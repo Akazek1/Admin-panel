@@ -8,6 +8,7 @@ import GreenAppIcon from "@/public/svg/green-app-icon.svg";
 import RightFlowerIcon from "@/public/svg/flower.svg";
 import LeftFlowerIcon from "@/public/svg/left-flower.svg";
 import BubbleLoader from "@/components/loader/Bubble-Loader.tsx";
+import { useRouter } from "next/navigation";
 
 interface OnboardingStep {
   title: string;
@@ -117,11 +118,13 @@ const OnboardingPage = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [currentStep, setCurrentStep] = useState(-1);
 
+  const router = useRouter();
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
       setCurrentStep(0);
-    }, 3000);
+    }, 3500);
 
     return () => clearTimeout(timer);
   }, []);
@@ -129,6 +132,8 @@ const OnboardingPage = () => {
   const handleNext = () => {
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1);
+    } else {
+      router.push("/overview");
     }
   };
 

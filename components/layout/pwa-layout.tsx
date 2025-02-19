@@ -1,16 +1,24 @@
 "use client";
+import { usePathname } from "next/navigation";
+import Navigation from "@/components/layout/app-navigation";
 
-import { ReactNode } from "react";
+const Layout = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname();
 
-interface LayoutProps {
-  children: ReactNode;
-}
+  // Define pages where the Navigation should NOT be visible
+  const hideNavigationPaths = ["/onboarding", "/auth/login", "/auth/register"];
+  const shouldShowNavigation = !hideNavigationPaths.includes(pathname);
 
-export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="h-screen max-w-[428px] mx-auto overflow-hidden bg-background">
-      {/* Main Content */}
-      {children}
+    <div className="h-screen bg-[#F1FCEF] max-w-[428px] mx-auto overflow-hidden relative">
+      <main className="flex-1">{children}</main>
+      {shouldShowNavigation && (
+        <div className="max-w-[428px] fixed bottom-0  mx-auto w-full">
+          <Navigation />
+        </div>
+      )}
     </div>
   );
-}
+};
+
+export default Layout;
