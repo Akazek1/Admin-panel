@@ -1,6 +1,8 @@
 import Header from "@/components/header";
 import Categories from "@/components/home/category-scroller";
 import PromoBanner from "@/components/home/promo-banner";
+import ServiceProvider from "@/components/home/service-providers";
+import PopulerService from "@/components/home/service-scroller";
 import SearchBar from "@/components/search";
 import React from "react";
 
@@ -11,6 +13,8 @@ const page = () => {
       <SearchBar />
       <PromoBanner />
       <Categories />
+      <PopulerService />
+      <ServiceProvider />
     </div>
   );
 };

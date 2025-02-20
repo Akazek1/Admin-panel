@@ -33,7 +33,7 @@ const categories = [
 
 export default function Categories() {
   return (
-    <div className="py-6 space-y-3">
+    <div className="pt-6 pb-4 space-y-3">
       <div className="flex items-center justify-between">
         <h1 className="text-[#1B2431] font-normal text-[18px]">
           Browse all categories
@@ -48,7 +48,7 @@ export default function Categories() {
         itemWidth={72}
         visibleItems={5.3}
         renderItem={(item) => (
-          <div className="bg-white rounded-lg overflow-hidden flex flex-col items-center justify-center gap-1 w-full">
+          <div className="rounded-lg overflow-hidden flex flex-col items-center justify-center gap-1 w-full">
             <div>
               <Image
                 height={500}
@@ -56,6 +56,7 @@ export default function Categories() {
                 src={item.image}
                 alt={item.title}
                 className="w-14 h-14 rounded-full object-cover"
+                loading="lazy"
               />
             </div>
             <div className="w-full text-center ">
@@ -66,22 +67,6 @@ export default function Categories() {
           </div>
         )}
       />
-
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">Card Example</h2>
-        <Scroller
-          items={[1, 2, 3, 4, 5]}
-          itemWidth={240}
-          visibleItems={4}
-          renderItem={(item) => (
-            <div className="bg-white rounded-lg p-6  h-32 flex items-center justify-center">
-              <span className="text-2xl font-bold text-gray-700">
-                Card {item}
-              </span>
-            </div>
-          )}
-        />
-      </div>
     </div>
   );
 }

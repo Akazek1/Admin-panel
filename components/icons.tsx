@@ -9,6 +9,7 @@ import BellIcon from "@/public/svg/bell-icon.svg";
 import SearchIcon from "@/public/svg/search.svg";
 import FilerIcon from "@/public/svg/filter.svg";
 import NextIcon from "@/public/svg/next.svg";
+import HeartIcon from "@/public/svg/heart-icon.svg";
 
 export const Icons = {
   FlowerIcon,
@@ -22,6 +23,7 @@ export const Icons = {
   SearchIcon,
   FilerIcon,
   NextIcon,
+  HeartIcon,
 } as const;
 
 export type IconsType = keyof typeof Icons;

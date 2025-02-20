@@ -2,7 +2,7 @@ import { Icons } from "@/components/icons";
 
 const Header = () => {
   return (
-    <div className="flex justify-between items-center rounded bg-white">
+    <div className="flex justify-between items-center rounded">
       <div className="flex items-center gap-2">
         <span className=" bg-[#D0DECF] p-2">
           <Icons.Location className="w-5 h-5 text-green-600" />
