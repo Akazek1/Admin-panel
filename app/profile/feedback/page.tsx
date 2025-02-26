@@ -6,6 +6,7 @@ import { Star } from "lucide-react";
 import { Inter } from "next/font/google";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { toast } from "react-hot-toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,6 +19,10 @@ const Feedback = () => {
   // Handle star click to set the rating
   const handleStarClick = (starIndex: number) => {
     setRating(starIndex + 1); // Star index is 0-based, so add 1 for 1-5 rating
+  };
+
+  const handleSubmit = () => {
+    toast.success("Thanks for your valuable feedback.");
   };
 
   return (
@@ -46,7 +51,10 @@ const Feedback = () => {
           placeholder="Type in your feedback"
           rows={6}
         />
-        <Button className="bg-[#167021] py-[18px] px-4 h-full rounded-[40px] hover:bg-[#167021]/90 font-bold text-base leading-6 font-urbanist">
+        <Button
+          onClick={handleSubmit}
+          className="bg-[#167021] py-[18px] px-4 h-full rounded-[40px] hover:bg-[#167021]/90 font-bold text-base leading-6 font-urbanist"
+        >
           Submit
         </Button>
       </div>

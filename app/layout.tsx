@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Urbanist } from "next/font/google";
 import "./globals.css";
 import Layout from "@/components/layout/pwa-layout";
+import { Toaster } from "react-hot-toast";
 
 // Load Geist fonts
 const geistSans = Geist({
@@ -38,7 +39,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${urbanist.variable}`}
     >
       <body className="antialiased">
-        <Layout>{children}</Layout>
+        <Layout>
+          <Toaster position="top-center" />
+          {children}
+        </Layout>
       </body>
     </html>
   );
