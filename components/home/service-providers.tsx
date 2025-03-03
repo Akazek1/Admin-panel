@@ -5,7 +5,24 @@ import ServiceCard from "../service-card";
 import Scroller from "../scroller";
 import { motion, AnimatePresence } from "framer-motion";
 
-const providers = [
+// Define the provider interface for type safety
+interface Provider {
+  id: number;
+  image: string;
+  name: string;
+  title: string;
+  experience: string;
+  languages: string;
+  location: string;
+  price: string;
+  rating: number;
+  reviews: number;
+  distance: string;
+  available: boolean;
+  verified: boolean;
+}
+
+const providers: Provider[] = [
   {
     id: 1,
     image:
@@ -122,7 +139,12 @@ const providers = [
 
 const filters = ["All", "Cleaning", "Repairing", "Painting"];
 
-const ServiceProvider = () => {
+// Define props interface for ServiceProvider
+interface ServiceProviderProps {
+  showHeader: boolean;
+}
+
+const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
   const [selectedFilter, setSelectedFilter] = useState("All");
 
   const filteredProviders = providers.filter((provider) => {
@@ -132,38 +154,41 @@ const ServiceProvider = () => {
 
   return (
     <div className="space-y-6">
-      <SectionHeader
-        title="Browse by Service Provider"
-        linkText="See All"
-        linkHref="/"
-        className="text-[#1B2431] font-medium text-lg"
-      />
-
-      {/* Sticky Filter Bar */}
-      <div className="sticky top-0 z-10 bg-[#F1FCEF] py-2">
-        <div className="flex rounded-lg">
-          <Scroller
-            visibleItems={3.5}
-            gap={12}
-            items={filters}
-            renderItem={(filter) => (
-              <button
-                key={filter}
-                className={`px-5 py-2 rounded-full border-2 border-[#145B10] text-[#145B10] font-semibold
-                  transition-all duration-300 ease-in-out
-                  ${
-                    selectedFilter === filter
-                      ? "bg-[#145B10] text-white scale-105"
-                      : "bg-transparent hover:bg-[#145B10]/10"
-                  }`}
-                onClick={() => setSelectedFilter(filter)}
-              >
-                {filter}
-              </button>
-            )}
+      {showHeader && (
+        <div>
+          <SectionHeader
+            title="Browse by Service Provider"
+            linkText="See All"
+            linkHref="/"
+            className="text-[#1B2431] font-medium text-lg"
           />
+
+          {/* Sticky Filter Bar */}
+          <div className="sticky top-0 z-10 bg-[#F1FCEF] py-2">
+            <div className="flex rounded-lg">
+              <Scroller
+                visibleItems={3.5}
+                gap={12}
+                items={filters}
+                renderItem={(filter) => (
+                  <button
+                    key={filter}
+                    className={`px-5 py-2 rounded-full border-2 border-[#145B10] text-[#145B10] font-semibold
+                  transition-all duration-300 ease-in-out
+                  ${selectedFilter === filter
+                        ? "bg-[#145B10] text-white scale-105"
+                        : "bg-transparent hover:bg-[#145B10]/10"
+                      }`}
+                    onClick={() => setSelectedFilter(filter)}
+                  >
+                    {filter}
+                  </button>
+                )}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Service Provider Cards */}
       <div className="space-y-4">

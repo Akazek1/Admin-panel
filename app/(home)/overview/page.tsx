@@ -53,7 +53,7 @@ const HomeContent = () => {
               <PromoBanner />
               <Categories />
               <PopulerService />
-              <ServiceProvider />
+              <ServiceProvider showHeader={true} />
             </div>
           </motion.div>
         )}
