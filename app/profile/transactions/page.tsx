@@ -3,6 +3,7 @@
 import React from "react";
 import BackButtonHeader from "@/components/header/back-button-header";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import from shadcn/ui
 
 const Transaction = () => {
   const router = useRouter();
@@ -21,38 +22,31 @@ const Transaction = () => {
       {/* Header */}
       <BackButtonHeader text="Transaction" className="p-6" />
 
-      {/* Tabs */}
-      <div className="flex justify-between items-center border-b border-green-800">
-        <button
-          onClick={() => setTab("earned")}
-          className={`py-2 px-4 text-lg font-medium w-[50%] ${
-            currentTab === "earned"
-              ? "text-green-800 border-b-2 border-green-800"
-              : "text-gray-500"
-          }`}
-        >
-          Earned
-        </button>
-        <button
-          onClick={() => setTab("spend")}
-          className={`py-2 px-4 text-lg font-medium w-[50%] ${
-            currentTab === "spend"
-              ? "text-green-800 border-b-2 border-green-800"
-              : "text-gray-500"
-          }`}
-        >
-          Spend
-        </button>
-      </div>
+      {/* Tabs using shadcn/ui */}
+      <Tabs value={currentTab} onValueChange={setTab} className="w-full">
+        <TabsList className="flex justify-between  bg-transparent p-0">
+          <TabsTrigger
+            value="earned"
+            className="py-2 px-4 text-lg font-medium w-[50%] rounded-none data-[state=active]:text-green-800 data-[state=active]:border-b-4 data-[state=active]:border-green-800 data-[state=inactive]:text-gray-500"
+          >
+            Earned
+          </TabsTrigger>
+          <TabsTrigger
+            value="spend"
+            className="py-2 px-4 text-lg font-medium w-[50%] rounded-none data-[state=active]:text-green-800 data-[state=active]:border-b-4 data-[state=active]:border-green-800 data-[state=inactive]:text-gray-500"
+          >
+            Spend
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Tab Content */}
-      <div className="mt-4">
-        {currentTab === "earned" ? (
+        {/* Tab Content */}
+        <TabsContent value="earned" className="mt-4">
           <p>Content for Earned transactions will go here.</p>
-        ) : (
+        </TabsContent>
+        <TabsContent value="spend" className="mt-4">
           <p>Content for Spend transactions will go here.</p>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

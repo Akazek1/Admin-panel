@@ -5,16 +5,16 @@ import Categories from "@/components/home/category-scroller";
 import PromoBanner from "@/components/home/promo-banner";
 import ServiceProvider from "@/components/home/service-providers";
 import PopulerService from "@/components/home/service-scroller";
-import SearchBar from "@/components/search/search";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchResults from "@/components/search/search-result";
+import SearchBar from "@/components/search/search";
 
 const HomeContent = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (query: string) => {
-    setSearchQuery(query || ""); // Use the query or empty string if none provided
+    setSearchQuery(query); // Update the query, even if empty
     setIsSearching(true); // Show search results immediately on focus
   };
 
@@ -44,14 +44,17 @@ const HomeContent = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeInOut" }}
           >
-            <span className="space-y-6">
+            <div className="space-y-6">
               <Header />
-              <SearchBar onSearch={handleSearch} />
+              <SearchBar
+                onSearch={handleSearch}
+                placeholder="Search baby sitter, carpenter etc"
+              />
               <PromoBanner />
               <Categories />
               <PopulerService />
               <ServiceProvider />
-            </span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

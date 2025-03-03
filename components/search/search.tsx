@@ -1,61 +1,82 @@
 "use client";
 import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // Keep Framer Motion for animation (optional, if you want to animate the search bar)
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
+// Define props interface for the SearchBar
 interface SearchBarProps {
-  onSearch: (query: string) => void;
+  onSearch: (query: string) => void; // Callback for search queries
+  placeholder?: string; // Optional custom placeholder text
+  searchIcon?: React.ReactNode; // Optional custom search icon
+  filterIcon?: React.ReactNode; // Optional custom filter icon
+  className?: string; // Optional custom Tailwind classes for additional styling
+  initialQuery?: string; // Optional initial query value
+  onFocus?: () => void; // Optional callback for when the input is focused
+  onBlur?: () => void; // Optional callback for when the input loses focus
 }
 
-const SearchBar = ({ onSearch }: SearchBarProps) => {
-  const [query, setQuery] = useState("");
-  const [isActive, setIsActive] = useState(false); // Track if the search bar is focused
+// Default values for optional props
+const defaultProps: Partial<SearchBarProps> = {
+  placeholder: "Search...",
+  searchIcon: (
+    <Icons.SearchIcon className="absolute left-3 top-3 w-4 h-4 fill-[#878787]" />
+  ),
+  filterIcon: (
+    <Icons.FilerIcon className="absolute right-4 top-3 w-[18px] h-[18px] fill-[#145B10]" />
+  ),
+};
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (query.trim()) {
-        onSearch(query);
-      }
-    }, 300); // 300ms debounce delay for actual typing (optional, can remove if not needed)
-
-    return () => clearTimeout(timer);
-  }, [query, onSearch]);
+const SearchBar = ({
+  onSearch,
+  placeholder = defaultProps.placeholder,
+  searchIcon = defaultProps.searchIcon,
+  filterIcon = defaultProps.filterIcon,
+  className = "",
+  initialQuery = "",
+  onFocus,
+  onBlur,
+}: SearchBarProps) => {
+  const [query, setQuery] = useState(initialQuery);
+  const [isActive, setIsActive] = useState(false);
 
   const handleFocus = () => {
     setIsActive(true);
-    onSearch(""); // Trigger search results immediately with an empty query
+    onFocus?.(); // Call optional onFocus callback
+    onSearch(""); // Trigger search results immediately with an empty query when clicked
   };
 
   const handleBlur = () => {
     setIsActive(false);
+    onBlur?.(); // Call optional onBlur callback
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
+    // No search triggered on typing—only on focus
   };
 
   return (
-    <div className="">
+    <div className={`relative ${className}`}>
       <AnimatePresence>
         <motion.div
           initial={{ scale: 1, opacity: 0.8 }}
-          animate={{ scale: isActive ? 1.05 : 1, opacity: isActive ? 1 : 0.8 }}
+          animate={{ scale: isActive ? 1 : 1, opacity: isActive ? 1 : 0.8 }}
           exit={{ scale: 1, opacity: 0.8 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className="relative"
         >
-          <Icons.SearchIcon className="absolute left-3 top-3 w-4 h-4 fill-[#878787]" />
+          {searchIcon}
           <Input
             type="text"
-            placeholder="Search baby sitter, carpenter etc"
-            className="pl-10 border-[#D6D6D6] rounded-[40px] placeholder:text-xs placeholder:text-[#878787]"
+            placeholder={placeholder}
+            className="pl-10 pr-12 border-[#D6D6D6] rounded-[40px] placeholder:text-xs placeholder:text-[#878787]"
             value={query}
             onChange={handleChange}
             onFocus={handleFocus}
             onBlur={handleBlur}
           />
-          <Icons.FilerIcon className="absolute right-4 top-3 w-[18px] h-[18px] fill-[#145B10]" />
+          {filterIcon}
         </motion.div>
       </AnimatePresence>
     </div>
