@@ -5,16 +5,13 @@ import Navigation from "@/components/layout/app-navigation";
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
 
-  // Define pages where the Navigation should NOT be visible
   const hideNavigationPaths = ["/onboarding", "/auth/login", "/auth/register"];
   const shouldShowNavigation = !hideNavigationPaths.includes(pathname);
 
   return (
-    <div className="bg-[#F1FCEF] max-w-[428px] mx-auto relative flex flex-col min-h-screen overflow-hidden">
-      {/* Main content area with vertical scrolling only */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden pb-[60px]">
-        {children}
-      </main>
+    <div className="bg-[#F1FCEF] max-w-[428px] mx-auto relative flex flex-col min-h-screen">
+      {/* Main content area without overflow restrictions */}
+      <main className="flex-1 pb-[60px]">{children}</main>
 
       {/* Fixed Navigation */}
       {shouldShowNavigation && (

@@ -1,3 +1,5 @@
+// icons.tsx
+import { JSX, SVGProps } from "react";
 import FlowerIcon from "@/public/svg/flower.svg";
 import HomeIcon from "@/public/svg/home.svg";
 import SettingIcon from "@/public/svg/setting.svg";
@@ -10,6 +12,15 @@ import SearchIcon from "@/public/svg/search.svg";
 import FilerIcon from "@/public/svg/filter.svg";
 import NextIcon from "@/public/svg/next.svg";
 import HeartIcon from "@/public/svg/heart-icon.svg";
+import BookMarkIcon from "@/public/svg/bookmark-icon.svg";
+import BagIcon from "@/public/svg/bag.svg";
+import ClockIcon from "@/public/svg/clock.svg";
+import UserIcon from "@/public/svg/user.svg";
+import WalletIcon from "@/public/svg/wallet.svg";
+import LockIcon from "@/public/svg/lock.svg";
+import OrderHistoryIcon from "@/public/svg/order-history.svg";
+import BookIcon from "@/public/svg/book.svg";
+import Exit from "@/public/svg/exit.svg";
 
 export const Icons = {
   FlowerIcon,
@@ -24,6 +35,16 @@ export const Icons = {
   FilerIcon,
   NextIcon,
   HeartIcon,
+  BookMarkIcon,
+  BagIcon,
+  ClockIcon,
+  UserIcon,
+  WalletIcon,
+  LockIcon,
+  OrderHistoryIcon,
+  BookIcon,
+  Exit,
 } as const;
 
-export type IconsType = keyof typeof Icons;
+export type IconType = keyof typeof Icons;
+export type IconComponentType = (props: SVGProps<SVGSVGElement>) => JSX.Element;

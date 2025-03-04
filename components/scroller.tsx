@@ -1,11 +1,10 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 interface ScrollerProps<T> {
   items: T[];
   renderItem: (item: T, index: number) => ReactNode;
   visibleItems?: number;
-  itemWidth?: number;
   gap?: number;
   className?: string;
 }
@@ -13,34 +12,40 @@ interface ScrollerProps<T> {
 const Scroller = <T,>({
   items,
   renderItem,
-  visibleItems = 3,
-  itemWidth = 280,
   gap = 16,
   className = "",
 }: ScrollerProps<T>) => {
-  const containerWidth = itemWidth * visibleItems + gap * (visibleItems - 1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [totalWidth, setTotalWidth] = useState(0);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      const children = containerRef.current.children;
+      let width = 0;
+      for (let i = 0; i < children.length; i++) {
+        width += children[i].getBoundingClientRect().width + gap;
+      }
+      setTotalWidth(width - gap); // Remove last gap
+    }
+  }, [items, gap]);
+
+  const containerWidth =
+    containerRef.current?.getBoundingClientRect().width || 400;
 
   return (
-    <div
-      className={`overflow-hidden ${className}`}
-      style={{ width: `${containerWidth}px` }}
-    >
-      {/* Draggable Scrollable Container */}
+    <div className={`overflow-hidden ${className}`}>
       <motion.div
+        ref={containerRef}
         className="flex cursor-grab active:cursor-grabbing"
         drag="x"
         dragConstraints={{
-          left: -(items.length * (itemWidth + gap) - containerWidth),
+          left: -(totalWidth - containerWidth),
           right: 0,
         }}
         style={{ gap: `${gap}px`, paddingLeft: "4px", paddingRight: "4px" }}
       >
         {items.map((item, index) => (
-          <div
-            key={index}
-            className="flex-shrink-0"
-            style={{ width: `${itemWidth}px` }}
-          >
+          <div key={index} className="flex-shrink-0">
             {renderItem(item, index)}
           </div>
         ))}

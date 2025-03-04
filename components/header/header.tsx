@@ -12,7 +12,7 @@ const Header = () => {
           <p className="text-sm font-semibold">Jl. Soekarno Hatta 15A Malang</p>
         </div>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
         <Icons.Language className="w-6 h-6 text-gray-500" />
         <Icons.BellIcon className="w-5 h-5 text-green-600" />
       </div>

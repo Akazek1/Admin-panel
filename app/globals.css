@@ -105,3 +105,16 @@ body {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.font-urbanist {
+  font-family: "Urbanist", sans-serif;
+}

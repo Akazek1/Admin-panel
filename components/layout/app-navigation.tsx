@@ -2,31 +2,42 @@
 
 import { usePathname } from "next/navigation";
 import { Icons } from "@/components/icons";
-import { navItems } from "@/constant";
+import { navItems } from "@/constant"; // Adjust the import path as needed
 import Link from "next/link";
+import { NavItem } from "@/types";
 
 const Navigation = () => {
   const pathname = usePathname(); // Get the current route
+
+  const isActive = (item: NavItem): boolean => {
+    if (item.matchPattern) {
+      // Check if the current pathname matches the pattern (e.g., "/profile/*")
+      const pattern = item.matchPattern.replace("/*", ""); // Remove the "/*" for matching
+      return pathname.startsWith(pattern);
+    }
+    // For items without a matchPattern, check exact URL match
+    return pathname === item.url;
+  };
 
   return (
     <nav className="w-full bg-white shadow-md border-t p-2">
       <div className="flex justify-around items-center">
         {navItems?.map((item) => {
           const IconComponent = item.icon ? Icons[item.icon] : null;
-          const isActive = pathname === item.url;
+          const isActiveNav = isActive(item);
 
           return (
             <Link
               key={item.title}
               href={item.url}
               className={`flex flex-col items-center text-[10px] leading-3 w-16 ${
-                isActive ? "text-[#167021] font-semibold" : "text-[#9E9E9E]"
+                isActiveNav ? "text-[#167021] font-semibold" : "text-[#9E9E9E]"
               }`}
             >
               {IconComponent && (
                 <IconComponent
                   className={`w-6 h-6 ${
-                    isActive ? "stroke-[#167021]" : "stroke-[#9E9E9E]"
+                    isActiveNav ? "stroke-[#167021]" : "stroke-[#9E9E9E]"
                   }`}
                 />
               )}

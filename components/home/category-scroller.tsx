@@ -43,30 +43,31 @@ export default function Categories() {
           <Icons.NextIcon className="w-3 h-3 fill-[#1B2431]" />
         </button>
       </div>
-      <Scroller
-        items={categories}
-        itemWidth={72}
-        visibleItems={5.3}
-        renderItem={(item) => (
-          <div className="rounded-lg overflow-hidden flex flex-col items-center justify-center gap-1 w-full">
-            <div>
-              <Image
-                height={500}
-                width={500}
-                src={item.image}
-                alt={item.title}
-                className="w-14 h-14 rounded-full object-cover"
-                loading="lazy"
-              />
+      <div className="flex items-center gap-3 ">
+        <Scroller
+          items={categories}
+          visibleItems={5.3}
+          renderItem={(item) => (
+            <div className="rounded-lg  px-2 overflow-hidden flex flex-col items-center justify-center gap-1 w-full">
+              <div>
+                <Image
+                  height={500}
+                  width={500}
+                  src={item.image}
+                  alt={item.title}
+                  className="w-14 h-14 rounded-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <div className="w-full text-center ">
+                <h3 className="text-[12px] font-semibold text-gray-800">
+                  {item.title}
+                </h3>
+              </div>
             </div>
-            <div className="w-full text-center ">
-              <h3 className="text-[12px] font-semibold text-gray-800">
-                {item.title}
-              </h3>
-            </div>
-          </div>
-        )}
-      />
+          )}
+        />
+      </div>
     </div>
   );
 }

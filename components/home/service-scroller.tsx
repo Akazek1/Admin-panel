@@ -64,7 +64,6 @@ const PopulerService = () => {
       />
       <Scroller
         items={categories}
-        itemWidth={208}
         visibleItems={2}
         renderItem={(item) => (
           <div className=" flex flex-col gap-2">
@@ -84,7 +83,7 @@ const PopulerService = () => {
                     stroke={
                       liked.some((likedItem) => likedItem.id === item.id)
                         ? "#1B2431"
-                        : "#9CA3AF"
+                        : "#1B2431"
                     }
                   />
                 </div>

@@ -10,4 +10,5 @@ export interface NavItem {
   description?: string;
   isActive?: boolean;
   items?: NavItem[];
+  matchPattern?: string;
 }

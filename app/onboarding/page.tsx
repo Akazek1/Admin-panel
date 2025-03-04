@@ -133,7 +133,7 @@ const OnboardingPage = () => {
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
-      router.push("/overview");
+      router.push("/");
     }
   };
 
@@ -160,7 +160,7 @@ const OnboardingPage = () => {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-white">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentStep}
