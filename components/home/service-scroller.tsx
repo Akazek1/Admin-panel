@@ -93,7 +93,7 @@ const PopulerService = () => {
                 width={500}
                 src={item.image}
                 alt={item.title}
-                className="w-full h-full object-cover"
+                className="min-w-full h-full object-cover"
                 loading="lazy"
               />
             </div>

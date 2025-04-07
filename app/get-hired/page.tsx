@@ -144,7 +144,7 @@ const GetHired: React.FC = () => {
 
   return (
     <div className="">
-      <BackButtonHeader text="Get Hired" className="p-6" />
+      <BackButtonHeader text="Get Hired" className="p-6" backHref="/" />
       {/* Profile Header */}
       <div className="flex flex-col items-center gap-4">
         {userType === "individual" ? (

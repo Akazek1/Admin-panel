@@ -2,6 +2,7 @@
 import Image from "next/image";
 import Scroller from "../scroller";
 import { Icons } from "@/components/icons";
+import { getUnsplashImageUrl } from "@/lib/unsplash";
 
 const categories = [
   {
@@ -47,13 +48,13 @@ export default function Categories() {
         <Scroller
           items={categories}
           visibleItems={5.3}
-          renderItem={(item) => (
+          renderItem={(item, index) => (
             <div className="rounded-lg  px-2 overflow-hidden flex flex-col items-center justify-center gap-1 w-full">
               <div>
                 <Image
                   height={500}
                   width={500}
-                  src={item.image}
+                  src={item.image && getUnsplashImageUrl(index)}
                   alt={item.title}
                   className="w-14 h-14 rounded-full object-cover"
                   loading="lazy"

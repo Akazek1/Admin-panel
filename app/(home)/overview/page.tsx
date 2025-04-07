@@ -3,11 +3,13 @@ import React, { useState } from "react";
 import Header from "@/components/header/header";
 import Categories from "@/components/home/category-scroller";
 import PromoBanner from "@/components/home/promo-banner";
-import ServiceProvider from "@/components/home/service-providers";
 import PopulerService from "@/components/home/service-scroller";
 import { motion, AnimatePresence } from "framer-motion";
 import SearchResults from "@/components/search/search-result";
 import SearchBar from "@/components/search/search";
+import { lazy } from "react";
+
+const ServiceProvider = lazy(() => import("@/components/home/service-providers"));
 
 const HomeContent = () => {
   const [isSearching, setIsSearching] = useState(false);

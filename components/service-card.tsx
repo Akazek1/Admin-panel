@@ -1,8 +1,10 @@
+// ServiceCard.tsx
 "use client";
 import { Star, MapPin, Languages, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { Icons } from "./icons";
 import { useState } from "react";
+import { getUnsplashImageUrl } from "@/lib/unsplash";
 
 interface ServiceCardProps {
   id: number;
@@ -18,6 +20,7 @@ interface ServiceCardProps {
   distance: string;
   available: boolean;
   verified?: boolean;
+  onClick: () => void;
 }
 
 const ServiceCard: React.FC<ServiceCardProps> = ({
@@ -34,10 +37,12 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   distance,
   available,
   verified,
+  onClick,
 }) => {
   const [bookMark, setBookMark] = useState<number[]>([]); // Store bookmarked IDs
 
-  const handleBookMark = (id: number) => {
+  const handleBookMark = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation(); // Prevent the card's onClick from triggering
     setBookMark(
       (prevBookmarked) =>
         prevBookmarked.includes(id)
@@ -47,31 +52,32 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   };
 
   return (
-    <div className="bg-white shadow-[#04060F0D] rounded-2xl p-5 flex items-center gap-4 hover:scale-105 transition transform 2s ease-in cursor-pointer">
+    <div
+      onClick={onClick}
+      className="bg-white shadow-[#04060F0D] rounded-2xl p-5 flex items-center gap-4 hover:scale-105 transition transform 2s ease-in cursor-pointer"
+    >
       {/* Image */}
       <div className="relative">
         <Image
-          src={image}
+          src={image && getUnsplashImageUrl(id)}
           alt={title}
           width={200}
           height={200}
+          loading="lazy"
           className="max-w-[120px] h-44 object-cover rounded-t-[20px] rounded-br-[20px]"
         />
         <span
-          className={`absolute bottom-0 left-0 text-xs font-medium px-2 py-1  rounded-tr-[20px] ${
-            available
-              ? "bg-[#FFFFFF] text-green-700"
-              : "bg-[#FFFFFF] text-red-700"
-          }`}
+          className={`absolute bottom-0 left-0 text-xs font-medium px-2 py-1 rounded-tr-[20px] ${available ? "bg-[#FFFFFF] text-green-700" : "bg-[#FFFFFF] text-red-700"
+            }`}
         >
           {available ? "Available" : "Unavailable"}
         </span>
       </div>
 
       {/* Details */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 w-full">
         {/* Profile Section */}
-        <div className="flex justify-between items-start">
+        <div className="flex justify-between items-start w-full">
           <div className="flex flex-col items-start gap-1">
             <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
               {name}{" "}
@@ -83,13 +89,15 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
               {title}
             </h3>
           </div>
-          <span onClick={() => handleBookMark(id)}>
+          <span
+            onClick={(e) => handleBookMark(e, id)}
+            className="cursor-pointer"
+          >
             <Icons.BookMarkIcon
-              className={`w-6 h-6 cursor-pointer ${
-                bookMark.includes(id)
-                  ? "fill-[#145B10] stroke-white"
-                  : "stroke-[#145B10] hover:stroke-green-600"
-              }`}
+              className={`w-6 h-6 ${bookMark.includes(id)
+                ? "fill-[#145B10] stroke-white"
+                : "stroke-[#145B10] hover:stroke-green-600"
+                }`}
             />
           </span>
         </div>
@@ -108,18 +116,15 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
         </p>
         <p className="text-[#145B10] font-semibold">{price}</p>
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-1 text-sm leading-[14px]  text-[#616161] font-medium">
+          <div className="flex items-center gap-1 text-sm leading-[14px] text-[#616161] font-medium">
             <Star className="w-4 h-4 text-yellow-500" />
             {rating} |<span>{reviews} reviews</span>
             <span className="flex items-center gap-1">
-              <Icons.ClockIcon className="w-3 h-3 stroke-[#212121] " />{" "}
-              {distance}
+              <Icons.ClockIcon className="w-3 h-3 stroke-[#212121]" /> {distance}
             </span>
           </div>
         </div>
       </div>
-
-      {/* Pricing & Ratings */}
     </div>
   );
 };
