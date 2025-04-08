@@ -1,11 +1,12 @@
+// ServiceProvider.tsx
 "use client";
 import React, { useState } from "react";
 import SectionHeader from "../section-header";
 import ServiceCard from "../service-card";
 import Scroller from "../scroller";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 
-// Define the provider interface for type safety
 interface Provider {
   id: number;
   image: string;
@@ -20,6 +21,7 @@ interface Provider {
   distance: string;
   available: boolean;
   verified: boolean;
+  type: string;
 }
 
 const providers: Provider[] = [
@@ -38,6 +40,7 @@ const providers: Provider[] = [
     distance: "2 miles",
     available: true,
     verified: true,
+    type:"Professional"
   },
   {
     id: 2,
@@ -54,6 +57,7 @@ const providers: Provider[] = [
     distance: "2 miles",
     available: false,
     verified: false,
+    type:"Agency"
   },
   {
     id: 3,
@@ -70,6 +74,7 @@ const providers: Provider[] = [
     distance: "2 miles",
     available: true,
     verified: true,
+    type:"Agency"
   },
   {
     id: 4,
@@ -86,6 +91,7 @@ const providers: Provider[] = [
     distance: "2 miles",
     available: false,
     verified: false,
+    type:"Professional"
   },
   {
     id: 5,
@@ -102,6 +108,7 @@ const providers: Provider[] = [
     distance: "2 miles",
     available: true,
     verified: true,
+    type:"Agency"
   },
   {
     id: 6,
@@ -118,6 +125,7 @@ const providers: Provider[] = [
     distance: "2 miles",
     available: false,
     verified: false,
+    type:"Professional"
   },
   {
     id: 7,
@@ -134,17 +142,20 @@ const providers: Provider[] = [
     distance: "2 miles",
     available: true,
     verified: true,
+    type:"Agency"
   },
 ];
 
+
 const filters = ["All", "Cleaning", "Repairing", "Painting"];
 
-// Define props interface for ServiceProvider
+
 interface ServiceProviderProps {
   showHeader: boolean;
 }
 
 const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
+  const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState("All");
 
   const filteredProviders = providers.filter((provider) => {
@@ -162,8 +173,6 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
             linkHref="/"
             className="text-[#1B2431] font-medium text-lg"
           />
-
-          {/* Sticky Filter Bar */}
           <div className="sticky top-0 z-10 bg-[#F1FCEF] py-2">
             <div className="flex rounded-lg">
               <Scroller
@@ -174,11 +183,12 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
                   <button
                     key={filter}
                     className={`px-5 py-2 rounded-full border-2 border-[#145B10] text-[#145B10] font-semibold
-                  transition-all duration-300 ease-in-out
-                  ${selectedFilter === filter
+                    transition-all duration-300 ease-in-out
+                    ${
+                      selectedFilter === filter
                         ? "bg-[#145B10] text-white scale-105"
                         : "bg-transparent hover:bg-[#145B10]/10"
-                      }`}
+                    }`}
                     onClick={() => setSelectedFilter(filter)}
                   >
                     {filter}
@@ -190,30 +200,34 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
         </div>
       )}
 
-      {/* Service Provider Cards */}
-      <div className="space-y-4">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={selectedFilter}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {filteredProviders.length > 0 ? (
-              filteredProviders.map((provider) => (
-                <ServiceCard key={provider.id} {...provider} />
-              ))
-            ) : (
-              <p className="text-center text-gray-500">
-                No providers found for this filter
-              </p>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      {/* Service Provider Cards with Exit Animation */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={selectedFilter || "default"}
+          initial={{ opacity: 1 }} // No initial animation for entry
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: 0.3 } }} // Fade out on exit
+        >
+          {filteredProviders.length > 0 ? (
+            filteredProviders.map((provider) => (
+              <ServiceCard
+                key={provider.id}
+                onClick={() => router.push(`/book/${provider.type}/${provider.id}`)}
+                {...provider}
+              />
+            ))
+          ) : (
+            <p className="text-center text-gray-500">
+              No providers found for this filter
+            </p>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };
 
 export default ServiceProvider;
+
+
+

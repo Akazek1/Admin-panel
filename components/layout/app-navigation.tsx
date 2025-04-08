@@ -37,7 +37,7 @@ const Navigation = () => {
               {IconComponent && (
                 <IconComponent
                   className={`w-6 h-6 ${
-                    isActiveNav ? "stroke-[#167021]" : "stroke-[#9E9E9E]"
+                    isActiveNav ? "stroke-white fill-[#145B10]" : "stroke-[#9E9E9E]"
                   }`}
                 />
               )}

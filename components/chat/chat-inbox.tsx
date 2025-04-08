@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useSearchParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { cn } from "@/lib/utils";
+import { getUnsplashImageUrl } from "@/lib/unsplash";
 
 // Define the message interface for TypeScript
 interface Message {
@@ -132,17 +133,20 @@ export default function ChatInbox() {
           initial="hidden"
           animate="visible"
         >
-          {filterMessages().map((msg) => (
+          {filterMessages().map((msg, index) => (
             <motion.div
               key={msg.id}
-              className={`flex justify-between  rounded-lg cursor-pointer ${
-                !msg.read ? "bg-green-50" : "hover:bg-gray-50"
-              }`}
+              className={`flex justify-between  rounded-lg cursor-pointer ${!msg.read ? "bg-green-50" : "hover:bg-gray-50"
+                }`}
               variants={itemVariants}
             >
               <div className="flex items-center gap-5">
                 <Avatar className={cn("h-16 w-16")}>
-                  <AvatarImage src={msg.profile} className="object-cover" />
+
+                  <AvatarImage
+                    src={getUnsplashImageUrl(index)} 
+                    className="object-cover"
+                  />
                   <AvatarFallback>
                     <div className=" w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold">
                       {msg.name[0]}
@@ -151,16 +155,14 @@ export default function ChatInbox() {
                 </Avatar>
                 <div className="ml-3 flex flex-col gap-1">
                   <p
-                    className={`text-xl font-bold leading-5 ${
-                      !msg.read ? "text-gray-900" : "text-gray-700"
-                    }`}
+                    className={`text-xl font-bold leading-5 ${!msg.read ? "text-gray-900" : "text-gray-700"
+                      }`}
                   >
                     {msg.name}
                   </p>
                   <p
-                    className={`text-sm font-medium leading-5 ${
-                      !msg.read ? " text-[#616161]" : "text-gray-500"
-                    }`}
+                    className={`text-sm font-medium leading-5 ${!msg.read ? " text-[#616161]" : "text-gray-500"
+                      }`}
                   >
                     {msg.message}
                   </p>
