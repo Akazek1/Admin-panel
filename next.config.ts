@@ -6,7 +6,6 @@ const nextConfig: NextConfig = {
       test: /\.svg$/,
       use: ["@svgr/webpack"],
     });
-
     return config;
   },
   images: {
@@ -18,6 +17,11 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "source.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "flagcdn.com",
+        pathname: "/**", // Allow all paths
       },
     ],
   },

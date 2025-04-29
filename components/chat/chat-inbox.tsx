@@ -1,6 +1,6 @@
 "use client";
 import { motion } from "framer-motion";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { cn } from "@/lib/utils";
 import { getUnsplashImageUrl } from "@/lib/unsplash";
@@ -93,6 +93,7 @@ const messages: Message[] = [
 export default function ChatInbox() {
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") || "All"; // Get tab from URL, default to "All"
+  const route = useRouter()
 
   // Map URL tab values to filter logic
   const filterMessages = (): Message[] => {
@@ -139,12 +140,13 @@ export default function ChatInbox() {
               className={`flex justify-between  rounded-lg cursor-pointer ${!msg.read ? "bg-green-50" : "hover:bg-gray-50"
                 }`}
               variants={itemVariants}
+              onClick={() => route.push(`/conversations/inbox/${msg.id}`)}
             >
               <div className="flex items-center gap-5">
                 <Avatar className={cn("h-16 w-16")}>
 
                   <AvatarImage
-                    src={getUnsplashImageUrl(index)} 
+                    src={getUnsplashImageUrl(index)}
                     className="object-cover"
                   />
                   <AvatarFallback>
