@@ -11,7 +11,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="bg-[#F1FCEF] max-w-[428px] mx-auto relative flex flex-col min-h-screen">
       {/* Main content area without overflow restrictions */}
-      <main className="flex-1 pb-[60px]">{children}</main>
+      <main className="flex-1">{children}</main>
 
       {/* Fixed Navigation */}
       {shouldShowNavigation && (
