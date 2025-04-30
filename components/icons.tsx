@@ -21,6 +21,8 @@ import LockIcon from "@/public/svg/lock.svg";
 import OrderHistoryIcon from "@/public/svg/order-history.svg";
 import BookIcon from "@/public/svg/book.svg";
 import Exit from "@/public/svg/exit.svg";
+import Gallery from "@/public/svg/gallery-icon.svg";
+import Mic from "@/public/svg/mic-icon.svg";
 
 export const Icons = {
   FlowerIcon,
@@ -44,6 +46,8 @@ export const Icons = {
   OrderHistoryIcon,
   BookIcon,
   Exit,
+  Gallery,
+  Mic
 } as const;
 
 export type IconType = keyof typeof Icons;

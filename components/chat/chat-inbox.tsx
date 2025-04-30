@@ -15,6 +15,11 @@ interface Message {
   profile: string;
 }
 
+// Define props interface for ChatInbox
+interface ChatInboxProps {
+  searchQuery: string;
+}
+
 const messages: Message[] = [
   {
     id: 1,
@@ -88,25 +93,60 @@ const messages: Message[] = [
     profile:
       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
   },
+  {
+    id: 9,
+    name: "Mugwaneza",
+    message: "Message",
+    timestamp: "Dec 18",
+    read: false,
+    profile:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
+  },
+  {
+    id: 10,
+    name: "Mugwaneza",
+    message: "Message",
+    timestamp: "Dec 18",
+    read: false,
+    profile:
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
+  },
 ];
 
-export default function ChatInbox() {
+export default function ChatInbox({ searchQuery }: ChatInboxProps) {
   const searchParams = useSearchParams();
-  const currentTab = searchParams.get("tab") || "All"; // Get tab from URL, default to "All"
-  const route = useRouter()
+  const currentTab = searchParams.get("tab") || "All";
+  const router = useRouter();
 
-  // Map URL tab values to filter logic
+  // Filter messages based on tab and search query
   const filterMessages = (): Message[] => {
+    let filteredMessages = messages;
+
+    // Apply tab-based filtering
     switch (currentTab.toLowerCase()) {
       case "all":
-        return messages;
+        filteredMessages = messages;
+        break;
       case "read":
-        return messages.filter((msg) => !msg.read);
+        filteredMessages = messages.filter((msg) => msg.read);
+        break;
       case "unread":
-        return messages.filter((msg) => msg.read);
+        filteredMessages = messages.filter((msg) => !msg.read);
+        break;
       default:
-        return messages; // Default to all messages
+        filteredMessages = messages;
     }
+
+    // Apply search filtering
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filteredMessages = filteredMessages.filter(
+        (msg) =>
+          msg.name.toLowerCase().includes(query) ||
+          msg.message.toLowerCase().includes(query)
+      );
+    }
+    return filteredMessages;
   };
 
   const containerVariants = {
@@ -126,62 +166,65 @@ export default function ChatInbox() {
   };
 
   return (
-    <div className=" flex items-center justify-center">
-      <div className="w-full  overflow-hidden">
+    <div className="flex items-center justify-center">
+      <div className="w-full overflow-hidden">
         <motion.div
           className="overflow-y-auto space-y-6"
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          {filterMessages().map((msg, index) => (
-            <motion.div
-              key={msg.id}
-              className={`flex justify-between  rounded-lg cursor-pointer ${!msg.read ? "bg-green-50" : "hover:bg-gray-50"
-                }`}
-              variants={itemVariants}
-              onClick={() => route.push(`/conversations/inbox/${msg.id}`)}
-            >
-              <div className="flex items-center gap-5">
-                <Avatar className={cn("h-16 w-16")}>
-
-                  <AvatarImage
-                    src={getUnsplashImageUrl(index)}
-                    className="object-cover"
-                  />
-                  <AvatarFallback>
-                    <div className=" w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold">
-                      {msg.name[0]}
-                    </div>
-                  </AvatarFallback>
-                </Avatar>
-                <div className="ml-3 flex flex-col gap-1">
-                  <p
-                    className={`text-xl font-bold leading-5 ${!msg.read ? "text-gray-900" : "text-gray-700"
-                      }`}
-                  >
-                    {msg.name}
-                  </p>
-                  <p
-                    className={`text-sm font-medium leading-5 ${!msg.read ? " text-[#616161]" : "text-gray-500"
-                      }`}
-                  >
-                    {msg.message}
-                  </p>
+          {filterMessages().length > 0 ? (
+            filterMessages().map((msg, index) => (
+              <motion.div
+                key={msg.id}
+                className={`flex justify-between rounded-lg cursor-pointer ${!msg.read ? "bg-green-50" : "hover:bg-gray-50"
+                  }`}
+                variants={itemVariants}
+                onClick={() => router.push(`/conversations/inbox/${msg.id}`)}
+              >
+                <div className="flex items-center gap-5">
+                  <Avatar className={cn("h-16 w-16")}>
+                    <AvatarImage
+                      src={getUnsplashImageUrl(index)}
+                      className="object-cover"
+                    />
+                    <AvatarFallback>
+                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold">
+                        {msg.name[0]}
+                      </div>
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="ml-3 flex flex-col gap-1">
+                    <p
+                      className={`text-xl font-bold leading-5 ${!msg.read ? "text-gray-900" : "text-gray-700"
+                        }`}
+                    >
+                      {msg.name}
+                    </p>
+                    <p
+                      className={`text-sm font-medium leading-5 ${!msg.read ? "text-[#616161]" : "text-gray-500"
+                        }`}
+                    >
+                      {msg.message}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              {msg.read && (
-                <div className=" text-right flex flex-col items-center gap-[10px]">
-                  <p className="flex items-center justify-center text-white rounded-full text-[10px] leading-3 w-6 h-6 bg-[#145B10]">
-                    2
-                  </p>
-                  <p className="text-xs text-[#616161] leading-4">
-                    {msg.timestamp}
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          ))}
+                {msg.read && (
+                  <div className="text-right flex flex-col items-center gap-[10px]">
+                    <p className="flex items-center justify-center text-white rounded-full text-[10px] leading-3 w-6 h-6 bg-[#145B10]">
+                      2
+                    </p>
+                    <p className="text-xs text-[#616161] leading-4">
+                      {msg.timestamp}
+                    </p>
+                  </div>
+                )}
+              </motion.div>
+            ))
+          ) : (
+            <p className="text-center text-gray-500">No messages found.</p>
+          )}
         </motion.div>
       </div>
     </div>
