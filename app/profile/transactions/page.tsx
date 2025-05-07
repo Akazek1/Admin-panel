@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import BackButtonHeader from "@/components/header/back-button-header";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Import from shadcn/ui
 
-const Transaction = () => {
+const TransactionPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTab = searchParams.get("tab") || "earned"; // Default to "earned"
@@ -51,4 +51,13 @@ const Transaction = () => {
   );
 };
 
+
+
+const Transaction = () => {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+      <TransactionPage />
+    </Suspense>
+  );
+}
 export default Transaction;

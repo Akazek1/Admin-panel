@@ -220,9 +220,9 @@ const Page = () => {
           </div>
         </motion.div>
 
-        {/* <div className="space-y-4">
+        <div className="space-y-4">
           <ServiceProvider showHeader={true} />
-        </div> */}
+        </div>
       </main>
     </div>
   );
