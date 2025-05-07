@@ -1,10 +1,10 @@
 "use client";
-import React from "react";
+import React, { Suspense } from "react";
 import BackButtonHeader from "@/components/header/back-button-header";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const OrderHistory = () => {
+const OrderHistoryPage = () => {
     const router = useRouter();
     const searchParams = useSearchParams();
     const currentTab = searchParams.get("tab") || "Service Given"; // Default to "Service Given"
@@ -150,5 +150,14 @@ const OrderHistory = () => {
         </div>
     );
 };
+
+
+const OrderHistory = () => {
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center h-screen">Loading...</div>}>
+            <OrderHistoryPage />
+        </Suspense>
+    );
+}
 
 export default OrderHistory;

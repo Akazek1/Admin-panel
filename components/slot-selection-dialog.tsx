@@ -19,6 +19,7 @@ interface SlotSelectionDialogProps {
     onConfirm: (selectedDate: string, selectedTime: string) => void;
     availableDates: AvailableDate[];
     availableTimes: string[];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     provider: any;
 }
 
