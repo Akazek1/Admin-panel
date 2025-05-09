@@ -44,7 +44,6 @@ export const useAuth = () => {
         return false;
       }
 
-      console.log("Sending OTP to:", data.phoneNumber);
       await dispatch(sendOtp(data)).unwrap();
       return true;
     } catch (error) {
@@ -73,11 +72,7 @@ export const useAuth = () => {
         otp,
       };
 
-      console.log("Verifying OTP:", otp, "for phone:", phoneNumber);
       const result = await dispatch(verifyOtp(data)).unwrap();
-
-      // Log successful verification
-      console.log("OTP verification successful:", result);
 
       // Force a page reload to ensure cookies are properly recognized
       if (result && result.token) {

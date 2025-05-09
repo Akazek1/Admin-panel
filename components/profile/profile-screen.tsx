@@ -11,8 +11,14 @@ import { Icons } from "../icons";
 import { Separator } from "../ui/separator";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import Image from "next/image";
+import { logout } from "@/store/slices/auth-slice";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/store";
+import { useRouter } from "next/navigation";
 
 const ProfileScreen = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const router = useRouter()
   const user = {
     name: "Gatete",
     email: "gatete@gmail.com",
@@ -46,8 +52,9 @@ const ProfileScreen = () => {
     { name: "Share Feedback", Icon: MessageSquare, href: "/profile/feedback" },
   ];
 
-  const handleLogout = () => {
-    console.log("Logged out");
+  const handleLogout = async () => {
+    await dispatch(logout());
+    router.push("/onboarding")
   };
 
   return (
