@@ -21,7 +21,8 @@ import { RootState } from "@/store";
 const ProfileScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter()
-  const actualUser = useSelector((state: RootState) => state.auth.user);
+  const actualUser = useSelector((state: RootState) => state.auth);
+  console.log("User from Redux store:", actualUser);
 
   const user = {
     name: "Gatete",

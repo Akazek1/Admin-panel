@@ -24,7 +24,10 @@ interface AuthState {
 
 // Initial state
 const initialState: AuthState = {
-  user: null,
+  user:
+    typeof window !== "undefined"
+      ? JSON.parse(localStorage.getItem("user") || "null")
+      : null,
   token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
   isAuthenticated:
     typeof window !== "undefined" ? !!localStorage.getItem("token") : false,
@@ -116,6 +119,7 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
+      // Verify OTP cases
       .addCase(verifyOtp.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
@@ -123,8 +127,16 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.otpSent = false;
         state.phoneNumber = null;
+
+        // Save user and token to localStorage
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user", JSON.stringify(action.payload.user));
+          localStorage.setItem("token", action.payload.token);
+        }
+
         toast.success("OTP verified successfully");
       })
+
       .addCase(verifyOtp.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
