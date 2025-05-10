@@ -1,35 +1,31 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   ChevronRight,
   CircleEllipsis,
   Verified,
-  MessageSquare, // for Share Feedback
+  MessageSquare,
+  Camera,
 } from "lucide-react";
 import { Icons } from "../icons";
 import { Separator } from "../ui/separator";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import Image from "next/image";
 import { logout } from "@/store/slices/auth-slice";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "@/store";
 import { useRouter } from "next/navigation";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
+import { updateUser } from "@/store/slices/auth-slice";
+import api from "@/lib/axios";
 
 const ProfileScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const router = useRouter()
-  const actualUser = useSelector((state: RootState) => state.auth);
-  console.log("User from Redux store:", actualUser);
+  const router = useRouter();
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-  const user = {
-    name: "Gatete",
-    email: "gatete@gmail.com",
-    image:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80",
-  };
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Menu items with Lucide icon components
   const menuItems = [
@@ -59,8 +55,56 @@ const ProfileScreen = () => {
 
   const handleLogout = async () => {
     await dispatch(logout());
-    router.push("/onboarding")
+    router.push("/onboarding");
   };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return; // Guard against no file or no user
+
+    setIsUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await api.patch("/users/profile/image", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Update user in Redux store with new profile URL
+      if (response.data.user && response.data.user.profileURL) {
+        dispatch(updateUser({
+          id: user.id,
+          phoneNumber: user.phoneNumber,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          userType: user.userType,
+          isProfileComplete: user.isProfileComplete,
+          isMobileVerified: user.isMobileVerified,
+          isEmailVerified: user.isEmailVerified,
+          profileURL: response.data.user.profileURL,
+        }));
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && (err as { response?: { data?: { message?: string } } }).response?.data?.message) {
+        setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || "An error occurred");
+      } else {
+        setError("Failed to update profile image");
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (!isAuthenticated || !user) {
+    router.push("/onboarding");
+    return null;
+  }
 
   return (
     <div className="bg-[#F1FCEF] px-6 py-11 space-y-6">
@@ -76,18 +120,39 @@ const ProfileScreen = () => {
       </div>
 
       {/* Profile Section */}
-      <div className="flex flex-col justify-center items-center gap-4">
-        <Avatar className="w-[120px] h-[120px]">
-          <AvatarImage src={user.image} className="object-cover" />
-        </Avatar>
+      <div className="flex flex-col justify-center items-center gap-4 relative">
+        <label htmlFor="profile-image" className="relative cursor-pointer group">
+          <Avatar className={`w-[120px] h-[120px] ${isUploading ? "animate-pulse" : ""}`}>
+            <AvatarImage
+              src={user.profileURL || "/images/user.png"}
+              className="object-cover"
+            />
+          </Avatar>
+          <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <Camera className="w-8 h-8 text-white" />
+          </div>
+          <input
+            id="profile-image"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageChange}
+            disabled={isUploading}
+          />
+        </label>
+        {error && (
+          <p className="text-red-500 text-sm">{error}</p>
+        )}
         <div className="flex-1">
           <div className="flex items-center justify-center gap-2">
             <h2 className="text-lg font-semibold text-[#1B2431]">
-              {user.name}
+              {user.firstName} {user.lastName}
             </h2>
-            <Verified className="w-5 h-5 fill-[#145B10] stroke-white" />
+            {user.isProfileComplete && (
+              <Verified className="w-5 h-5 fill-[#145B10] stroke-white" />
+            )}
           </div>
-          <p className="text-sm text-[#212121] font-bold">{user.email}</p>
+          <p className="text-sm text-center text-[#212121] font-bold">{user.email || user.phoneNumber}</p>
         </div>
       </div>
 
@@ -96,7 +161,7 @@ const ProfileScreen = () => {
       {/* Menu Items */}
       <div className="space-y-5">
         {menuItems.map((item) => {
-          const IconComponent = item.Icon; // Lucide icon component
+          const IconComponent = item.Icon;
           return (
             <Link
               key={item.name}

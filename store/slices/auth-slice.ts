@@ -95,6 +95,13 @@ const authSlice = createSlice({
     setPhoneNumber: (state, action: PayloadAction<string>) => {
       state.phoneNumber = action.payload;
     },
+    updateUser: (state, action: PayloadAction<AuthState["user"]>) => {
+      state.user = action.payload;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user", JSON.stringify(action.payload));
+      }
+      toast.success("Profile updated successfully");
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -119,7 +126,6 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      // Verify OTP cases
       .addCase(verifyOtp.fulfilled, (state, action) => {
         state.isLoading = false;
         state.isAuthenticated = true;
@@ -136,7 +142,6 @@ const authSlice = createSlice({
 
         toast.success("OTP verified successfully");
       })
-
       .addCase(verifyOtp.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
@@ -171,5 +176,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { resetAuthState, setPhoneNumber } = authSlice.actions;
+export const { resetAuthState, setPhoneNumber, updateUser } = authSlice.actions;
 export default authSlice.reducer;
