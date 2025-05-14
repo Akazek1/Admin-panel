@@ -16,7 +16,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Fixed Navigation */}
       {!shouldHideNavigation && (
-        <div className="max-w-[428px] fixed bottom-0 left-0 right-0 mx-auto w-full bg-white shadow-md">
+        <div className="max-w-[428px] fixed bottom-0 left-0 right-0 mx-auto w-full bg-white shadow-md z-20">
           <Navigation />
         </div>
       )}

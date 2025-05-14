@@ -14,7 +14,10 @@ const Header = () => {
       </div>
       <div className="flex items-center gap-6">
         <Icons.Language className="w-6 h-6 text-gray-500" />
-        <Icons.BellIcon className="w-5 h-5 text-green-600" />
+        <span className="relative">
+          <Icons.BellIcon className="w-5 h-5 text-green-600 z-0" />
+          <span className="bg-red-700 rounded-full w-1.5 h-1.5 absolute -top-0.5 right-1 z-10" />
+        </span>
       </div>
     </div>
   );

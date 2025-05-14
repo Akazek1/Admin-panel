@@ -8,6 +8,7 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { ChevronDown, Verified } from "lucide-react";
 import BackButtonHeader from "@/components/header/back-button-header";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ProfileImageUploader from "@/components/profile/profile-img-uloader";
 
 // Define a shared interface for common fields
 interface CommonProfile {
@@ -150,18 +151,7 @@ const GetHired: React.FC = () => {
         {userType === "individual" ? (
 
           <>
-            <Avatar className="w-[120px] h-[120px]">
-              <AvatarImage src={individualData.image} className="object-cover" />
-            </Avatar>
-            <div className="flex-1">
-              <div className="flex items-center justify-center gap-2">
-                <h2 className="text-lg font-semibold text-[#1B2431]">
-                  {individualData.name}
-                </h2>
-                <Verified className="w-5 h-5 fill-[#145B10] stroke-white" />
-              </div>
-              <p className="text-sm text-[#212121] font-bold">{individualData.email}</p>
-            </div>
+            <ProfileImageUploader />
           </>
         ) : (
           <>
@@ -182,7 +172,7 @@ const GetHired: React.FC = () => {
       </div>
 
       {/* Profile Details (Form with shadcn/ui Inputs) */}
-      <div className="">
+      <div className="pb-10">
         {userType === "individual" ? (
           // Individual Profile Form
           <div className="p-6">
@@ -198,7 +188,7 @@ const GetHired: React.FC = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Rwanda">Agency</SelectItem>
-                      <SelectItem value="USA">Agency</SelectItem>
+                      <SelectItem value="USA">Individual</SelectItem>
                       {/* Add more countries as needed */}
                     </SelectContent>
                   </Select>
@@ -282,21 +272,36 @@ const GetHired: React.FC = () => {
                 <Label>
                   Services Offered
                 </Label>
-                <Input
-                  id="servicesOffered"
-                  value={individualData.servicesOffered.join(", ") || ""}
-                  onChange={(e) => handleIndividualChange("servicesOffered", e.target.value)}
-                  className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                />
+                <div className="space-y-2">
+                  <Select
+                  >
+                    <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none  border-none focus:ring-[#145B10] ">
+                      <SelectValue placeholder="Select Service" />
+                      <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Electrician">Electrician</SelectItem>
+                      <SelectItem value="Baby Sitter">Baby Sitter</SelectItem>
+                      <SelectItem value="Painter">Painter</SelectItem>
+                      <SelectItem value="House Help">House Help</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-
-                <Input
-                  id="weekdaysHours"
-                  value={individualData.weekdaysHours || ""}
-                  onChange={(e) => handleIndividualChange("weekdaysHours", e.target.value)}
-                  className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                />
+              <div className="space-y-2">
+                <Select
+                >
+                  <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none  border-none focus:ring-[#145B10]">
+                    <SelectValue placeholder="Select Price" />
+                    <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1000-2000rwf/day">1000-2000rwf/day</SelectItem>
+                    <SelectItem value="3000-6000rwf/day">1000-3000rwf/day</SelectItem>
+                    <SelectItem value="3000-6000rwf/day">3000-6000rwf/day</SelectItem>
+                    <SelectItem value="3000-6000rwf/day">6000-10000rwf/day</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
 

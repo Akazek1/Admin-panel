@@ -101,6 +101,11 @@ const authSlice = createSlice({
           ...state.user,
           ...action.payload,
         };
+
+        // Update localStorage too
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user", JSON.stringify(state.user));
+        }
       }
     },
   },
