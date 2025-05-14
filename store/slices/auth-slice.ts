@@ -95,12 +95,13 @@ const authSlice = createSlice({
     setPhoneNumber: (state, action: PayloadAction<string>) => {
       state.phoneNumber = action.payload;
     },
-    updateUser: (state, action: PayloadAction<AuthState["user"]>) => {
-      state.user = action.payload;
-      if (typeof window !== "undefined") {
-        localStorage.setItem("user", JSON.stringify(action.payload));
+    updateUser(state, action: PayloadAction<Partial<AuthState["user"]>>) {
+      if (state.user) {
+        state.user = {
+          ...state.user,
+          ...action.payload,
+        };
       }
-      toast.success("Profile updated successfully");
     },
   },
   extraReducers: (builder) => {

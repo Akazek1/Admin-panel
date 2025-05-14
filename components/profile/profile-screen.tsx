@@ -74,21 +74,12 @@ const ProfileScreen = () => {
           "Content-Type": "multipart/form-data",
         },
       });
+      console.log(response.data.data.imageUrl);
+
 
       // Update user in Redux store with new profile URL
-      if (response.data.user && response.data.user.profileURL) {
-        dispatch(updateUser({
-          id: user.id,
-          phoneNumber: user.phoneNumber,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          userType: user.userType,
-          isProfileComplete: user.isProfileComplete,
-          isMobileVerified: user.isMobileVerified,
-          isEmailVerified: user.isEmailVerified,
-          profileURL: response.data.user.profileURL,
-        }));
+      if (response.data.data && response.data.data.imageUrl) {
+        dispatch(updateUser({ profileURL: response.data.data.imageUrl }));
       }
     } catch (err: unknown) {
       if (err instanceof Error && (err as { response?: { data?: { message?: string } } }).response?.data?.message) {
