@@ -19,7 +19,7 @@ export interface AuthResponse {
       firstName: string;
       lastName: string;
       email: string;
-      userType: string;
+      userType: "Customer" | "Service Provider" | "Agency";
       isProfileComplete: boolean;
       isMobileVerified: boolean;
       isEmailVerified: boolean;
@@ -39,12 +39,10 @@ const authService = {
     data: SendOtpRequest
   ): Promise<{ message: string; phoneNumber: string }> => {
     try {
-      console.log("Auth service sending OTP to:", data.phoneNumber);
       const response = await api.post<{ message: string; phoneNumber: string }>(
         "/auth/request-otp",
         data
       );
-      console.log("OTP send response:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error in sendOtp service:", error);

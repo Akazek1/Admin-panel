@@ -20,13 +20,11 @@ export function middleware(request: NextRequest) {
 
   // If trying to access a protected route without being logged in, redirect to onboarding
   if (isProtectedRoute && !isAuthenticated) {
-    console.log("Redirecting to onboarding: not authenticated");
     return NextResponse.redirect(new URL("/onboarding", request.url));
   }
 
   // If trying to access onboarding while logged in, redirect to home
   if (request.nextUrl.pathname === "/onboarding" && isAuthenticated) {
-    console.log("Redirecting to home: already authenticated");
     return NextResponse.redirect(new URL("/", request.url));
   }
 

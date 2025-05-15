@@ -1,6 +1,7 @@
 "use client";
-import React, { useState } from "react";
-import { ChevronDown, Loader2 } from "lucide-react";
+
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { ChevronDown, Loader2, CalendarIcon, Mail } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon, Mail } from "lucide-react";
 import BackButtonHeader from "@/components/header/back-button-header";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
@@ -19,15 +19,28 @@ import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
 
+// Interface for form data to ensure type safety
+interface FormData {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  email: string;
+  country: string;
+  phone: string;
+  gender: string;
+  languages: string[]; // Array for multi-select
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+}
+
 const EditProfile = () => {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
   const { user } = useSelector((state: RootState) => state.auth);
-  console.log("user in edit profile", user);
-  
 
-  // Initialize form with user data or defaults
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     firstName: user?.firstName || "",
     lastName: user?.lastName || "",
     dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split("T")[0] : "",
@@ -35,7 +48,7 @@ const EditProfile = () => {
     country: user?.country || "",
     phone: user?.phoneNumber || "",
     gender: user?.gender || "",
-    languages: user?.languages?.join(",") || "",
+    languages: user?.languages || [], // Initialize as array
     street: "",
     city: "",
     state: "",
@@ -44,23 +57,59 @@ const EditProfile = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Redirect if user is not authenticated
+  React.useEffect(() => {
+    if (!user) {
+      toast.error("User not authenticated");
+      router.push("/onboarding");
+    }
+  }, [user, router]);
 
   // Handle input changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for the field when user types
     setErrors((prev) => ({ ...prev, [name]: "" }));
-  };
+  }, []);
 
-  // Handle select changes
-  const handleSelectChange = (name: string, value: string) => {
+  // Handle select changes for non-array fields
+  const handleSelectChange = useCallback((name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: "" }));
-  };
+  }, []);
+
+  // Handle language selection
+  const handleLanguageChange = useCallback((language: string) => {
+    setFormData((prev) => {
+      const languages = prev.languages.includes(language)
+        ? prev.languages.filter((lang) => lang !== language)
+        : [...prev.languages, language];
+      return { ...prev, languages };
+    });
+    setErrors((prev) => ({ ...prev, languages: "" }));
+  }, []);
+
+  // Toggle dropdown
+  const toggleLanguageDropdown = useCallback(() => {
+    setIsLanguageDropdownOpen((prev) => !prev);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsLanguageDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Validate form data
-  const validateForm = () => {
+  const validateForm = useCallback(() => {
     const newErrors: { [key: string]: string } = {};
 
     if (!formData.firstName.trim()) {
@@ -82,19 +131,24 @@ const EditProfile = () => {
     if (!formData.gender) {
       newErrors.gender = "Gender is required";
     }
+    if (!formData.country) {
+      newErrors.country = "Country is required";
+    }
+    if (formData.languages.length === 0) {
+      newErrors.languages = "At least one language is required";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
+  }, [formData]);
+
+  if (!user) {
+    return null;
+  }
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      toast.error("User not authenticated");
-      router.push("/onboarding");
-      return;
-    }
 
     if (!validateForm()) {
       toast.error("Please fix the form errors");
@@ -113,43 +167,41 @@ const EditProfile = () => {
         email: formData.email,
         gender: formData.gender.toUpperCase(),
         dateOfBirth: new Date(formData.dateOfBirth).toISOString(),
-        languages: formData.languages
-          .split(",")
-          .map((lang) => lang.trim())
-          .filter(Boolean),
-        userType: user?.userType,
-        profilePicture: "/images/user.png",
-        // profilePicture: user.profileURL || null,
+        languages: formData.languages, // Already an array
+        userType: user.userType,
+        profilePicture: "",
       };
 
-      // Update profile
+      // Update profile via API
       const profileResponse = await api.post("/users/complete-profile", profilePayload);
-
-      const userData = profileResponse.data.data?.user || profileResponse.data;
+      const userData = profileResponse?.data?.data;
 
       // Update Redux store with response data
       const updatedUser = {
-        id: userData.data.id,
-        phoneNumber: userData.data.phoneNumber,
-        firstName: userData.data.firstName,
-        lastName: userData.data.lastName,
-        email: userData.data.email,
-        userType: userData.data.userType,
-        isProfileComplete: userData.data.isProfileComplete ?? user.isProfileComplete,
-        isMobileVerified: userData.data.isMobileVerified ?? user.isMobileVerified,
-        isEmailVerified: userData.data.isEmailVerified ?? user.isEmailVerified,
-        profileURL: userData.data.profilePicture ?? user.profileURL,
-        gender: userData.data.gender,
-        dateOfBirth: userData.data.dateOfBirth,
-        languages: userData.data.languages,
+        id: userData.id,
+        phoneNumber: userData.phoneNumber,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        email: userData.email,
+        userType: userData.userType,
+        isProfileComplete: userData.isProfileComplete ?? user.isProfileComplete,
+        isMobileVerified: userData.isMobileVerified ?? user.isMobileVerified,
+        isEmailVerified: userData.isEmailVerified ?? user.isEmailVerified,
+        profileURL: userData.profilePicture ?? user.profileURL,
+        gender: userData.gender,
+        dateOfBirth: userData.dateOfBirth,
+        languages: userData.languages,
+        country: userData.country,
       };
 
       dispatch(updateUser(updatedUser));
 
       toast.success("Profile updated successfully");
-      // router.push("/profile");
+      router.push("/profile");
     } catch (err: unknown) {
-      const errorMessage = (err as unknown as { response?: { data?: { message?: string } } })?.response?.data?.message || "Failed to update profile";
+      const errorMessage =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Failed to update profile";
       setErrors({ form: errorMessage });
       toast.error(errorMessage);
     } finally {
@@ -157,10 +209,13 @@ const EditProfile = () => {
     }
   };
 
+  // Available languages
+  const availableLanguages = ["Kinyarwanda", "English", "French", "Swahili"];
+
   return (
-    <div className="bg-[#F1FCEF] px-6 py-11 space-y-6">
+    <div className="bg-[#F1FCEF] px-6 py-11 space-y-6 min-h-screen">
       {/* Header */}
-      <BackButtonHeader text="Edit Profile" />
+      <BackButtonHeader text="Edit Profile" backHref="/profile" />
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6 pb-4">
@@ -171,12 +226,10 @@ const EditProfile = () => {
             name="firstName"
             value={formData.firstName}
             onChange={handleChange}
-            className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10] ${errors.firstName ? "border-red-500" : ""}`}
+            className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.firstName ? "border-red-500" : "border-none"} focus:ring-[#145B10]`}
             placeholder="Enter first name"
           />
-          {errors.firstName && (
-            <p className="text-red-500 text-sm">{errors.firstName}</p>
-          )}
+          {errors.firstName && <p className="text-red-500 text-sm">{errors.firstName}</p>}
         </div>
 
         {/* Last Name */}
@@ -187,7 +240,7 @@ const EditProfile = () => {
             value={formData.lastName}
             onChange={handleChange}
             className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-            placeholder="Enter last name(Optional)"
+            placeholder="Enter last name (Optional)"
           />
         </div>
 
@@ -200,13 +253,11 @@ const EditProfile = () => {
               type="date"
               value={formData.dateOfBirth}
               onChange={handleChange}
-              className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] pl-10 focus:outline-none border-none focus:ring-[#145B10] ${errors.dateOfBirth ? "border-red-500" : ""}`}
+              className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] pl-10 focus:outline-none border ${errors.dateOfBirth ? "border-red-500" : "border-none"} focus:ring-[#145B10]`}
             />
             <CalendarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           </div>
-          {errors.dateOfBirth && (
-            <p className="text-red-500 text-sm">{errors.dateOfBirth}</p>
-          )}
+          {errors.dateOfBirth && <p className="text-red-500 text-sm">{errors.dateOfBirth}</p>}
         </div>
 
         {/* Email */}
@@ -218,14 +269,12 @@ const EditProfile = () => {
               type="email"
               value={formData.email}
               onChange={handleChange}
-              className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] pl-10 focus:outline-none border-none focus:ring-[#145B10] ${errors.email ? "border-red-500" : ""}`}
+              className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] pl-10 focus:outline-none border ${errors.email ? "border-red-500" : "border-none"} focus:ring-[#145B10]`}
               placeholder="Enter email"
             />
             <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           </div>
-          {errors.email && (
-            <p className="text-red-500 text-sm">{errors.email}</p>
-          )}
+          {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
         </div>
 
         {/* Country */}
@@ -234,9 +283,12 @@ const EditProfile = () => {
             value={formData.country}
             onValueChange={(value) => handleSelectChange("country", value)}
           >
-            <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]">
+            <SelectTrigger
+              id="country"
+              className={`relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.country ? "border-red-500" : "border-none"} focus:ring-[#145B10]`}
+            >
               <SelectValue placeholder="Select country" />
-              <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
+              <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-180 transition ease-in duration-200" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Rwanda">Rwanda</SelectItem>
@@ -245,6 +297,7 @@ const EditProfile = () => {
               <SelectItem value="India">India</SelectItem>
             </SelectContent>
           </Select>
+          {errors.country && <p className="text-red-500 text-sm">{errors.country}</p>}
         </div>
 
         {/* Phone Number */}
@@ -254,12 +307,10 @@ const EditProfile = () => {
             name="phone"
             value={formData.phone}
             onChange={handleChange}
-            className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10] ${errors.phone ? "border-red-500" : ""}`}
+            className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.phone ? "border-red-500" : "border-none"} focus:ring-[#145B10]`}
             placeholder="Enter phone number"
           />
-          {errors.phone && (
-            <p className="text-red-500 text-sm">{errors.phone}</p>
-          )}
+          {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
         </div>
 
         {/* Gender */}
@@ -268,9 +319,12 @@ const EditProfile = () => {
             value={formData.gender}
             onValueChange={(value) => handleSelectChange("gender", value)}
           >
-            <SelectTrigger className={`bg-white relative text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10] ${errors.gender ? "border-red-500" : ""}`}>
+            <SelectTrigger
+              id="gender"
+              className={`relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.gender ? "border-red-500" : "border-none"} focus:ring-[#145B10]`}
+            >
               <SelectValue placeholder="Select gender" />
-              <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
+              <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-180 transition ease-in duration-200" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="MALE">Male</SelectItem>
@@ -278,21 +332,39 @@ const EditProfile = () => {
               <SelectItem value="OTHER">Other</SelectItem>
             </SelectContent>
           </Select>
-          {errors.gender && (
-            <p className="text-red-500 text-sm">{errors.gender}</p>
-          )}
+          {errors.gender && <p className="text-red-500 text-sm">{errors.gender}</p>}
         </div>
 
         {/* Languages Spoken */}
-        <div className="space-y-2">
-          <Input
-            id="languages"
-            name="languages"
-            value={formData.languages}
-            onChange={handleChange}
-            className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-            placeholder="Enter languages (comma-separated)"
-          />
+        <div className="space-y-2 relative" ref={dropdownRef}>
+          <div
+            onClick={toggleLanguageDropdown}
+            className={`relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.languages ? "border-red-500" : "border-none"} focus:ring-[#145B10] cursor-pointer flex items-center justify-between`}
+          >
+            <span>
+              {formData.languages.length > 0 ? formData.languages.join(", ") : "Select languages"}
+            </span>
+            <ChevronDown
+              className={`w-5 h-5 text-black fill-black transition-transform duration-200 ${isLanguageDropdownOpen ? "rotate-180" : ""}`}
+            />
+          </div>
+          {isLanguageDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {availableLanguages.map((language) => (
+                <div
+                  key={language}
+                  onClick={() => handleLanguageChange(language)}
+                  className="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100"
+                >
+                  <span className="flex-1">{language}</span>
+                  {formData.languages.includes(language) && (
+                    <span className="text-green-500 ml-2">✓</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {errors.languages && <p className="text-red-500 text-sm">{errors.languages}</p>}
         </div>
 
         {/* Address Fields */}

@@ -11,6 +11,7 @@ import {
   getCurrentUser,
   resetAuthState,
   setPhoneNumber,
+  updateUser,
 } from "@/store/slices/auth-slice";
 import type { SendOtpRequest, VerifyOtpRequest } from "@/services/auth-service";
 import { toast } from "react-hot-toast";
@@ -74,14 +75,11 @@ export const useAuth = () => {
 
       const result = await dispatch(verifyOtp(data)).unwrap();
 
-      // Force a page reload to ensure cookies are properly recognized
-      if (result && result.token) {
-        setTimeout(() => {
-          router.push("/");
-        }, 500);
+      if (result.token) {
+        return true;
+      } else {
+        toast.error("Invalid OTP please try again.");
       }
-
-      return true;
     } catch (error) {
       console.error("OTP verification failed:", error);
       return false;
@@ -92,6 +90,59 @@ export const useAuth = () => {
   const handleLogout = async () => {
     await dispatch(logout());
     router.push("/onboarding"); // Redirect to onboarding page after logout
+  };
+
+  // Update user profile with userType locally
+  const updateUserProfile = async (data: { userType: string }) => {
+    try {
+      if (!data.userType) {
+        toast.error("User type is required");
+        return false;
+      }
+
+      // Validate userType
+      const validUserTypes = ["Customer", "Service Provider", "Agency"];
+      if (!validUserTypes.includes(data.userType.charAt(0).toUpperCase() + data.userType.slice(1))) {
+        toast.error("Invalid user type");
+        return false;
+      }
+
+      // Prevent duplicate requests
+      if (isLoading) {
+        toast.error("Please wait, another request is in progress");
+        return false;
+      }
+
+      // Update Redux store with new user data
+      dispatch(
+        updateUser({
+          userType: data.userType as "Customer" | "Service Provider" | "Agency",
+          isProfileComplete: true, // Assume profile is complete after setting userType
+        })
+      );
+
+      // Update localStorage
+      if (typeof window !== "undefined" && user) {
+        const updatedUser = {
+          ...user,
+          userType: data.userType,
+          isProfileComplete: true,
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      } else {
+        toast.error("User data not found");
+        return false;
+      }
+
+      toast.success("User profile updated successfully");
+      return true;
+    } catch (error) {
+      const err = error as Error;
+      const message = err.message || "Failed to update user profile";
+      console.error("Error updating user profile:", error);
+      toast.error(message);
+      return false;
+    }
   };
 
   // Reset auth state (clear errors)
@@ -109,6 +160,7 @@ export const useAuth = () => {
     sendOtp: handleSendOtp,
     verifyOtp: handleVerifyOtp,
     logout: handleLogout,
+    updateUserProfile,
     resetAuth,
     setPhoneNumber: (phone: string) => dispatch(setPhoneNumber(phone)),
   };

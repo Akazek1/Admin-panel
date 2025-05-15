@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { motion, AnimatePresence } from "framer-motion"
@@ -49,25 +48,25 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     buttonText: "Next",
   },
   {
-    title: "Get services by HWA's verified professionals.",
+    title: "Enter your phone number",
     image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=800",
     bgColor: "bg-[#1B5E20]",
     textColor: "text-white",
-    buttonText: "Next",
+    buttonText: "Send OTP",
   },
   {
-    title: "Get services by HWA's verified professionals.",
+    title: "Enter Verification Code",
     image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=800",
     bgColor: "bg-[#1B5E20]",
     textColor: "text-white",
-    buttonText: "Submit",
+    buttonText: "Verify",
   },
   {
-    title: "",
+    title: "Select your role",
     image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=800",
     bgColor: "bg-[#1B5E20]",
     textColor: "text-white",
-    buttonText: "Submit",
+    buttonText: "Get Started",
   },
 ]
 
@@ -77,11 +76,12 @@ const OnboardingPage = () => {
   const [isVerified, setIsVerified] = useState(false)
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""))
   const [phoneNumber, setPhoneNumber] = useState("")
-  const [userType, setUserType] = useState("customer")
+  const [userType, setUserType] = useState("")
+  const [errors, setErrors] = useState<{ userType?: string }>({})
   const inputsRef = useRef<Array<HTMLInputElement | null>>(Array(CODE_LENGTH).fill(null))
 
   const router = useRouter()
-  const { sendOtp, verifyOtp, isLoading } = useAuth()
+  const { sendOtp, verifyOtp, updateUserProfile, isLoading } = useAuth()
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -93,36 +93,29 @@ const OnboardingPage = () => {
   }, [])
 
   const handleChange = (value: string, index: number) => {
-    // Only accept numeric input
     const numericValue = value.replace(/[^0-9]/g, "")
-
     const newCode = [...code]
     newCode[index] = numericValue.slice(-1)
     setCode(newCode)
 
-    // Auto-focus to next input if a digit was entered
     if (numericValue && index < CODE_LENGTH - 1) {
       setTimeout(() => {
         inputsRef.current[index + 1]?.focus()
       }, 10)
     }
 
-    // If all digits are filled, verify the OTP
     if (newCode.every((val) => val) && newCode.join("").length === CODE_LENGTH) {
       const finalCode = newCode.join("")
-      console.log("Code entered:", finalCode)
       handleVerifyOtp(finalCode)
     }
   }
 
-  // Handle backspace key event
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
     if (e.key === "Backspace" && !code[index] && index > 0) {
       inputsRef.current[index - 1]?.focus()
     }
   }
 
-  // Handle paste event
   const handlePaste = (e: React.ClipboardEvent) => {
     const pasteData = e.clipboardData.getData("text").slice(0, CODE_LENGTH).split("")
     const newCode = [...code]
@@ -137,31 +130,25 @@ const OnboardingPage = () => {
 
     if (pasteData.length === CODE_LENGTH) {
       const finalCode = pasteData.join("")
-      console.log("Code entered:", finalCode)
       handleVerifyOtp(finalCode)
     }
 
     e.preventDefault()
   }
 
-  // Send OTP function
   const handleSendOtp = async () => {
-    // Validate phone number (optional, adjust length as needed)
     if (!phoneNumber || phoneNumber.length < 9) {
       toast.error("Please enter a valid phone number (at least 9 digits)")
       return
     }
 
-    // Remove any country code (e.g., +250, +91, etc.) and non-digit characters
     const cleanedPhoneNumber = phoneNumber.replace(/^\+\d{1,4}/, "").replace(/\D/g, "")
 
-    // Optional: Additional validation for cleaned number
     if (cleanedPhoneNumber.length < 9) {
       toast.error("Phone number is too short after removing country code")
       return
     }
 
-    // Send the cleaned phone number (without country code) to the backend
     const success = await sendOtp({ phoneNumber: cleanedPhoneNumber })
 
     if (success) {
@@ -178,18 +165,16 @@ const OnboardingPage = () => {
     }
   }
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep === 3) {
-      // Phone number step
-      handleSendOtp()
+      await handleSendOtp()
       return
     }
 
-    if (currentStep === 4 && !isVerified) {
-      // OTP verification step
+    if (currentStep === 4) {
       const otpCode = code.join("")
       if (otpCode.length === CODE_LENGTH) {
-        handleVerifyOtp(otpCode)
+        await handleVerifyOtp(otpCode)
       } else {
         toast.error("Please enter the complete verification code")
       }
@@ -197,8 +182,18 @@ const OnboardingPage = () => {
     }
 
     if (currentStep === 5) {
-      // Final step - complete onboarding with user type
-      router.push("/")
+      if (!userType) {
+        setErrors({ userType: "Please select a user type" })
+        toast.error("Please select a user type")
+        return
+      }
+
+      const success = await updateUserProfile({ userType })
+      if (success) {
+        router.push("/")
+      } else {
+        toast.error("Failed to update user profile")
+      }
       return
     }
 
@@ -316,9 +311,6 @@ const OnboardingPage = () => {
                 onChange={(e) => {
                   const value = e.target.value.replace(/\D/g, "")
                   setPhoneNumber(value)
-
-                  // Don't automatically send OTP when length reaches 10
-                  // Just focus the button to make it easier to submit
                   if (value.length === 10) {
                     document.querySelector("button")?.focus()
                   }
@@ -343,7 +335,7 @@ const OnboardingPage = () => {
             <span className="flex flex-col items-center gap-2 mb-8">
               <h2 className="font-bold text-3xl text-[#212121]">Enter Verification Code</h2>
               <p className="text-sm font-bold text-center text-[#212121]">
-                We have sent you a 4 digit verification code on your registered mobile
+                We have sent a {CODE_LENGTH} digit verification code to your registered mobile
               </p>
             </span>
             <div onPaste={handlePaste} className="flex gap-1">
@@ -367,15 +359,18 @@ const OnboardingPage = () => {
         )
       case 5:
         return (
-          <>
-            <div className="h-full flex flex-col items-center justify-center gap-[13px]">
+          <div className="flex flex-col items-center gap-10 w-full">
+            <div className="flex flex-col items-center gap-2">
               <GreenAppIcon />
-              {renderImage(287, 287)}
             </div>
-            <div className="mt-14 w-full">
-              <Select value={userType} onValueChange={setUserType}>
-                <SelectTrigger className="w-full py-4 border border-black rounded-xl overflow-hidden">
-                  <SelectValue placeholder="Select User Type" className="text-black" />
+            {renderImage(287, 287)}
+            <div className="w-full">
+              <Select value={userType} onValueChange={(value) => {
+                setUserType(value)
+                setErrors({})
+              }}>
+                <SelectTrigger className={`w-full py-4 border rounded-xl ${errors.userType ? "border-red-500" : "border-black"} overflow-hidden`}>
+                  <SelectValue placeholder="Select your role" className="text-black" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="customer">Customer</SelectItem>
@@ -383,8 +378,9 @@ const OnboardingPage = () => {
                   <SelectItem value="agency">Agency</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.userType && <p className="text-red-500 text-sm mt-2">{errors.userType}</p>}
             </div>
-          </>
+          </div>
         )
       default:
         return null
@@ -447,8 +443,7 @@ const OnboardingPage = () => {
         {ONBOARDING_STEPS.map((_, index) => (
           <div
             key={index}
-            className={`h-2 rounded-full ${index === currentStep ? "bg-[#1B5E20] w-8 transition transform 1s" : "bg-[#E0E0E0] w-2"
-              }`}
+            className={`h-2 rounded-full ${index === currentStep ? "bg-[#1B5E20] w-8 transition transform 1s" : "bg-[#E0E0E0] w-2"}`}
           />
         ))}
       </div>

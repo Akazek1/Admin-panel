@@ -82,7 +82,6 @@ const Page = () => {
   };
 
   const handleSlotConfirm = (selectedDate: string, selectedTime: string) => {
-    console.log("Selected Slot:", { date: selectedDate, time: selectedTime });
     // Navigation is handled in SlotSelectionDialog, but you can add additional logic here if needed
   };
 

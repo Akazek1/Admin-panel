@@ -18,8 +18,6 @@ const ProfileImageUploader: React.FC<ProfileImageUploaderProps> = ({
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { user } = useSelector((state: RootState) => state.auth);
-    console.log(user);
-
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

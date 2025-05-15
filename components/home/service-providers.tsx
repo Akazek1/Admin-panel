@@ -203,7 +203,7 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
           initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.3 } }}
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-4 pb-8"
         >
           {filteredProviders.length > 0 ? (
             filteredProviders.map((provider) => (
