@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ProfileImageUploader from "@/components/profile/profile-img-uloader";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
+import { Button } from "@/components/ui/button";
 
 interface CommonProfile {
   name: string;
@@ -174,7 +175,7 @@ const GetHired: React.FC = () => {
 
       {/* Profile Details (Form with shadcn/ui Inputs) */}
       <div className="pb-10">
-        {userType === "individual" ? (
+        {user?.userType === "Individual" ? (
           // Individual Profile Form
           <div className="p-6">
             <div className="space-y-6">
@@ -400,6 +401,14 @@ const GetHired: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
+              <Button
+                size="lg"
+                type="submit"
+                className="w-full bg-[#167021] text-white rounded-full font-bold leading-6 py-[18px] px-4 h-full hover:bg-[#0F4D0C] transition-colors"
+
+              >
+                Update
+              </Button>
             </div>
           </div>
         ) : (

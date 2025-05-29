@@ -2,20 +2,33 @@
 
 import { usePathname } from "next/navigation";
 import { Icons } from "@/components/icons";
-import { navItems } from "@/constant"; // Adjust the import path as needed
+import { navItems as defaultNavItems } from "@/constant"; // Keep this immutable
 import Link from "next/link";
 import { NavItem } from "@/types";
+import { RootState } from "@/store";
+import { useSelector } from "react-redux";
 
 const Navigation = () => {
-  const pathname = usePathname(); // Get the current route
+  const pathname = usePathname();
+  const { user } = useSelector((state: RootState) => state.auth);
+
+  // Dynamically adjust nav items based on user type
+  const navItems: NavItem[] = defaultNavItems.map((item) => {
+    if (item.title === "Get Hired" && user?.userType?.toLowerCase() === "individual") {
+      return {
+        ...item,
+        title: "Request Service",
+        url: "/request-service"
+      };
+    }
+    return item;
+  });
 
   const isActive = (item: NavItem): boolean => {
     if (item.matchPattern) {
-      // Check if the current pathname matches the pattern (e.g., "/profile/*")
-      const pattern = item.matchPattern.replace("/*", ""); // Remove the "/*" for matching
+      const pattern = item.matchPattern.replace("/*", "");
       return pathname.startsWith(pattern);
     }
-    // For items without a matchPattern, check exact URL match
     return pathname === item.url;
   };
 
@@ -30,15 +43,13 @@ const Navigation = () => {
             <Link
               key={item.title}
               href={item.url}
-              className={`flex flex-col items-center text-[10px] leading-3 w-16 ${
-                isActiveNav ? "text-[#167021] font-semibold" : "text-[#9E9E9E]"
-              }`}
+              className={`flex flex-col items-center text-[10px] leading-3 w-20 ${isActiveNav ? "text-[#167021] font-semibold" : "text-[#9E9E9E]"
+                }`}
             >
               {IconComponent && (
                 <IconComponent
-                  className={`w-6 h-6 ${
-                    isActiveNav ? "stroke-white fill-[#145B10]" : "stroke-[#9E9E9E]"
-                  }`}
+                  className={`w-6 h-6 ${isActiveNav ? "stroke-white fill-[#145B10]" : "stroke-[#9E9E9E]"
+                    }`}
                 />
               )}
               <span>{item.title}</span>

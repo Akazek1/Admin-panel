@@ -100,24 +100,39 @@ export const useAuth = () => {
         return false;
       }
 
-      // Validate userType
-      const validUserTypes = ["Customer", "Service Provider", "Agency"];
-      if (!validUserTypes.includes(data.userType.charAt(0).toUpperCase() + data.userType.slice(1))) {
+      // Normalize userType input (capitalize each word)
+      const toTitleCase = (str: string) =>
+        str
+          .toLowerCase()
+          .split(" ")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" ");
+
+      const normalizedUserType = toTitleCase(data.userType.trim());
+
+      const validUserTypes = [
+        "Individual",
+        "Agency",
+      ] as const;
+
+      if (
+        !validUserTypes.includes(
+          normalizedUserType as (typeof validUserTypes)[number]
+        )
+      ) {
         toast.error("Invalid user type");
         return false;
       }
 
-      // Prevent duplicate requests
       if (isLoading) {
         toast.error("Please wait, another request is in progress");
         return false;
       }
 
-      // Update Redux store with new user data
       dispatch(
         updateUser({
-          userType: data.userType as "Customer" | "Service Provider" | "Agency",
-          isProfileComplete: true, // Assume profile is complete after setting userType
+          userType: normalizedUserType as (typeof validUserTypes)[number],
+          isProfileComplete: true,
         })
       );
 
@@ -125,7 +140,7 @@ export const useAuth = () => {
       if (typeof window !== "undefined" && user) {
         const updatedUser = {
           ...user,
-          userType: data.userType,
+          userType: normalizedUserType,
           isProfileComplete: true,
         };
         localStorage.setItem("user", JSON.stringify(updatedUser));

@@ -19,7 +19,7 @@ export interface AuthResponse {
       firstName: string;
       lastName: string;
       email: string;
-      userType: "Customer" | "Service Provider" | "Agency";
+      userType: "Individual" | "Agency";
       isProfileComplete: boolean;
       isMobileVerified: boolean;
       isEmailVerified: boolean;

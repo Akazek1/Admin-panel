@@ -370,11 +370,10 @@ const OnboardingPage = () => {
                 setErrors({})
               }}>
                 <SelectTrigger className={`w-full py-4 border rounded-xl ${errors.userType ? "border-red-500" : "border-black"} overflow-hidden`}>
-                  <SelectValue placeholder="Select your role" className="text-black" />
+                  <SelectValue placeholder="Individual" className="text-black" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="provider">Service Provider</SelectItem>
+                  <SelectItem value="individual">Individual</SelectItem>
                   <SelectItem value="agency">Agency</SelectItem>
                 </SelectContent>
               </Select>

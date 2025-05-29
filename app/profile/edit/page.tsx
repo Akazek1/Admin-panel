@@ -168,7 +168,8 @@ const EditProfile = () => {
         gender: formData.gender.toUpperCase(),
         dateOfBirth: new Date(formData.dateOfBirth).toISOString(),
         languages: formData.languages, // Already an array
-        userType: user.userType,
+        userType: user.userType === "Agency" ? "AGENCY" : "INDIVIDUAL",
+        // userType: user.userType,
         profilePicture: "",
       };
 

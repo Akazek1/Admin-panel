@@ -8,12 +8,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import SearchResults from "@/components/search/search-result";
 import SearchBar from "@/components/search/search";
 import { lazy } from "react";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 const ServiceProvider = lazy(() => import("@/components/home/service-providers"));
 
 const HomeContent = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useSelector((state: RootState) => state.auth);  
 
   const handleSearch = (query: string) => {
     setSearchQuery(query); // Update the query, even if empty
@@ -47,14 +50,21 @@ const HomeContent = () => {
             transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             <div className="space-y-6">
-              <Header />
-              <SearchBar
-                onSearch={handleSearch}
-                placeholder="Search baby sitter, carpenter etc"
-              />
-              <PromoBanner />
-              <Categories />
-              <PopulerService />
+              {
+                user?.userType === "Individual"
+                &&
+                <>
+                  <Header />
+                  <SearchBar
+                    onSearch={handleSearch}
+                    placeholder="Search baby sitter, carpenter etc"
+                  />
+                  <PromoBanner />
+                  <Categories />
+                  <PopulerService />
+                </>
+              }
+
               <ServiceProvider showHeader={true} />
             </div>
           </motion.div>
