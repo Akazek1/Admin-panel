@@ -76,7 +76,7 @@ export const useAuth = () => {
       const result = await dispatch(verifyOtp(data)).unwrap();
 
       if (result.token) {
-        return true;
+        return result.user;
       } else {
         toast.error("Invalid OTP please try again.");
       }

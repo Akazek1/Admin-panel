@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import {
+  Briefcase,
   ChevronRight,
   CircleEllipsis,
   MessageSquare,
@@ -22,6 +23,11 @@ const ProfileScreen = () => {
 
   const menuItems = [
     { name: "Edit Profile", Icon: Icons.UserIcon, href: "/profile/edit" },
+    {
+      name: "Get Hired",
+      Icon: Briefcase,
+      href: "/profile/get-hired"
+    },
     { name: "Transactions", Icon: Icons.WalletIcon, href: "/profile/transactions" },
     { name: "Order History", Icon: Icons.OrderHistoryIcon, href: "/profile/orders" },
     { name: "Address Book", Icon: Icons.BookIcon, href: "/profile/address-book" },

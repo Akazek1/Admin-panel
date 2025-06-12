@@ -6,6 +6,7 @@ import api from "@/lib/axios";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
 import { updateUser } from "@/store/slices/auth-slice";
+import { toast } from "react-hot-toast";
 
 type ProfileImageUploaderProps = {
     className?: string;
@@ -21,14 +22,18 @@ const ProfileImageUploader: React.FC<ProfileImageUploaderProps> = ({
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !user?.id) return;
+        if (!file || !user?.id) {
+            setError("No file selected or user not authenticated");
+            toast.error("Please select an image and ensure you are logged in");
+            return;
+        }
 
         setIsUploading(true);
         setError(null);
 
         try {
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("avatar", file);
 
             const response = await api.patch("/users/profile/image", formData, {
                 headers: {
@@ -38,13 +43,17 @@ const ProfileImageUploader: React.FC<ProfileImageUploaderProps> = ({
 
             if (response.data.data?.imageUrl) {
                 dispatch(updateUser({ profileURL: response.data.data.imageUrl }));
+                toast.success("Profile image updated successfully");
+            } else {
+                throw new Error("No image URL returned from server");
             }
         } catch (err: unknown) {
-            if (err instanceof Error && (err as { response?: { data?: { message?: string } } })?.response?.data?.message) {
-                setError((err as { response?: { data?: { message?: string } } }).response?.data?.message || "An error occurred");
-            } else {
-                setError("Failed to update profile image");
-            }
+            const errorMessage =
+                (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+                "Failed to update profile image";
+            console.error("Error updating profile image:", err);
+            setError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setIsUploading(false);
         }
@@ -69,7 +78,7 @@ const ProfileImageUploader: React.FC<ProfileImageUploaderProps> = ({
                 />
             </label>
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center gap-2">
                 <h2 className="text-xl font-bold text-[#1B2431] leading-[120%]">
                     {user?.firstName} {user?.lastName}
                 </h2>

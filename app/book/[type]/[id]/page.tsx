@@ -1,18 +1,21 @@
-// pages/book/[type]/[id].tsx
 "use client";
 import BackButtonHeader from "@/components/header/back-button-header";
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Languages, MapPin, MessageCircleMore, Phone, Share, Star } from "lucide-react";
 import ServiceProvider from "@/components/home/service-providers";
 import { motion } from "framer-motion";
 import SlotSelectionDialog from "@/components/slot-selection-dialog";
+import {  useParams } from "next/navigation";
+import api from "@/lib/axios";
+import toast from "react-hot-toast";
+import { Loader2 } from "lucide-react";
 
-// Define the provider interface
+// Define the provider interface (aligned with ServiceProvider)
 interface Provider {
-  id: number;
+  id: string; // Changed to string
   image: string;
   name: string;
   title: string;
@@ -28,24 +31,29 @@ interface Provider {
   type: string;
 }
 
-const providers: Provider = {
-  id: 1,
-  image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
-  name: "Akaliza Mukumbu",
-  title: "Baby Sitter",
-  experience: "5 Years of Experience",
-  languages: "English, Kinyarwanda, Swahili, French",
-  location: "Nyamirambo, Kigali",
-  price: "3000-5000 rwf/day",
-  rating: 4.8,
-  reviews: 8289,
-  distance: "2 miles",
-  available: true,
-  verified: true,
-  type: "Professional",
-};
+// Define the service interface (aligned with ServiceProvider)
+interface Service {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  provider: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    userType: "AGENCY" | "INDIVIDUAL";
+  };
+  worker?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
 
-// Sample review data
+// Sample review data (unchanged)
 const reviews = [
   {
     name: "Morgane Fike",
@@ -59,7 +67,7 @@ const reviews = [
   },
 ];
 
-// Sample date and time data
+// Sample date and time data (unchanged)
 const availableDates = [
   { day: "Tue", date: 18 },
   { day: "Wed", date: 19 },
@@ -67,30 +75,101 @@ const availableDates = [
   { day: "Fri", date: 21 },
 ];
 
-const availableTimes = ["10:00am", "10:00am", "10:00am", "10:00am", "10:00am", "10:00am", "10:00am"];
+const availableTimes = ["10:00am", "10:59am", "12:00pm", "1:00pm", "2:00pm", "3:00pm", "4:00pm"];
 
 const Page = () => {
-  const [bookMark, setBookMark] = useState<number[]>([]);
+  const router = useParams();
+  const id = router.id as string; // Get the service ID from the URL
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>();
+  const [bookmarks, setBookmarks] = useState<string[]>([]); // Changed to string[]
 
-  const handleBookMark = (id: number) => {
-    setBookMark(
-      (prevBookmarked) =>
-        prevBookmarked.includes(id)
-          ? prevBookmarked.filter((itemId) => itemId !== id)
-          : [...prevBookmarked, id]
+  // Fetch service details from API
+  useEffect(() => {
+    const fetchService = async () => {
+      if (!id || typeof id !== "string") {
+        setError("Invalid service ID");
+        setLoading(false);
+        toast.error("Invalid service ID");
+        return;
+      }
+
+      try {
+        const response = await api.get(`/services/${id}`);
+        const service: Service = response.data.data;
+
+        // Map service to provider (similar to ServiceProvider)
+        const mappedProvider: Provider = ({
+          id: service.id,
+          image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
+          name: `${service.provider.firstName} ${service.provider.lastName}`,
+          title: service.title,
+          experience: service.description || "No experience provided",
+          languages: "English, Kinyarwanda, Swahili, French",
+          location: "Nyamirambo, Kigali",
+          price: `${service.price} RWF/day`,
+          rating: 4.8,
+          reviews: 8289,
+          distance: "2 miles",
+          available: true,
+          verified: true,
+          type: service.provider.userType === "AGENCY" ? "Agency" : "Professional",
+        });
+
+        setProvider(mappedProvider);
+        setError(null);
+      } catch (err) {
+        const message = (err as Error).message || "Failed to fetch service details";
+        setError(message);
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchService();
+  }, [id]);
+
+  const handleBookMark = (id: string) => {
+    setBookmarks((prev) =>
+      prev.includes(id)
+        ? prev.filter((item) => item !== id)
+        : [...prev, id]
     );
   };
 
   const handleSlotConfirm = (selectedDate: string, selectedTime: string) => {
     console.log("Selected Slot:", { date: selectedDate, time: selectedTime });
-    // Navigation is handled in SlotSelectionDialog, but you can add additional logic here if needed
+    // Additional logic can be handled in SlotSelectionDialog
   };
+
+  // Render loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-6 h-6 animate-spin text-[#145B10]" />
+      </div>
+    );
+  }
+
+  // Render error state
+  if (error || !provider) {
+    return (
+      <div className="p-6">
+        <BackButtonHeader text="Service Details" backHref="/" />
+        <div className="text-center text-red-500 py-4">
+          {error || "Service not found"}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
       <BackButtonHeader text="Service Details" backHref="/" />
 
-      <main className="flex-1  overflow-y-auto">
+      <main className="flex-1 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, y: "50vh" }}
           animate={{ opacity: 1, y: 0 }}
@@ -102,23 +181,23 @@ const Page = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Avatar className="w-[78px] h-[78px]">
-                  <AvatarImage src={providers.image} />
-                  <AvatarFallback>{providers.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={provider.image} />
+                  <AvatarFallback>{provider.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start">
                   <h2 className="text-lg font-semibold text-[#1B2431]">
-                    {providers.name}
+                    {provider.name}
                   </h2>
                   <p className="text-sm text-[#212121] font-bold">
-                    {providers.title}
+                    {provider.title}
                   </p>
                 </div>
               </div>
-              <span onClick={() => handleBookMark(providers.id)}>
+              <span onClick={() => handleBookMark(provider.id)}>
                 <Icons.BookMarkIcon
-                  className={`w-6 h-6 cursor-pointer ${bookMark.includes(providers.id)
-                    ? "fill-[#145B10] stroke-white"
-                    : "stroke-[#145B10] hover:stroke-green-600"
+                  className={`w-6 h-6 cursor-pointer ${bookmarks.includes(provider.id)
+                      ? "fill-[#145B10] stroke-white"
+                      : "stroke-[#145B10] hover:stroke-green-600"
                     }`}
                 />
               </span>
@@ -126,19 +205,19 @@ const Page = () => {
 
             <div className="space-y-3">
               <p className="flex items-center gap-2 text-[#616161] text-sm font-medium">
-                <Icons.BagIcon className="w-4 h-4 stroke-[#212121]" /> {providers.experience}
+                <Icons.BagIcon className="w-4 h-4 stroke-[#212121]" /> {provider.experience}
               </p>
               <p className="flex items-center gap-2 text-[#616161] text-sm font-medium">
-                <Languages className="w-4 h-4 text-[#212121]" /> {providers.languages}
+                <Languages className="w-4 h-4 text-[#212121]" /> {provider.languages}
               </p>
               <p className="flex items-center gap-2 text-[#616161] text-sm font-medium">
-                <MapPin className="w-4 h-4 text-[#212121]" /> {providers.location}
+                <MapPin className="w-4 h-4 text-[#212121]" /> {provider.location}
               </p>
               <p className="flex flex-col gap-3 text-[#616161] font-semibold leading-[120%] text-sm">
                 <strong className="font-bold text-[#212121] text-lg leading-[100%]">
                   Description
                 </strong>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam commodo vehicula quam a facilisis. Aliquam venenatis et quis pharetra facilisis.
+                {provider.experience || "No description available."}
               </p>
             </div>
 
@@ -171,7 +250,7 @@ const Page = () => {
 
             <div className="space-y-4">
               <p className="text-sm text-gray-500 flex items-center gap-2">
-                <Star className="w-4 h-4 fill-[#FB9400] stroke-[#FB9400]" /> {providers.rating} | {providers.reviews} reviews • {providers.distance}
+                <Star className="w-4 h-4 fill-[#FB9400] stroke-[#FB9400]" /> {provider.rating} | {provider.reviews} reviews • {provider.distance}
               </p>
               <div className="space-y-3">
                 {reviews.map((review, index) => (
@@ -202,19 +281,19 @@ const Page = () => {
             </div>
 
             <div className="py-2 flex items-center justify-between">
-              <h1 className="text-[#145B10] font-bold text-lg leading-[120%]">300 RWF/Hr</h1>
+              <h1 className="text-[#145B10] font-bold text-lg leading-[120%]">{provider.price}</h1>
               <SlotSelectionDialog
                 trigger={
                   <Button className="rounded-[100px] font-bold mr-3 bg-[#145B10] text-white hover:bg-[#145B10]/90">
                     Select Slot
                   </Button>
                 }
-                providerName={providers.name}
-                price="300 RWF/Hr"
+                providerName={provider.name}
+                price={provider.price}
                 onConfirm={handleSlotConfirm}
                 availableDates={availableDates}
                 availableTimes={availableTimes}
-                provider={providers} // Pass the provider object
+                provider={provider}
               />
             </div>
           </div>

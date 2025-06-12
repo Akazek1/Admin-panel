@@ -23,6 +23,7 @@ import BookIcon from "@/public/svg/book.svg";
 import Exit from "@/public/svg/exit.svg";
 import Gallery from "@/public/svg/gallery-icon.svg";
 import Mic from "@/public/svg/mic-icon.svg";
+import { PackageOpen } from "lucide-react"
 
 export const Icons = {
   FlowerIcon,
@@ -47,7 +48,8 @@ export const Icons = {
   BookIcon,
   Exit,
   Gallery,
-  Mic
+  Mic,
+  PackageOpen
 } as const;
 
 export type IconType = keyof typeof Icons;
