@@ -27,7 +27,7 @@ export const BookmarkProvider: React.FC<BookmarkProviderProps> = ({ children }) 
     useEffect(() => {
         const fetchBookmarks = async () => {
             try {
-                const response = await api.get("/bookmarks/services");
+                const response = await api.get("/bookmarks/services", { withCredentials: true });
                 type Bookmark = { serviceId?: string };
                 const bookmarks: Bookmark[] = Array.isArray(response.data.data)
                     ? response.data.data
