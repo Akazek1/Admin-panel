@@ -1,13 +1,12 @@
-// ServiceCard.tsx
 "use client";
 import { Star, MapPin, Languages, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { Icons } from "./icons";
-import { useState } from "react";
 import { getUnsplashImageUrl } from "@/lib/unsplash";
+import { useBookmark } from "@/context/bookmark-context";
 
 interface ServiceCardProps {
-  id: number;
+  id: string;
   image: string;
   name: string;
   title: string;
@@ -39,17 +38,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   verified,
   onClick,
 }) => {
-  const [bookMark, setBookMark] = useState<number[]>([]); // Store bookmarked IDs
+  const { isBookmarked, toggleBookmark, isLoading } = useBookmark("services");
 
-  const handleBookMark = (e: React.MouseEvent, id: number) => {
-    e.stopPropagation(); // Prevent the card's onClick from triggering
-    setBookMark(
-      (prevBookmarked) =>
-        prevBookmarked.includes(id)
-          ? prevBookmarked.filter((itemId) => itemId !== id) // Remove if already bookmarked
-          : [...prevBookmarked, id] // Add if not bookmarked
-    );
-  };
+  // Fallback image URL in case image or getUnsplashImageUrl fails
+  const idNumber = Number.isNaN(Number(id)) ? id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : Number(id);
+  const imageUrl = image && getUnsplashImageUrl(idNumber) ? getUnsplashImageUrl(idNumber) : "/placeholder-image.jpg";
 
   return (
     <div
@@ -59,8 +52,8 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
       {/* Image */}
       <div className="relative">
         <Image
-          src={image && getUnsplashImageUrl(id)}
-          alt={title}
+          src={imageUrl}
+          alt={title || "Service Provider"}
           width={200}
           height={200}
           loading="lazy"
@@ -80,23 +73,26 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
         <div className="flex justify-between items-start w-full">
           <div className="flex flex-col items-start gap-1">
             <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
-              {name}{" "}
+              {name || "Unknown Provider"}
               {verified && (
                 <BadgeCheck className="fill-blue-500 stroke-white w-5 h-5" />
               )}
             </span>
-            <h3 className="text-lg font-bold leading-5 text-[#212121]">
-              {title}
+            <h3 className="text-lg font-bold leading-5 text-[#212121] capitalize">
+              {title || "Untitled Service"}
             </h3>
           </div>
           <span
-            onClick={(e) => handleBookMark(e, id)}
-            className="cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleBookmark(id);
+            }}
+            className={`cursor-pointer ${isLoading ? "opacity-50" : ""}`}
           >
             <Icons.BookMarkIcon
-              className={`w-6 h-6 ${bookMark.includes(id)
-                ? "fill-[#145B10] stroke-white"
-                : "stroke-[#145B10] hover:stroke-green-600"
+              className={`w-6 h-6 ${isBookmarked(id)
+                  ? "fill-[#145B10] stroke-white"
+                  : "stroke-[#145B10] hover:stroke-green-600"
                 }`}
             />
           </span>
@@ -104,23 +100,23 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
 
         <p className="text-sm text-[#616161] font-medium flex items-center gap-2">
           <Icons.BagIcon className="w-4 h-4 stroke-[#212121]" />
-          {experience}
+          {experience || "No experience provided"}
         </p>
         <p className="text-sm text-[#616161] font-medium flex items-center gap-2">
           <Languages className="w-5 h-5 text-[#212121]" />
-          {languages}
+          {languages || "No languages specified"}
         </p>
         <p className="text-sm text-[#616161] font-medium flex items-center gap-2">
           <MapPin className="w-4 h-4 text-[#212121]" />
-          {location}
+          {location || "No location provided"}
         </p>
-        <p className="text-[#145B10] font-semibold">{price}</p>
+        <p className="text-[#145B10] font-semibold">{price || "Price not available"}</p>
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-1 text-sm leading-[14px] text-[#616161] font-medium">
             <Star className="w-4 h-4 text-yellow-500" />
-            {rating} |<span>{reviews} reviews</span>
+            {rating || "N/A"} |<span>{reviews || 0} reviews</span>
             <span className="flex items-center gap-1">
-              <Icons.ClockIcon className="w-3 h-3 stroke-[#212121]" /> {distance}
+              <Icons.ClockIcon className="w-3 h-3 stroke-[#212121]" /> {distance || "N/A"}
             </span>
           </div>
         </div>

@@ -2,6 +2,7 @@
 import React from "react";
 import Link from "next/link";
 import {
+  Briefcase,
   ChevronRight,
   CircleEllipsis,
   MessageSquare,
@@ -14,6 +15,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
 import { useRouter } from "next/navigation";
 import ProfileImageUploader from "./profile-img-uloader";
+import { persistor } from "@/store";
+import authService from "@/services/auth-service";
 
 const ProfileScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -22,6 +25,11 @@ const ProfileScreen = () => {
 
   const menuItems = [
     { name: "Edit Profile", Icon: Icons.UserIcon, href: "/profile/edit" },
+    {
+      name: "Get Hired",
+      Icon: Briefcase,
+      href: "/profile/get-hired"
+    },
     { name: "Transactions", Icon: Icons.WalletIcon, href: "/profile/transactions" },
     { name: "Order History", Icon: Icons.OrderHistoryIcon, href: "/profile/orders" },
     { name: "Address Book", Icon: Icons.BookIcon, href: "/profile/address-book" },
@@ -30,10 +38,12 @@ const ProfileScreen = () => {
   ];
 
   const handleLogout = async () => {
-    await dispatch(logout());
+    dispatch(logout());
+    await persistor.purge();
+    authService.logout();
+    window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
     router.push("/onboarding");
   };
-
   if (!isAuthenticated || !user) {
     router.push("/onboarding");
     return null;
@@ -63,7 +73,7 @@ const ProfileScreen = () => {
             className="flex items-center justify-between rounded-lg transition-colors"
           >
             <div className="flex items-center gap-5">
-              <Icon className="w-6 h-6 text-[#212121]" />
+              <Icon className="w-6 h-6 text-[#212121] stroke-[#212121]" />
               <span className="text-lg text-[#1B2431] leading-6">{name}</span>
             </div>
             <ChevronRight className="w-4 h-4" />

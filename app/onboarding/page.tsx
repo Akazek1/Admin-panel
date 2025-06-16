@@ -8,12 +8,11 @@ import AppIcon from "@/public/svg/app-icon.svg"
 import GreenAppIcon from "@/public/svg/green-app-icon.svg"
 import RightFlowerIcon from "@/public/svg/flower.svg"
 import LeftFlowerIcon from "@/public/svg/left-flower.svg"
-import BubbleLoader from "@/components/loader/Bubble-Loader.tsx"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/hooks/useAuth"
 import { toast } from "react-hot-toast"
+import BubbleLoader from "@/components/loader/Bubble-Loader.tsx"
 
 const CODE_LENGTH = 6
 
@@ -61,23 +60,13 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
     textColor: "text-white",
     buttonText: "Verify",
   },
-  {
-    title: "Select your role",
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=800",
-    bgColor: "bg-[#1B5E20]",
-    textColor: "text-white",
-    buttonText: "Get Started",
-  },
 ]
 
 const OnboardingPage = () => {
   const [showSplash, setShowSplash] = useState(true)
   const [currentStep, setCurrentStep] = useState(-1)
-  const [isVerified, setIsVerified] = useState(false)
   const [code, setCode] = useState<string[]>(Array(CODE_LENGTH).fill(""))
   const [phoneNumber, setPhoneNumber] = useState("")
-  const [userType, setUserType] = useState("")
-  const [errors, setErrors] = useState<{ userType?: string }>({})
   const inputsRef = useRef<Array<HTMLInputElement | null>>(Array(CODE_LENGTH).fill(null))
 
   const router = useRouter()
@@ -157,11 +146,16 @@ const OnboardingPage = () => {
   }
 
   const handleVerifyOtp = async (otpCode: string) => {
-    const success = await verifyOtp(otpCode)
+    const result = await verifyOtp(otpCode)
 
-    if (success) {
-      setIsVerified(true)
-      setCurrentStep(5)
+    if (result) {
+      // Use the userType from the verifyOtp response
+      const profileSuccess = await updateUserProfile({ userType: result.userType })
+      if (profileSuccess) {
+        router.push("/")
+      } else {
+        toast.error("Failed to complete signup")
+      }
     }
   }
 
@@ -181,22 +175,6 @@ const OnboardingPage = () => {
       return
     }
 
-    if (currentStep === 5) {
-      if (!userType) {
-        setErrors({ userType: "Please select a user type" })
-        toast.error("Please select a user type")
-        return
-      }
-
-      const success = await updateUserProfile({ userType })
-      if (success) {
-        router.push("/")
-      } else {
-        toast.error("Failed to update user profile")
-      }
-      return
-    }
-
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1)
     }
@@ -204,8 +182,7 @@ const OnboardingPage = () => {
 
   const getButtonText = () => {
     if (currentStep === 3) return "Send OTP"
-    if (currentStep === 4) return isVerified ? "Continue" : "Verify"
-    if (currentStep === 5) return "Get Started"
+    if (currentStep === 4) return "Verify"
     return ONBOARDING_STEPS[currentStep].buttonText
   }
 
@@ -354,30 +331,6 @@ const OnboardingPage = () => {
                   className="w-12 h-12 text-center text-lg font-medium border border-black rounded-md focus:ring-2 focus:ring-none focus:outline-none outline-none"
                 />
               ))}
-            </div>
-          </div>
-        )
-      case 5:
-        return (
-          <div className="flex flex-col items-center gap-10 w-full">
-            <div className="flex flex-col items-center gap-2">
-              <GreenAppIcon />
-            </div>
-            {renderImage(287, 287)}
-            <div className="w-full">
-              <Select value={userType} onValueChange={(value) => {
-                setUserType(value)
-                setErrors({})
-              }}>
-                <SelectTrigger className={`w-full py-4 border rounded-xl ${errors.userType ? "border-red-500" : "border-black"} overflow-hidden`}>
-                  <SelectValue placeholder="Individual" className="text-black" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="individual">Individual</SelectItem>
-                  <SelectItem value="agency">Agency</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.userType && <p className="text-red-500 text-sm mt-2">{errors.userType}</p>}
             </div>
           </div>
         )

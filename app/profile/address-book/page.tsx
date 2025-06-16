@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from "react";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Trash2, Edit3 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,19 +51,21 @@ const AddressBook = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isFormVisible, setIsFormVisible] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
 
   // Fetch addresses from /users/profile
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
+        setIsLoading(true);
         const response = await api.get("/users/profile");
-        console.log("API Response:", response.data); // Debug response
-        // Adjust based on actual response structure
         const addressesData = response.data.data?.addresses || response.data.addresses || [];
         setAddresses(addressesData);
       } catch (err: unknown) {
         console.error("Error fetching addresses:", err);
         toast.error("Failed to fetch addresses");
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchAddresses();
@@ -113,7 +115,7 @@ const AddressBook = () => {
     return Object.keys(newErrors).length === 0;
   }, [formData]);
 
-  // Handle form submission
+  // Handle form submission (create/update)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -135,10 +137,21 @@ const AddressBook = () => {
         isDefault: formData.isDefault,
       };
 
-      // Submit address to API
-      const response = await api.post("/users/addresses", payload);
-      setAddresses((prev) => [...prev, response.data]);
-      toast.success("Address added successfully");
+      if (editingAddressId) {
+        // Update existing address
+        const response = await api.patch(`/users/addresses/${editingAddressId}`, payload);
+        setAddresses((prev) =>
+          prev.map((addr) =>
+            addr.id === editingAddressId ? { ...addr, ...response.data } : addr
+          )
+        );
+        toast.success("Address updated successfully");
+      } else {
+        // Create new address
+        const response = await api.post("/users/addresses", payload);
+        setAddresses((prev) => [...prev, response.data]);
+        toast.success("Address added successfully");
+      }
 
       // Reset form and hide it
       setFormData({
@@ -150,11 +163,12 @@ const AddressBook = () => {
         isDefault: false,
       });
       setIsFormVisible(false);
+      setEditingAddressId(null);
     } catch (err: unknown) {
       const errorMessage =
         (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        "Failed to add address";
-      console.error("Error adding address:", err);
+        `Failed to ${editingAddressId ? "update" : "add"} address`;
+      console.error(`Error ${editingAddressId ? "updating" : "adding"} address:`, err);
       setErrors({ form: errorMessage });
       toast.error(errorMessage);
     } finally {
@@ -162,9 +176,51 @@ const AddressBook = () => {
     }
   };
 
+  // Handle address deletion
+  const handleDelete = async (addressId: string) => {
+    setIsLoading(true);
+    try {
+      await api.delete(`/users/addresses/${addressId}`);
+      setAddresses((prev) => prev.filter((addr) => addr.id !== addressId));
+      toast.success("Address deleted successfully");
+    } catch (err: unknown) {
+      const errorMessage =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        "Failed to delete address";
+      console.error("Error deleting address:", err);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle address editing
+  const handleEdit = (address: Address) => {
+    setFormData({
+      street: address.street,
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country,
+      isDefault: address.isDefault,
+    });
+    setEditingAddressId(address.id);
+    setIsFormVisible(true);
+    setErrors({});
+  };
+
   // Toggle form visibility
   const toggleFormVisibility = () => {
     setIsFormVisible((prev) => !prev);
+    setFormData({
+      street: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "",
+      isDefault: false,
+    });
+    setEditingAddressId(null);
     setErrors({});
   };
 
@@ -281,45 +337,84 @@ const AddressBook = () => {
             </label>
           </div>
 
-          {/* Submit Button */}
-          <Button
-            size="lg"
-            type="submit"
-            className="w-full bg-[#167021] text-white rounded-full font-bold leading-6 py-[18px] px-4 h-full hover:bg-[#0F4D0C] transition-colors"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Adding...
-              </>
-            ) : (
-              "Add Address"
-            )}
-          </Button>
+          <div className="flex flex-col gap-2">
+            {/* Submit Button */}
+            <Button
+              size="lg"
+              type="submit"
+              className="w-full bg-[#167021] text-white rounded-full font-bold leading-6 py-[18px] px-4 h-full hover:bg-[#0F4D0C] transition-colors"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {editingAddressId ? "Updating..." : "Adding..."}
+                </>
+              ) : (
+                editingAddressId ? "Update Address" : "Add Address"
+              )}
+            </Button>
+            {/* Cancel Button */}
+            <Button
+              size="lg"
+              className="w-full bg-transparent hover:bg-[#167021]/10 border-[#167021] border text-[#167021] rounded-full font-bold leading-6 py-[18px] px-4 h-full"
+              onClick={toggleFormVisibility}
+            >
+              Cancel
+            </Button>
+          </div>
         </form>
       )}
 
       <Separator />
 
       {/* Display Addresses */}
-      <div className="space-y-6">
-        {addresses.length === 0 ? (
-          <p className="text-[#757575] font-medium text-sm">
-            No addresses found. Add an address above.
-          </p>
-        ) : (
-          addresses.map((address, index) => (
-            <div key={address.id} className="space-y-2">
-              <h1 className="text-[#161616] text-base leading-5 font-semibold">
-                {address.isDefault ? "Default Address" : `Address ${index + 1}`}
-              </h1>
-              <p className="text-[#757575] font-medium text-sm max-w-[70%]">
-                {`${address.street},  ${address.state}, ${address.postalCode}, ${address.city}, ${address.country}`}
-              </p>
+      <div className="space-y-6 pb-6">
+        {
+          isLoading ? (
+            <div className="flex items-center justify-center w-full">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin text-center" />
             </div>
-          ))
-        )}
+          ) : (
+            addresses.length === 0 ? (
+              <p className="text-[#757575] font-medium text-sm">
+                No addresses found. Add an address above.
+              </p>
+            ) : (
+              addresses.map((address, index) => (
+                <div key={address.id} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h1 className="text-[#161616] text-base leading-5 font-semibold">
+                      {address.isDefault ? "Default Address" : `Address ${index + 1}`}
+                    </h1>
+                    <div className="flex">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(address)}
+                        disabled={isLoading}
+                      >
+                        <Edit3 className="h-4 w-4 text-[#167021]" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(address.id)}
+                        disabled={isLoading}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
+                  <p className="text-[#757575] font-medium text-sm max-w-[70%]">
+                    {`${address.street}, ${address.state}, ${address.postalCode}, ${address.city}, ${address.country}`}
+                  </p>
+                </div>
+              ))
+            )
+          )
+        }
+
       </div>
     </div>
   );

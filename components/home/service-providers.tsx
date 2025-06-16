@@ -1,14 +1,16 @@
-// ServiceProvider.tsx
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SectionHeader from "../section-header";
 import ServiceCard from "../service-card";
 import Scroller from "../scroller";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import api from "@/lib/axios";
+import toast from "react-hot-toast";
+import { Loader2 } from "lucide-react";
 
 interface Provider {
-  id: number;
+  id: string;
   image: string;
   name: string;
   title: string;
@@ -24,131 +26,26 @@ interface Provider {
   type: string;
 }
 
-const providers: Provider[] = [
-  {
-    id: 1,
-    image:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
-    name: "Akaliza",
-    title: "Baby Sitter",
-    experience: "5 Years of Experience",
-    languages: "English, Kinyarwanda, Swahili, French",
-    location: "Nyamirambo, Kigali",
-    price: "3000-5000 rwf/day",
-    rating: 4.8,
-    reviews: 8289,
-    distance: "2 miles",
-    available: true,
-    verified: true,
-    type: "Professional"
-  },
-  {
-    id: 2,
-    image:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
-    name: "Agency",
-    title: "HouseHelp",
-    experience: "5 Years of Experience",
-    languages: "English, Kinyarwanda, Swahili, French",
-    location: "Nyamirambo, Kigali",
-    price: "3000-5000 rwf/day",
-    rating: 4.8,
-    reviews: 8289,
-    distance: "2 miles",
-    available: false,
-    verified: false,
-    type: "Agency"
-  },
-  {
-    id: 3,
-    image:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
-    name: "Agency",
-    title: "HouseHelp",
-    experience: "5 Years of Experience",
-    languages: "English, Kinyarwanda, Swahili, French",
-    location: "Nyamirambo, Kigali",
-    price: "3000-5000 rwf/day",
-    rating: 4.8,
-    reviews: 8289,
-    distance: "2 miles",
-    available: true,
-    verified: true,
-    type: "Agency"
-  },
-  {
-    id: 4,
-    image:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
-    name: "Agency",
-    title: "Repairing",
-    experience: "5 Years of Experience",
-    languages: "English, Kinyarwanda, Swahili, French",
-    location: "Nyamirambo, Kigali",
-    price: "3000-5000 rwf/day",
-    rating: 4.8,
-    reviews: 8289,
-    distance: "2 miles",
-    available: false,
-    verified: false,
-    type: "Professional"
-  },
-  {
-    id: 5,
-    image:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
-    name: "Agency",
-    title: "Painting",
-    experience: "5 Years of Experience",
-    languages: "English, Kinyarwanda, Swahili, French",
-    location: "Nyamirambo, Kigali",
-    price: "3000-5000 rwf/day",
-    rating: 4.8,
-    reviews: 8289,
-    distance: "2 miles",
-    available: true,
-    verified: true,
-    type: "Agency"
-  },
-  {
-    id: 6,
-    image:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
-    name: "Agency",
-    title: "Repairing",
-    experience: "5 Years of Experience",
-    languages: "English, Kinyarwanda, Swahili, French",
-    location: "Nyamirambo, Kigali",
-    price: "3000-5000 rwf/day",
-    rating: 4.8,
-    reviews: 8289,
-    distance: "2 miles",
-    available: false,
-    verified: false,
-    type: "Professional"
-  },
-  {
-    id: 7,
-    image:
-      "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
-    name: "Agency",
-    title: "Cleaning",
-    experience: "5 Years of Experience",
-    languages: "English, Kinyarwanda, Swahili, French",
-    location: "Nyamirambo, Kigali",
-    price: "3000-5000 rwf/day",
-    rating: 4.8,
-    reviews: 8289,
-    distance: "2 miles",
-    available: true,
-    verified: true,
-    type: "Agency"
-  },
-];
-
-
-const filters = ["All", "Cleaning", "Repairing", "Painting"];
-
+interface Service {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  provider: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    userType: "AGENCY" | "INDIVIDUAL";
+  };
+  worker?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+}
 
 interface ServiceProviderProps {
   showHeader: boolean;
@@ -157,19 +54,69 @@ interface ServiceProviderProps {
 const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredProviders = providers.filter((provider) => {
-    if (selectedFilter === "All") return true;
-    return provider.title === selectedFilter;
-  });
+  // Derive unique filters from service titles
+  const filters = ["All", ...new Set(services.map((service) => service.title))];
+
+  // Fetch services
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await api.get("/services");
+        const data = Array.isArray(response.data.data) ? response.data.data : [];
+
+        // Validate services have valid id
+        const validatedServices = data.filter(
+          (service: Service) =>
+            service.id && typeof service.id === "string" && service.id.trim() !== ""
+        );
+        setServices(validatedServices);
+        setError(null);
+      } catch (err) {
+        const message = (err as Error).message || "Failed to fetch services";
+        setError(message);
+        toast.error(message);
+        setServices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchServices();
+  }, []);
+
+  // Map services to Provider interface
+  const filteredProviders: Provider[] = services
+    .filter((service) => {
+      if (selectedFilter === "All") return true;
+      return service.title === selectedFilter;
+    })
+    .map((service) => ({
+      id: service.id,
+      image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
+      name: `${service.provider.firstName} ${service.provider.lastName}`,
+      title: service.title,
+      experience: service.description || "No description provided",
+      languages: "English, Kinyarwanda, Swahili, French",
+      location: "Nyamirambo, Kigali",
+      price: `${service.price} RWF/day`,
+      rating: 4.8,
+      reviews: 8289,
+      distance: "2 miles",
+      available: true,
+      verified: true,
+      type: service.provider.userType === "AGENCY" ? "Agency" : "Professional",
+    }));
 
   return (
-    <div >
+    <div>
       {showHeader && (
         <SectionHeader
           title="Browse by Service Provider"
           linkText="See All"
-          linkHref="/"
+          linkHref="/services"
           className="text-[#1B2431] font-medium text-lg"
         />
       )}
@@ -183,9 +130,9 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
               <button
                 key={filter}
                 className={`px-5 py-2 rounded-full border-2 border-[#145B10] text-[#145B10] font-semibold
-                  transition-all duration-300 ease-in-out
+                  transition-all duration-200 ease-in-out capitalize
                   ${selectedFilter === filter
-                    ? "bg-[#145B10] text-white scale-105"
+                    ? "bg-[#145B10] text-white"
                     : "bg-transparent hover:bg-[#145B10]/10"
                   }`}
                 onClick={() => setSelectedFilter(filter)}
@@ -198,33 +145,54 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
       </div>
       {/* Service Provider Cards */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={selectedFilter || "default"}
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.3 } }}
-          className="flex flex-col gap-4 pb-8"
-        >
-          {filteredProviders.length > 0 ? (
-            filteredProviders.map((provider) => (
-              <ServiceCard
-                key={provider.id}
-                onClick={() => router.push(`/book/${provider.type}/${provider.id}`)}
-                {...provider}
-              />
-            ))
-          ) : (
-            <p className="text-center text-gray-500">
-              No providers found for this filter
-            </p>
-          )}
-        </motion.div>
+        {loading ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex justify-center py-8"
+          >
+            <Loader2 className="w-6 h-6 animate-spin text-[#145B10]" />
+          </motion.div>
+        ) : error ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center text-red-500 py-4"
+          >
+            {error}
+          </motion.div>
+        ) : (
+          <motion.div
+            key={selectedFilter || "default"}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.2 } }}
+            className="flex flex-col gap-4 pb-8"
+          >
+            {filteredProviders.length > 0 ? (
+              filteredProviders.map((provider) => (
+                <ServiceCard
+                  key={provider.id}
+                  onClick={() => {
+                    if (!provider.id || provider.id === "NaN") {
+                      toast.error("Invalid provider ID");
+                      return;
+                    }
+                    router.push(`/book/${provider.type}/${provider.id}`);
+                  }}
+                  {...provider}
+                />
+              ))
+            ) : (
+              <p className="text-center text-gray-500">
+                No providers found for this filter
+              </p>
+            )}
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
 };
 
 export default ServiceProvider;
-
-
-

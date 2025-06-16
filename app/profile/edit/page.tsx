@@ -45,7 +45,7 @@ const EditProfile = () => {
     lastName: user?.lastName || "",
     dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split("T")[0] : "",
     email: user?.email || "",
-    country: user?.country || "",
+    country: user?.country || "Rwanda",
     phone: user?.phoneNumber || "",
     gender: user?.gender || "",
     languages: user?.languages || [], // Initialize as array
@@ -59,6 +59,37 @@ const EditProfile = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+
+  useEffect(() => {
+    // Initialize form data with user data if available
+    const fetchUserData = async () => {
+      if (user) {
+        try {
+          const response = await api.get(`/users/profile`);
+          const userData = response.data?.data || {};
+          setFormData((prev) => ({
+            ...prev,
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
+            dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split("T")[0] : "",
+            email: userData.email || "",
+            country: userData.country || "Rwanda",
+            phone: userData.phoneNumber || "",
+            gender: userData.gender || "",
+            languages: userData.languages || [],
+            street: userData.address?.street || "",
+            city: userData.address?.city || "",
+            state: userData.address?.state || "",
+            postalCode: userData.address?.postalCode || "",
+          }));
+        } catch {
+          toast.error("Failed to load user data");
+        }
+      }
+    };
+    fetchUserData();
+  }, [user]);
 
   // Redirect if user is not authenticated
   React.useEffect(() => {
@@ -169,8 +200,6 @@ const EditProfile = () => {
         dateOfBirth: new Date(formData.dateOfBirth).toISOString(),
         languages: formData.languages, // Already an array
         userType: user.userType === "Agency" ? "AGENCY" : "INDIVIDUAL",
-        // userType: user.userType,
-        profilePicture: "",
       };
 
       // Update profile via API
@@ -188,7 +217,6 @@ const EditProfile = () => {
         isProfileComplete: userData.isProfileComplete ?? user.isProfileComplete,
         isMobileVerified: userData.isMobileVerified ?? user.isMobileVerified,
         isEmailVerified: userData.isEmailVerified ?? user.isEmailVerified,
-        profileURL: userData.profilePicture ?? user.profileURL,
         gender: userData.gender,
         dateOfBirth: userData.dateOfBirth,
         languages: userData.languages,
@@ -280,24 +308,15 @@ const EditProfile = () => {
 
         {/* Country */}
         <div className="space-y-2">
-          <Select
-            value={formData.country}
-            onValueChange={(value) => handleSelectChange("country", value)}
-          >
-            <SelectTrigger
+          <div className="space-y-2">
+            <Input
               id="country"
-              className={`relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.country ? "border-red-500" : "border-none"} focus:ring-[#145B10]`}
-            >
-              <SelectValue placeholder="Select country" />
-              <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-180 transition ease-in duration-200" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Rwanda">Rwanda</SelectItem>
-              <SelectItem value="USA">USA</SelectItem>
-              <SelectItem value="UK">UK</SelectItem>
-              <SelectItem value="India">India</SelectItem>
-            </SelectContent>
-          </Select>
+              name="country"
+              value="Rwanda"
+              disabled
+              className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10] text-gray-500"
+            />
+          </div>
           {errors.country && <p className="text-red-500 text-sm">{errors.country}</p>}
         </div>
 
@@ -369,7 +388,7 @@ const EditProfile = () => {
         </div>
 
         {/* Address Fields */}
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Input
             id="street"
             name="street"
@@ -378,7 +397,7 @@ const EditProfile = () => {
             className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
             placeholder="Enter street address"
           />
-        </div>
+        </div> */}
 
         {/* Update Button */}
         <Button

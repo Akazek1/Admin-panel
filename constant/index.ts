@@ -2,7 +2,7 @@ import { NavItem } from "@/types";
 
 export const navItems: NavItem[] = [
   { title: "Home", url: "/", icon: "HomeIcon" },
-  { title: "Get Hired", url: "/get-hired", icon: "GetHiredIcon" },
+  { title: "Order History", url: "/order-history", icon: "PackageOpen" },
   { title: "Message", url: "/conversations", icon: "MessageIcon" },
   {
     title: "More",
