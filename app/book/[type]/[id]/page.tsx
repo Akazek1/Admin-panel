@@ -1,21 +1,24 @@
 "use client";
+
 import BackButtonHeader from "@/components/header/back-button-header";
 import { Icons } from "@/components/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Languages, MapPin, MessageCircleMore, Phone, Share, Star } from "lucide-react";
+import { Languages, MapPin, MessageCircleMore, Phone, Share } from "lucide-react";
 import ServiceProvider from "@/components/home/service-providers";
 import { motion } from "framer-motion";
 import SlotSelectionDialog from "@/components/slot-selection-dialog";
-import {  useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import api from "@/lib/axios";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
+import ReviewSection from "@/components/review-section";
+import { useBookmark } from "@/context/bookmark-context";
 
 // Define the provider interface (aligned with ServiceProvider)
 interface Provider {
-  id: string; // Changed to string
+  id: string;
   image: string;
   name: string;
   title: string;
@@ -53,21 +56,7 @@ interface Service {
   };
 }
 
-// Sample review data (unchanged)
-const reviews = [
-  {
-    name: "Morgane Fike",
-    rating: 5,
-    comment: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam commodo vehicula quam a imperdiet. Morbi semper eros nec arcu fermentum vehicula. Aliquam venenatis erat quis pharetra facilisis.",
-  },
-  {
-    name: "Morgane Fike",
-    rating: 5,
-    comment: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam commodo vehicula quam a imperdiet. Morbi semper eros nec arcu fermentum vehicula. Aliquam venenatis erat quis pharetra facilisis.",
-  },
-];
-
-// Sample date and time data (unchanged)
+// Sample date and time data
 const availableDates = [
   { day: "Tue", date: 18 },
   { day: "Wed", date: 19 },
@@ -82,8 +71,8 @@ const Page = () => {
   const id = router.id as string; // Get the service ID from the URL
   const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>();
-  const [bookmarks, setBookmarks] = useState<string[]>([]); // Changed to string[]
+  const [error, setError] = useState<string | null>(null);
+  const { isBookmarked, toggleBookmark, isLoading } = useBookmark("services");
 
   // Fetch service details from API
   useEffect(() => {
@@ -99,8 +88,8 @@ const Page = () => {
         const response = await api.get(`/services/${id}`);
         const service: Service = response.data.data;
 
-        // Map service to provider (similar to ServiceProvider)
-        const mappedProvider: Provider = ({
+        // Map service to provider
+        const mappedProvider: Provider = {
           id: service.id,
           image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
           name: `${service.provider.firstName} ${service.provider.lastName}`,
@@ -115,7 +104,7 @@ const Page = () => {
           available: true,
           verified: true,
           type: service.provider.userType === "AGENCY" ? "Agency" : "Professional",
-        });
+        };
 
         setProvider(mappedProvider);
         setError(null);
@@ -131,17 +120,22 @@ const Page = () => {
     fetchService();
   }, [id]);
 
-  const handleBookMark = (id: string) => {
-    setBookmarks((prev) =>
-      prev.includes(id)
-        ? prev.filter((item) => item !== id)
-        : [...prev, id]
-    );
-  };
-
   const handleSlotConfirm = (selectedDate: string, selectedTime: string) => {
     console.log("Selected Slot:", { date: selectedDate, time: selectedTime });
     // Additional logic can be handled in SlotSelectionDialog
+  };
+
+  // Handle copy link for Share button
+  const handleShare = () => {
+    const shareLink = window.location.href;
+    navigator.clipboard
+      .writeText(shareLink)
+      .then(() => {
+        toast.success("Link copied to clipboard!");
+      })
+      .catch(() => {
+        toast.error("Failed to copy link");
+      });
   };
 
   // Render loading state
@@ -193,9 +187,15 @@ const Page = () => {
                   </p>
                 </div>
               </div>
-              <span onClick={() => handleBookMark(provider.id)}>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleBookmark(provider.id);
+                }}
+                className={`cursor-pointer ${isLoading ? "opacity-50" : ""}`}
+              >
                 <Icons.BookMarkIcon
-                  className={`w-6 h-6 cursor-pointer ${bookmarks.includes(provider.id)
+                  className={`w-6 h-6 ${isBookmarked(provider.id)
                       ? "fill-[#145B10] stroke-white"
                       : "stroke-[#145B10] hover:stroke-green-600"
                     }`}
@@ -234,7 +234,10 @@ const Page = () => {
                 </span>
                 Message
               </div>
-              <div className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white">
+              <div
+                className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white cursor-pointer"
+                onClick={handleShare}
+              >
                 <span className="px-6 pt-4">
                   <Share className="w-5 h-5" />
                 </span>
@@ -248,37 +251,7 @@ const Page = () => {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <p className="text-sm text-gray-500 flex items-center gap-2">
-                <Star className="w-4 h-4 fill-[#FB9400] stroke-[#FB9400]" /> {provider.rating} | {provider.reviews} reviews • {provider.distance}
-              </p>
-              <div className="space-y-3">
-                {reviews.map((review, index) => (
-                  <div key={index} className="flex flex-col gap-3">
-                    <div className="flex items-start gap-2">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={`https://i.pravatar.cc/150?img=${index + 1}`} />
-                        <AvatarFallback>{review.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="flex items-center flex-col gap-1">
-                          <p className="font-semibold text-sm">{review.name}</p>
-                          <div className="flex">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-4 h-4 ${i < review.rating ? "fill-[#FB9400] stroke-[#FB9400]" : "fill-none stroke-[#FB9400]"}`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-[13px] leading-[120%] text-[#616161] font-semibold">{review.comment}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ReviewSection serviceId={id} />
 
             <div className="py-2 flex items-center justify-between">
               <h1 className="text-[#145B10] font-bold text-lg leading-[120%]">{provider.price}</h1>

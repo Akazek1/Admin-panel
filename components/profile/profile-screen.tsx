@@ -69,7 +69,7 @@ const ProfileScreen = () => {
             className="flex items-center justify-between rounded-lg transition-colors"
           >
             <div className="flex items-center gap-5">
-              <Icon className="w-6 h-6 text-[#212121]" />
+              <Icon className="w-6 h-6 text-[#212121] stroke-[#212121]" />
               <span className="text-lg text-[#1B2431] leading-6">{name}</span>
             </div>
             <ChevronRight className="w-4 h-4" />

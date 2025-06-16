@@ -10,7 +10,7 @@ import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 
 interface Provider {
-  id: string; // Changed to string to match likely API response
+  id: string;
   image: string;
   name: string;
   title: string;
@@ -27,7 +27,7 @@ interface Provider {
 }
 
 interface Service {
-  id: string; // Changed to string to match likely API response
+  id: string;
   title: string;
   description: string;
   price: number;
@@ -60,14 +60,13 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch services from API
+  // Fetch services
   useEffect(() => {
     const fetchServices = async () => {
       try {
         const response = await api.get("/services");
         const data = Array.isArray(response.data.data) ? response.data.data : [];
-        console.log("Fetched services:", data);
-        
+
         // Validate services have valid id
         const validatedServices = data.filter(
           (service: Service) =>
@@ -91,10 +90,10 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
   const filteredProviders: Provider[] = services
     .filter((service) => {
       if (selectedFilter === "All") return true;
-      return service.title.includes(selectedFilter);
+      return service.title.toLowerCase().includes(selectedFilter.toLowerCase());
     })
     .map((service) => ({
-      id: service.id, // Use string id directly
+      id: service.id,
       image: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
       name: `${service.provider.firstName} ${service.provider.lastName}`,
       title: service.title,
@@ -172,7 +171,7 @@ const ServiceProvider: React.FC<ServiceProviderProps> = ({ showHeader }) => {
             {filteredProviders.length > 0 ? (
               filteredProviders.map((provider) => (
                 <ServiceCard
-                  key={provider.id} // Use provider.id directly
+                  key={provider.id}
                   onClick={() => {
                     if (!provider.id || provider.id === "NaN") {
                       toast.error("Invalid provider ID");

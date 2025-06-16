@@ -2,11 +2,11 @@
 import { Star, MapPin, Languages, BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { Icons } from "./icons";
-import { useState } from "react";
 import { getUnsplashImageUrl } from "@/lib/unsplash";
+import { useBookmark } from "@/context/bookmark-context";
 
 interface ServiceCardProps {
-  id: string; // Changed to string to match ServiceProvider
+  id: string;
   image: string;
   name: string;
   title: string;
@@ -38,16 +38,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   verified,
   onClick,
 }) => {
-  const [bookMark, setBookMark] = useState<string[]>([]); // Changed to string[] to match id type
-
-  const handleBookMark = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation(); // Prevent the card's onClick from triggering
-    setBookMark((prevBookmarked) =>
-      prevBookmarked.includes(id)
-        ? prevBookmarked.filter((itemId) => itemId !== id) // Remove if already bookmarked
-        : [...prevBookmarked, id] // Add if not bookmarked
-    );
-  };
+  const { isBookmarked, toggleBookmark, isLoading } = useBookmark("services");
 
   // Fallback image URL in case image or getUnsplashImageUrl fails
   const idNumber = Number.isNaN(Number(id)) ? id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : Number(id);
@@ -92,11 +83,14 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
             </h3>
           </div>
           <span
-            onClick={(e) => handleBookMark(e, id)}
-            className="cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleBookmark(id);
+            }}
+            className={`cursor-pointer ${isLoading ? "opacity-50" : ""}`}
           >
             <Icons.BookMarkIcon
-              className={`w-6 h-6 ${bookMark.includes(id)
+              className={`w-6 h-6 ${isBookmarked(id)
                   ? "fill-[#145B10] stroke-white"
                   : "stroke-[#145B10] hover:stroke-green-600"
                 }`}

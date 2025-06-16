@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FormEvent, useState } from "react";
+import React, {  useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import ServiceProvider from "@/components/home/service-providers";
@@ -10,12 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import ProfileImageUploader from "@/components/profile/profile-img-uloader";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { updateUser } from "@/store/slices/auth-slice";
 import { toast } from "react-hot-toast";
-import api from "@/lib/axios";
 import IndividualForm from "@/components/get-hired/individual-form";
 
 interface CommonProfile {
@@ -57,7 +55,7 @@ interface AgencyProfile extends CommonProfile {
 
 const GetHired: React.FC = () => {
     const dispatch = useDispatch<AppDispatch>();
-    const { user, isLoading } = useSelector((state: RootState) => state.auth);
+    const { user } = useSelector((state: RootState) => state.auth);
     const { updateUserProfile } = useAuth();
 
     // Determine if user is coming for the first time

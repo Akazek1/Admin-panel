@@ -1,14 +1,15 @@
 import type React from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Urbanist } from "next/font/google";
-import "./globals.css"; 
-import Layout from "@/components/layout/pwa-layout"; 
-import { Toaster } from "react-hot-toast"; 
-import { Providers } from "@/store/provider"; 
+import "./globals.css";
+import Layout from "@/components/layout/pwa-layout";
+import { Toaster } from "react-hot-toast";
+import { Providers } from "@/store/provider";
+import { BookmarkProvider } from "@/context/bookmark-context";
 
 // Load Geist fonts
 const geistSans = Geist({
-  variable: "--font-geist-sans", 
+  variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
@@ -20,14 +21,14 @@ const geistMono = Geist_Mono({
 // Load Urbanist font with specified weights
 const urbanist = Urbanist({
   subsets: ["latin"],
-  weight: ["400", "700"], 
-  variable: "--font-urbanist", 
+  weight: ["400", "700"],
+  variable: "--font-urbanist",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "HWA - House Working App", 
-  description: "Welcome to House Working App", 
+  title: "HWA - House Working App",
+  description: "Welcome to House Working App",
 };
 
 export default function RootLayout({
@@ -38,8 +39,10 @@ export default function RootLayout({
       <body className="antialiased">
         <Providers>
           <Layout>
-            <Toaster position="top-center" />
-            {children}
+            <BookmarkProvider>
+              <Toaster position="top-center" />
+              {children}
+            </BookmarkProvider>
           </Layout>
         </Providers>
       </body>
