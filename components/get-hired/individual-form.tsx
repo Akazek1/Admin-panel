@@ -1,13 +1,23 @@
 "use client";
-import React, { FormEvent, useState, useEffect } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { ChevronDown, Loader2, Edit, Trash2 } from 'lucide-react';
-import api from '@/lib/axios';
-import toast from 'react-hot-toast';
-import { Button } from '../ui/button';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
+
+import React, { FormEvent, useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChevronDown, Loader2, Edit, Trash2, Clock } from "lucide-react";
+import api from "@/lib/axios";
+import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Service {
   id: string;
@@ -17,7 +27,6 @@ interface Service {
   category: string;
   serviceType: string;
   scopeOfService: string;
-  timing?: string;
   areaServed?: string;
   serviceImage: string | null;
   isActive: boolean;
@@ -39,17 +48,33 @@ interface Service {
   } | null;
   workerId: string | null;
   serviceAreas: string[];
+  availability: {
+    id: string;
+    serviceId: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    createdAt: string;
+    updatedAt: string;
+  }[];
 }
 
-type IndividualData = {
+interface Availability {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  enabled: boolean;
+}
+
+interface IndividualData {
   category: string;
   price: number;
   serviceType: string;
   scopeOfService: string;
-  timing?: string;
   areaServed?: string;
   title: string;
-};
+  availability: Availability[];
+}
 
 interface ServiceFormProps {
   initialData: IndividualData;
@@ -60,10 +85,49 @@ interface ServiceFormProps {
 }
 
 const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSubmit, submitting, setData, onCancel }) => {
+  const [selectedDayGroup, setSelectedDayGroup] = useState<string>("Weekdays");
+  const [availabilityStatus, setAvailabilityStatus] = useState<string>("unavailable");
+
+  const dayGroups = [
+    { value: "Weekdays", label: "Weekdays (Mon-Fri)", days: [1, 2, 3, 4, 5] },
+    { value: "Weekends", label: "Weekends (Sat-Sun)", days: [6, 7] },
+    { value: "Monday", label: "Monday", days: [1] },
+    { value: "Tuesday", label: "Tuesday", days: [2] },
+    { value: "Wednesday", label: "Wednesday", days: [3] },
+    { value: "Thursday", label: "Thursday", days: [4] },
+    { value: "Friday", label: "Friday", days: [5] },
+    { value: "Saturday", label: "Saturday", days: [6] },
+    { value: "Sunday", label: "Sunday", days: [7] },
+  ];
+
+  const handleAvailabilityChange = (
+    days: number[],
+    field: keyof Availability | "status",
+    value: string | boolean
+  ) => {
+    setData((prev) => ({
+      ...prev,
+      availability: prev.availability.map((avail) => {
+        if (days.includes(avail.dayOfWeek)) {
+          if (field === "status") {
+            return { ...avail, enabled: value === "available" };
+          }
+          return { ...avail, [field]: value, enabled: true };
+        }
+        return avail;
+      }),
+    }));
+  };
+
+  const currentDays = dayGroups.find((group) => group.value === selectedDayGroup)?.days || [1];
+  const firstDayAvail = initialData.availability.find((a) => currentDays.includes(a.dayOfWeek)) || {
+    startTime: "09:00",
+    endTime: "17:00",
+    enabled: false,
+  };
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-
       {/* Category Select */}
       <div className="space-y-2">
         <Select
@@ -117,7 +181,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSubmit, submit
         >
           <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] border-none focus:ring-[#145B10]">
             <SelectValue placeholder="Select Price" />
-            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
+            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 transition-transform duration-300" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="1500" className="text-sm font-semibold">
@@ -133,59 +197,100 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSubmit, submit
         </Select>
       </div>
 
-      {/* Work Timing Select */}
-      <div className="space-y-2 overflow-hidden">
-        <Select
-          value={initialData.timing}
-          onValueChange={(value) => setData((prev) => ({ ...prev, timing: value }))}
-        >
-          <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] border-none focus:ring-[#145B10] w-full">
-            <SelectValue placeholder="Select Work Time" />
-            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 transition-transform duration-300" />
-          </SelectTrigger>
-          <SelectContent className="w-[--radix-select-trigger-width] max-w-full">
-            {[
-              "Weekdays: 9:00 AM - 9:00 PM, Weekends: 9:00 AM - 1:00 PM",
-              "Weekdays: 8:00 AM - 6:00 PM, Weekends: 10:00 AM - 2:00 PM",
-              "Weekdays: 9:00 AM - 5:00 PM, Weekends: Closed",
-              "Weekdays: 10:00 AM - 8:00 PM, Weekends: 9:00 AM - 12:00 PM",
-            ].map((text, idx) => (
-              <SelectItem
-                key={idx}
-                value={text}
-                className="whitespace-normal font-semibold break-words text-sm px-5 py-2"
-              >
-                {text}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Availability Inputs */}
+      <div className="space-y-4">
+        <Label className="text-sm font-semibold">Availability</Label>
+        <div className="space-y-2">
+          <Select
+            value={selectedDayGroup}
+            onValueChange={(value) => {
+              setSelectedDayGroup(value);
+              const days = dayGroups.find((group) => group.value === value)?.days || [1];
+              const firstAvail = initialData.availability.find((a) => days.includes(a.dayOfWeek));
+              setAvailabilityStatus(firstAvail?.enabled ? "available" : "unavailable");
+            }}
+          >
+            <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] border-none focus:ring-[#145B10] w-full">
+              <SelectValue placeholder="Select Day Group" />
+              <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 transition-transform duration-300" />
+            </SelectTrigger>
+            <SelectContent>
+              {dayGroups.map((group) => (
+                <SelectItem key={group.value} value={group.value} className="text-sm font-semibold">
+                  {group.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={availabilityStatus}
+            onValueChange={(value) => {
+              setAvailabilityStatus(value);
+              handleAvailabilityChange(currentDays, "status", value);
+            }}
+          >
+            <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] border-none focus:ring-[#145B10] w-full">
+              <SelectValue placeholder="Status" />
+              <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 transition-transform duration-300" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="available">Available</SelectItem>
+              <SelectItem value="unavailable">Unavailable</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {availabilityStatus === "available" && (
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Start Time</Label>
+                <Input
+                  type="time"
+                  value={firstDayAvail.startTime}
+                  onChange={(e) =>
+                    handleAvailabilityChange(currentDays, "startTime", e.target.value)
+                  }
+                  className="rounded-lg border-[#145B10] focus:ring-[#145B10] font-medium"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">End Time</Label>
+                <Input
+                  type="time"
+                  value={firstDayAvail.endTime}
+                  onChange={(e) => handleAvailabilityChange(currentDays, "endTime", e.target.value)}
+                  className="rounded-lg border-[#145B10] focus:ring-[#145B10] font-medium"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Area of Service */}
-      <div className="space-y-2 overflow-hidden">
+      <div className="space-y-2">
         <Select
           value={initialData.areaServed}
           onValueChange={(value) => setData((prev) => ({ ...prev, areaServed: value }))}
         >
-          <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg flex-wrap px-5 py-[18px] border-none focus:ring-[#145B10]">
+          <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] border-none focus:ring-[#145B10]">
             <SelectValue placeholder="Area of service" />
-            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
+            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 transition-transform duration-300" />
           </SelectTrigger>
-          <SelectContent className="flex-wrap">
-            <SelectItem className="text-sm font-semibold flex-wrap" value="kigali">
+          <SelectContent>
+            <SelectItem className="text-sm font-semibold" value="kigali">
               Kigali
             </SelectItem>
-            <SelectItem className="text-sm font-semibold flex-wrap" value="nyarugenge">
+            <SelectItem className="text-sm font-semibold" value="nyarugenge">
               Nyarugenge
             </SelectItem>
-            <SelectItem className="text-sm font-semibold flex-wrap" value="gasabo">
+            <SelectItem className="text-sm font-semibold" value="gasabo">
               Gasabo
             </SelectItem>
-            <SelectItem className="text-sm font-semibold flex-wrap" value="kicukiro">
+            <SelectItem className="text-sm font-semibold" value="kicukiro">
               Kicukiro
             </SelectItem>
-            <SelectItem className="text-sm font-semibold flex-wrap" value="all">
+            <SelectItem className="text-sm font-semibold" value="all">
               All Areas
             </SelectItem>
           </SelectContent>
@@ -193,23 +298,23 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSubmit, submit
       </div>
 
       {/* Service Type Select */}
-      <div className="space-y-2 overflow-hidden">
+      <div className="space-y-2">
         <Select
           value={initialData.serviceType}
           onValueChange={(value) => setData((prev) => ({ ...prev, serviceType: value }))}
         >
-          <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg flex-wrap px-5 py-[18px] border-none focus:ring-[#145B10]">
+          <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] border-none focus:ring-[#145B10]">
             <SelectValue placeholder="Select Service Type" />
-            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
+            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 transition-transform duration-300" />
           </SelectTrigger>
-          <SelectContent className="flex-wrap">
-            <SelectItem className="text-sm font-semibold flex-wrap" value="RESIDENTIAL">
+          <SelectContent>
+            <SelectItem className="text-sm font-semibold" value="RESIDENTIAL">
               Residential
             </SelectItem>
-            <SelectItem className="text-sm font-semibold flex-wrap" value="COMMERCIAL">
+            <SelectItem className="text-sm font-semibold" value="COMMERCIAL">
               Commercial
             </SelectItem>
-            <SelectItem className="text-sm font-semibold flex-wrap" value="RESIDENTIAL,COMMERCIAL">
+            <SelectItem className="text-sm font-semibold" value="RESIDENTIAL,COMMERCIAL">
               Residential & Commercial
             </SelectItem>
           </SelectContent>
@@ -217,7 +322,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSubmit, submit
       </div>
 
       {/* Scope of Service Select */}
-      <div className="space-y-2 overflow-hidden">
+      <div className="space-y-2">
         <Select
           value={initialData.scopeOfService}
           onValueChange={(value) => setData((prev) => ({ ...prev, scopeOfService: value }))}
@@ -253,10 +358,10 @@ const ServiceForm: React.FC<ServiceFormProps> = ({ initialData, onSubmit, submit
         <Button
           size="lg"
           type="submit"
-          className="w-full bg-[#167021] text-white rounded-full font-bold leading-6 py-[12px] h-13 hover:bg-[#0F4D0C] transition-colors"
+          className="w-full bg-[#167021] text-white rounded-full font-bold leading-6 h-14 hover:bg-[#0F4D0C] transition-colors"
           disabled={submitting}
         >
-          {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save'}
+          {submitting ? <Loader2 className="w-6 h-6 animate-spin" /> : "Save"}
         </Button>
         {onCancel && (
           <Button
@@ -285,17 +390,54 @@ const IndividualForm = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const { user } = useSelector((state: RootState) => state.auth);
 
+  const defaultAvailability: Availability[] = [
+    { dayOfWeek: 1, startTime: "09:00", endTime: "17:00", enabled: false },
+    { dayOfWeek: 2, startTime: "09:00", endTime: "17:00", enabled: false },
+    { dayOfWeek: 3, startTime: "09:00", endTime: "17:00", enabled: false },
+    { dayOfWeek: 4, startTime: "09:00", endTime: "17:00", enabled: false },
+    { dayOfWeek: 5, startTime: "09:00", endTime: "17:00", enabled: false },
+    { dayOfWeek: 6, startTime: "09:00", endTime: "17:00", enabled: false },
+    { dayOfWeek: 7, startTime: "09:00", endTime: "17:00", enabled: false },
+  ];
+
   const [individualData, setIndividualData] = useState<IndividualData>({
-    category: '',
+    category: "",
     price: 0,
-    serviceType: '',
-    scopeOfService: '',
-    timing: '',
-    areaServed: '',
-    title: '',
+    serviceType: "",
+    scopeOfService: "",
+    areaServed: "",
+    title: "",
+    availability: defaultAvailability,
   });
 
   const [updateData, setUpdateData] = useState<Record<string, IndividualData>>({});
+
+  // Exponential backoff retry mechanism
+  async function retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await operation();
+      } catch (error: unknown) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const status =
+          typeof error === "object" && error !== null && "response" in error
+            ? (error as { response?: { status?: number } }).response?.status
+            : undefined;
+        if (status === 429 || (typeof status === "number" && status >= 500)) {
+          const delay = baseDelay * Math.pow(2, i);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } else {
+          throw error;
+        }
+      }
+    }
+    throw lastError || new Error("Retry failed");
+  };
 
   // Fetch services for the logged-in user
   useEffect(() => {
@@ -303,12 +445,12 @@ const IndividualForm = () => {
       if (!user?.id) return;
       setLoadingServices(true);
       try {
-        const response = await api.get(`/services?providerId=${user.id}`);
-        console.log(response.data);
-
+        const response = await retryWithBackoff(() =>
+          api.get(`/services?providerId=${user.id}`)
+        );
         setServices(response.data.data || []);
       } catch {
-        toast.error('Failed to fetch services');
+        toast.error("Failed to fetch services");
       } finally {
         setLoadingServices(false);
       }
@@ -318,18 +460,32 @@ const IndividualForm = () => {
 
   // Initialize update form data for a service
   const initializeUpdateData = (service: Service) => {
-    // console.log(service);
+    const availability = defaultAvailability.map((defaultAvail) => {
+      const serviceAvail = service.availability.find(
+        (avail) => avail.dayOfWeek === defaultAvail.dayOfWeek
+      );
+      return serviceAvail
+        ? {
+          dayOfWeek: serviceAvail.dayOfWeek,
+          startTime: new Date(serviceAvail.startTime).toISOString().slice(11, 16),
+          endTime: new Date(serviceAvail.endTime).toISOString().slice(11, 16),
+          enabled: true,
+        }
+        : defaultAvail;
+    });
 
     setUpdateData((prev) => ({
       ...prev,
       [service.id]: {
-        category: service.category || '',
+        category: service.category || "",
         price: service.price || 0,
-        serviceType: service.serviceType || '',
-        scopeOfService: service.description || '',
-        timing: service.timing || '',
-        areaServed: Array.isArray(service.serviceAreas) ? service.serviceAreas.join(', ') : (service.areaServed || ''),
-        title: service.title || '',
+        serviceType: service.serviceType || "",
+        scopeOfService: service.description || "",
+        areaServed: Array.isArray(service.serviceAreas)
+          ? service.serviceAreas.join(", ")
+          : service.areaServed || "",
+        title: service.title || "",
+        availability,
       },
     }));
   };
@@ -350,25 +506,38 @@ const IndividualForm = () => {
       price: individualData.price,
       serviceType: individualData.serviceType,
       scopeOfService: individualData.scopeOfService,
-      timing: individualData.timing,
       areaServed: individualData.areaServed,
+      // title: individualData.category,
+      availability: individualData.availability
+        .filter((avail) => avail.enabled)
+        .map((avail) => ({
+          // dayOfWeek: avail.dayOfWeek,
+          startTime: avail.startTime,
+          endTime: avail.endTime,
+        })),
     };
 
     try {
-      const response = await api.post('/services', payload);
-      toast.success('Service submitted successfully');
+      const response = await retryWithBackoff(() => api.post("/services", payload));
+      toast.success("Service submitted successfully");
       setServices([...services, response.data]);
       setIndividualData({
-        category: '',
+        category: "",
         price: 0,
-        serviceType: '',
-        scopeOfService: '',
-        timing: '',
-        areaServed: '',
-        title: '',
+        serviceType: "",
+        scopeOfService: "",
+        areaServed: "",
+        title: "",
+        availability: defaultAvailability,
       });
-    } catch (error) {
-      const message = (error as Error).message || 'Failed to submit service';
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          ? (error as { response: { data: { message: string } } }).response.data.message
+          : "Failed to submit service";
       toast.error(message);
     } finally {
       setSubmitting(false);
@@ -383,26 +552,51 @@ const IndividualForm = () => {
     const data = updateData[serviceId];
     if (!data) return;
 
+    const payload = {
+      category: data.category.toLowerCase(),
+      price: data.price,
+      serviceType: data.serviceType,
+      scopeOfService: data.scopeOfService,
+      areaServed: data.areaServed,
+      title: data.category,
+      availability: data.availability
+        .filter((avail) => avail.enabled)
+        .map((avail) => ({
+          // dayOfWeek: avail.dayOfWeek,
+          startTime: avail.startTime,
+          endTime: avail.endTime,
+        })),
+    };
+
     try {
-      const payload = {
-        category: data.category.toLowerCase(),
-        price: data.price,
-        serviceType: data.serviceType,
-        scopeOfService: data.scopeOfService,
-        timing: data.timing,
-        areaServed: data.areaServed,
-      };
-      await api.patch(`/services/${serviceId}`, payload);
-      toast.success('Service updated successfully');
+      await retryWithBackoff(() => api.patch(`/services/${serviceId}`, payload));
+      toast.success("Service updated successfully");
       setServices(
         services.map((service) =>
-          service.id === serviceId ? { ...service, ...payload } : service
+          service.id === serviceId
+            ? {
+                ...service,
+                category: payload.category,
+                price: payload.price,
+                serviceType: payload.serviceType,
+                scopeOfService: payload.scopeOfService,
+                areaServed: payload.areaServed,
+                title: payload.title,
+              }
+            : service
         )
       );
       setEditModalOpen(false);
       setEditingServiceId(null);
-    } catch {
-      toast.error('Failed to update service');
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          (error as { response?: { data?: { message?: string } } }).response?.data?.message
+          ? (error as { response: { data: { message: string } } }).response.data.message
+          : "Failed to update service";
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -412,13 +606,13 @@ const IndividualForm = () => {
   const handleDeleteService = async () => {
     if (!serviceToDelete) return;
     try {
-      await api.delete(`/services/${serviceToDelete}`);
-      toast.success('Service deleted successfully');
+      await retryWithBackoff(() => api.delete(`/services/${serviceToDelete}`));
+      toast.success("Service deleted successfully");
       setServices(services.filter((service) => service.id !== serviceToDelete));
       setDeleteModalOpen(false);
       setServiceToDelete(null);
     } catch {
-      toast.error('Failed to delete service');
+      toast.error("Failed to delete service");
     }
   };
 
@@ -426,6 +620,19 @@ const IndividualForm = () => {
   const openDeleteModal = (serviceId: string) => {
     setServiceToDelete(serviceId);
     setDeleteModalOpen(true);
+  };
+
+  // Format availability for display
+  const formatAvailability = (availability: Service["availability"]) => {
+    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    return availability
+      .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+      .map((avail) => {
+        const start = new Date(avail.startTime).toISOString().slice(11, 16);
+        const end = new Date(avail.endTime).toISOString().slice(11, 16);
+        return `${daysOfWeek[avail.dayOfWeek - 1]}: ${start} - ${end}`;
+      })
+      .join(", ");
   };
 
   return (
@@ -476,28 +683,34 @@ const IndividualForm = () => {
                   </div>
                 </div>
                 <div className="space-y-2 text-sm text-gray-600">
-                  <p className='flex items-center justify-between'>
-                    <span className="font-medium text-gray-900">Category</span>{' '}
+                  <p className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900">Category</span>
                     {service?.category?.charAt(0).toUpperCase() + service?.category?.slice(1)}
                   </p>
-                  <p className='flex items-center justify-between'>
+                  <p className="flex items-center justify-between">
                     <span className="font-medium text-gray-900">Price</span> {service.price} RWF/day
                   </p>
-                  <p className='flex items-center justify-between'>
-                    <span className="font-medium text-gray-900">Service Type</span>{' '}
-                    {service.serviceType}
+                  <p className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900">Service Type</span> {service.serviceType}
                   </p>
-                  <p className='flex items-center justify-between'>
-                    <span className="font-medium text-gray-900">Area Served</span>{' '}
-                    {service.areaServed || 'N/A'}
+                  <p className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900">Area Served</span>
+                    {service.areaServed || service.serviceAreas.join(", ") || "N/A"}
                   </p>
-                  <p className='flex items-center justify-between'>
-                    <span className="font-medium text-gray-900">Status</span>{' '}
+                  <p className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900">Availability</span>
+                    <span className="flex items-center">
+                      <Clock className="w-4 h-4 mr-1" />
+                      {service.availability.length ? formatAvailability(service.availability) : "N/A"}
+                    </span>
+                  </p>
+                  <p className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900">Status</span>
                     <span
-                      className={`px-2 py-1 text-xs font-semibold rounded-full ${service.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      className={`px-2 py-1 text-xs font-semibold rounded-full ${service.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                         }`}
                     >
-                      {service.isActive ? 'Active' : 'Inactive'}
+                      {service.isActive ? "Active" : "Inactive"}
                     </span>
                   </p>
                 </div>
@@ -509,7 +722,7 @@ const IndividualForm = () => {
 
       {/* Delete Confirmation Modal */}
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="sm:max-w-[425px] top-1/3 translate-y-1/3 ">
+        <DialogContent className="sm:max-w-[425px] top-1/3 translate-y-1/3">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
@@ -531,7 +744,7 @@ const IndividualForm = () => {
               onClick={handleDeleteService}
               disabled={submitting}
             >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete'}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -551,9 +764,8 @@ const IndividualForm = () => {
               setData={(newData) =>
                 setUpdateData((prev) => ({
                   ...prev,
-                  [editingServiceId]: typeof newData === "function"
-                    ? (newData(prev[editingServiceId]))
-                    : newData,
+                  [editingServiceId]:
+                    typeof newData === "function" ? newData(prev[editingServiceId]) : newData,
                 }))
               }
               onCancel={() => {

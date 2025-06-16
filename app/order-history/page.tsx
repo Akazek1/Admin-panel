@@ -3,11 +3,17 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import BackButtonHeader from "@/components/header/back-button-header";
-import { CircleCheck, Loader2 } from "lucide-react";
+import { CircleCheck, Loader2, Star } from "lucide-react";
 import { Icons } from "@/components/icons";
 import api from "@/lib/axios";
 import toast from "react-hot-toast";
-import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 // Define interfaces based on API response
 interface Address {
@@ -32,7 +38,7 @@ interface Booking {
   scheduledFor: string;
   service: Service;
   address: Address;
-  worker: Worker | null; // Allow null for cases where worker is not assigned
+  worker: Worker | null;
   review: null | { rating: number; comment: string };
   price?: number;
 }
@@ -46,14 +52,19 @@ interface Category {
     profession: string;
     date: string;
     amount?: string;
+    reviewSubmitted: boolean; // Tracks if review exists
   }[];
 }
 
 const OrderHistory: React.FC = () => {
-  const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState<boolean>(false);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [rating, setRating] = useState<number>(0);
+  const [comment, setComment] = useState<string>("");
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Format ISO date to "Monday, 26th January 2024"
   const formatDate = (isoDate: string): string => {
@@ -152,6 +163,7 @@ const OrderHistory: React.FC = () => {
             profession: booking.service.title,
             date: formatDate(booking.scheduledFor),
             amount: booking.price ? `${booking.price} RWF` : undefined,
+            reviewSubmitted: !!booking.review, // True if review exists
           };
 
           const existingCategory = acc.find((cat) => cat.category === category);
@@ -172,7 +184,7 @@ const OrderHistory: React.FC = () => {
         setCategories(sortedCategories);
         setError(null);
       } catch (err: unknown) {
-        console.error("Error fetching bookings:", err); // Log for debugging
+        console.error("Error fetching bookings:", err);
         let message = "Failed to fetch order history";
         if (typeof err === "object" && err !== null && "response" in err) {
           const response = (err as { response?: { data?: { message?: string } } }).response;
@@ -191,9 +203,55 @@ const OrderHistory: React.FC = () => {
     fetchBookings();
   }, []);
 
-  // Handle book again
-  const handleBookAgain = (bookingId: string) => {
-    router.push(`/bookings/${bookingId}`);
+  // Handle opening review modal
+  const openReviewModal = (bookingId: string) => {
+    setSelectedBookingId(bookingId);
+    setRating(0);
+    setComment("");
+    setReviewModalOpen(true);
+  };
+
+  // Handle review submission
+  const handleSubmitReview = async () => {
+    if (!selectedBookingId) return;
+    if (rating < 1 || rating > 5) {
+      toast.error("Please select a rating between 1 and 5.");
+      return;
+    }
+    if (!comment.trim()) {
+      toast.error("Please provide a comment.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await retryWithBackoff(() =>
+        api.post(`/bookings/${selectedBookingId}/reviews`, { rating, comment })
+      );
+      toast.success("Review submitted successfully!");
+      // Update categories to reflect review submission
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          orders: cat.orders.map((order) =>
+            order.id === selectedBookingId ? { ...order, reviewSubmitted: true } : order
+          ),
+        }))
+      );
+      setReviewModalOpen(false);
+    } catch (err: unknown) {
+      console.error("Error submitting review:", err);
+      let message = "Failed to submit review";
+      if (typeof err === "object" && err !== null && "response" in err) {
+        const response = (err as { response?: { data?: { message?: string } } }).response;
+        if (response?.data?.message) {
+          message = response.data.message;
+        }
+      }
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Render loading state
@@ -218,6 +276,55 @@ const OrderHistory: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F1FCEF]">
       <BackButtonHeader text="Order History" className="p-6" backHref="/" />
+
+      {/* Review Modal */}
+      <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
+        <DialogContent className="sm:w-[425px] bg-white rounded-[32px] p-6">
+          <DialogHeader>
+            <DialogTitle className="text-[#1B2431] text-lg font-semibold">
+              Submit Review
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {/* Rating Stars */}
+            <div className="flex justify-center gap-1">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setRating(star)}
+                  className="focus:outline-none"
+                >
+                  <Star
+                    className={`w-8 h-8 ${star <= rating ? "fill-[#145B10] stroke-[#145B10]" : "stroke-[#145B10]"
+                      }`}
+                  />
+                </button>
+              ))}
+            </div>
+            {/* Comment Input */}
+            <Textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Write your feedback..."
+              className="border-[#145B10] focus:ring-[#145B10] rounded-lg"
+              rows={4}
+            />
+            {/* Submit Button */}
+            <Button
+              className="w-full rounded-[100px] font-bold bg-[#145B10] text-white hover:bg-[#145B10]/90"
+              onClick={handleSubmitReview}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                "Submit Review"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Order History List */}
       <div className="px-6 pb-10">
@@ -276,7 +383,7 @@ const OrderHistory: React.FC = () => {
 
                     <div className="flex items-center justify-between w-full">
                       {/* Amount Paid (if applicable) */}
-                      {order.status === "COMPLETED" && order.amount && (
+                      {order.status === "Job Completed" && order.amount && (
                         <div className="flex items-center mt-1">
                           <CircleCheck className="w-4 h-4 mr-1" />
                           <p className="text-xs text-[#145B10] w-max font-bold">
@@ -285,14 +392,16 @@ const OrderHistory: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Book Again Button */}
+                      {/* Give Feedback Button */}
                       <div className="flex items-center justify-end w-full">
-                        <Button
-                          className="w-max rounded-full border border-[#145B10] text-[#145B10] font-bold bg-transparent hover:bg-[#145B10] hover:text-white py-2"
-                          onClick={() => handleBookAgain(order.id)}
-                        >
-                          Give Feedback
-                        </Button>
+                        {order.status === "Job Completed" && !order.reviewSubmitted && (
+                          <Button
+                            className="w-max rounded-full border border-[#145B10] text-[#145B10] font-bold bg-transparent hover:bg-[#145B10] hover:text-white py-2"
+                            onClick={() => openReviewModal(order.id)}
+                          >
+                            Give Feedback
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>

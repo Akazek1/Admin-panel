@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -49,7 +50,7 @@ const ReviewManagement: React.FC<ReviewManagementProps> = ({ serviceId }) => {
     });
     const [editingReview, setEditingReview] = useState<Review | null>(null);
     const [submitting, setSubmitting] = useState<boolean>(false);
-    const [currentUserId, setCurrentUserId] = useState<string>(""); // Placeholder: Replace with auth system
+    const [currentUserId, setCurrentUserId] = useState<string>(""); 
 
     // Fetch user's reviews
     useEffect(() => {

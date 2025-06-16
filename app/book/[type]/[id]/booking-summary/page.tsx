@@ -243,10 +243,9 @@ const BookingSummary = () => {
     };
 
     // Pricing breakdown
-    const itemTotal = 900; // Example: 300 RWF/Hr * 3 hours
-    const discount = 100;
+    const discount = 0;
     const deliveryFee = 0;
-    const grandTotal = itemTotal - discount + deliveryFee;
+    // const grandTotal = itemTotal - discount + deliveryFee;
 
     return (
         <div className="flex flex-col bg-[#F1FCEF] overflow-hidden pb-16">
@@ -271,7 +270,7 @@ const BookingSummary = () => {
                         {provider.experience}
                     </p>
                     <div className="flex items-center justify-between">
-                        <span className="text-[#145B10] font-bold">300 RWF/Hr</span>
+                        <span className="text-[#145B10] font-bold">{provider.price}</span>
                         <div className="flex items-center gap-1">
                             <Button
                                 variant="outline"
@@ -379,7 +378,7 @@ const BookingSummary = () => {
                 <div className="rounded-[32px] p-5 bg-white space-y-3">
                     <div className="flex justify-between text-[#616161] font-medium">
                         <span>Item Totals</span>
-                        <span>{itemTotal} RWF</span>
+                        <span>{provider.price}</span>
                     </div>
                     <div className="flex justify-between text-[#616161] font-medium">
                         <span>Discounts</span>
@@ -391,7 +390,7 @@ const BookingSummary = () => {
                     </div>
                     <div className="flex justify-between text-[#1B2431] font-bold">
                         <span>Grand Total</span>
-                        <span>{grandTotal} RWF</span>
+                        <span>{provider.price}</span>
                     </div>
                 </div>
             </main>

@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import api from "@/lib/axios";
 import toast from "react-hot-toast";
+import { useSelector } from "react-redux";
+import { RootState } from "@/store";
 
 interface BookmarkContextType {
     bookmarkedIds: Set<string>;
@@ -19,8 +21,9 @@ interface BookmarkProviderProps {
 export const BookmarkProvider: React.FC<BookmarkProviderProps> = ({ children }) => {
     const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState<boolean>(false);
+    const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
-    // Fetch initial bookmarked services
+
     useEffect(() => {
         const fetchBookmarks = async () => {
             try {
@@ -37,10 +40,16 @@ export const BookmarkProvider: React.FC<BookmarkProviderProps> = ({ children }) 
                 setBookmarkedIds(ids);
             } catch (error) {
                 console.error("Failed to fetch bookmarks:", error);
+                setBookmarkedIds(new Set());
             }
         };
-        fetchBookmarks();
-    }, []);
+
+        if (isAuthenticated) {
+            fetchBookmarks();
+        }
+    }, [isAuthenticated]);
+
+
 
     const toggleBookmark = useCallback(async (itemId: string, itemType: string) => {
         setIsLoading(true);

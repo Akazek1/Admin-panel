@@ -15,6 +15,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
 import { useRouter } from "next/navigation";
 import ProfileImageUploader from "./profile-img-uloader";
+import { persistor } from "@/store";
+import authService from "@/services/auth-service";
 
 const ProfileScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -36,10 +38,12 @@ const ProfileScreen = () => {
   ];
 
   const handleLogout = async () => {
-    await dispatch(logout());
+    dispatch(logout());
+    await persistor.purge();
+    authService.logout();
+    window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
     router.push("/onboarding");
   };
-
   if (!isAuthenticated || !user) {
     router.push("/onboarding");
     return null;

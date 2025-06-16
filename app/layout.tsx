@@ -5,7 +5,7 @@ import "./globals.css";
 import Layout from "@/components/layout/pwa-layout";
 import { Toaster } from "react-hot-toast";
 import { Providers } from "@/store/provider";
-import { BookmarkProvider } from "@/context/bookmark-context";
+import { BookmarkProvider } from "@/context/bookmark-context"; // Ensure this import is correct
 
 // Load Geist fonts
 const geistSans = Geist({
@@ -18,7 +18,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Load Urbanist font with specified weights
 const urbanist = Urbanist({
   subsets: ["latin"],
   weight: ["400", "700"],

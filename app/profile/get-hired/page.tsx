@@ -246,23 +246,21 @@ const GetHired: React.FC = () => {
                                     className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
                                 />
                             </div>
-                            <div>
-                                <div className="space-y-2">
-                                    <Select
-                                        value={individualData.country}
-                                    >
-                                        <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none  border-none focus:ring-[#145B10] ">
-                                            <SelectValue placeholder="Select country" className="text-sm font-semibold" />
-                                            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Rwanda">Rwanda</SelectItem>
-                                            <SelectItem value="USA">USA</SelectItem>
-                                            <SelectItem value="UK">UK</SelectItem>
-                                            {/* Add more countries as needed */}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                            <div className="space-y-2">
+                                <Select
+                                    value={individualData.country}
+                                >
+                                    <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none  border-none focus:ring-[#145B10] ">
+                                        <SelectValue placeholder="Select country" className="text-sm font-semibold" />
+                                        <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 focus-within:rotate-90 transition ease-in 2s" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Rwanda">Rwanda</SelectItem>
+                                        <SelectItem value="USA">USA</SelectItem>
+                                        <SelectItem value="UK">UK</SelectItem>
+                                        {/* Add more countries as needed */}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="flex items-center border border-black rounded-xl overflow-hidden w-full">
                                 <div className="flex items-center gap-2 pl-3 pr-5 py-4 border-r border-black bg-white">
@@ -346,15 +344,6 @@ const GetHired: React.FC = () => {
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
-                            </div>
-                            <div>
-                                <Input
-                                    id="address"
-                                    defaultValue={individualData.yearsExperience || ""}
-                                    onChange={(e) => handleIndividualChange("yearsExperience", e.target.value)}
-                                    className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                                    placeholder="Enter street address"
-                                />
                             </div>
                             <div className="text-[#1B2431] text-lg font-medium">
                                 Services Offered
