@@ -695,11 +695,11 @@ const IndividualForm = () => {
                   </p>
                   <p className="flex items-center justify-between">
                     <span className="font-medium text-gray-900">Area Served</span>
-                    {service.areaServed || service.serviceAreas.join(", ") || "N/A"}
+                    {service?.areaServed || service?.serviceAreas?.join(", ") || "N/A"}
                   </p>
                   <p className="flex items-center justify-between">
                     <span className="font-medium text-gray-900">Availability</span>
-                    <span className="flex items-center">
+                    <span className="flex items-center text-xs">
                       <Clock className="w-4 h-4 mr-1" />
                       {service.availability.length ? formatAvailability(service.availability) : "N/A"}
                     </span>

@@ -104,7 +104,7 @@ const Page = () => {
           distance: "2 miles",
           available: true,
           verified: true,
-          type: service.provider.userType === "AGENCY" ? "Agency" : "Professional",
+          type: service.provider.userType === "AGENCY" ? "AGENCY" : "INDIVIDUAL",
         };
 
         setProvider(mappedProvider);
