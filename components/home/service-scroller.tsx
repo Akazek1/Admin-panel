@@ -6,6 +6,7 @@ import { Heart, Loader2 } from "lucide-react";
 import SectionHeader from "../section-header";
 import { Icons } from "../icons";
 import api from "@/lib/axios";
+import { useRouter } from "next/navigation";
 
 interface Service {
   id: string;
@@ -41,6 +42,11 @@ const PopulerService = () => {
   const [liked, setLiked] = useState<DisplayService[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
+  const handleCardClick = (service: DisplayService) => {
+    router.push(`/service/?category=${encodeURIComponent(service.title)}`);
+  };
 
   useEffect(() => {
     fetchServices();
@@ -86,7 +92,7 @@ const PopulerService = () => {
     <div className="space-y-6">
       <SectionHeader
         title="Popular Services"
-        linkHref="/providers"
+        linkHref="/service?category=all"
         linkText="View all"
         linkClassName="text-[12px] flex items-center gap-2"
         icon={<Icons.NextIcon className="w-3 h-3 fill-[#1B2431]" />}
@@ -111,7 +117,10 @@ const PopulerService = () => {
             items={scrollItems}
             visibleItems={2}
             renderItem={(service: DisplayService) => (
-              <div className="flex flex-col gap-2">
+              <div
+                onClick={() => handleCardClick(service)}
+                className="flex flex-col gap-2 cursor-pointer"
+              >
                 <div className="relative rounded-lg overflow-hidden h-32 max-w-[208px] flex items-center justify-center">
                   <div className="absolute top-3 right-3">
                     <div
@@ -128,11 +137,7 @@ const PopulerService = () => {
                             ? "#1B2431"
                             : "none"
                         }
-                        stroke={
-                          liked.some((likedItem) => likedItem.id === service.id)
-                            ? "#1B2431"
-                            : "#1B2431"
-                        }
+                        stroke="#1B2431"
                       />
                     </div>
                   </div>

@@ -32,7 +32,13 @@ export interface Service {
     firstName: string;
     lastName: string;
     email: string;
+    languages: string[];
   };
+  reviews: {
+    averageRating: number;
+    totalReviews: number;
+  };
+  serviceAreas: string[];
 }
 
 export interface Provider {
@@ -50,4 +56,5 @@ export interface Provider {
   available: boolean;
   verified: boolean;
   type: string;
+  phone?: string;
 }

@@ -57,8 +57,8 @@ const Page = () => {
           name: `${service.provider.firstName} ${service.provider.lastName}`,
           title: service.title,
           experience: service.description || "No experience provided",
-          languages: "English, Kinyarwanda, Swahili, French",
-          location: "Nyamirambo, Kigali",
+          languages: Array.isArray(service?.worker?.languages) && service.worker.languages.join(", ") || "",
+          location: Array.isArray(service.serviceAreas) ? service.serviceAreas.join(", ") : service.serviceAreas || "",
           price: `${service.price} RWF/day`,
           rating: 4.8,
           reviews: 8289,
@@ -184,18 +184,22 @@ const Page = () => {
             </div>
 
             <div className="flex gap-5 py-4 justify-center">
-              <div className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white">
-                <span className="px-6 pt-4">
-                  <Phone className="w-5 h-5" />
-                </span>
-                Call
-              </div>
-              <div className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white">
-                <span className="px-6 pt-4">
-                  <MessageCircleMore className="w-5 h-5" />
-                </span>
-                Message
-              </div>
+              <a href={`tel:${provider.phone}`}>
+                <div className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white">
+                  <span className="px-6 pt-4">
+                    <Phone className="w-5 h-5" />
+                  </span>
+                  Call
+                </div>
+              </a>
+              <a href="sms:+250123456789">
+                <div className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white">
+                  <span className="px-6 pt-4">
+                    <MessageCircleMore className="w-5 h-5" />
+                  </span>
+                  Message
+                </div>
+              </a>
               <div
                 className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white cursor-pointer"
                 onClick={handleShare}

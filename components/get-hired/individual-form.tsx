@@ -66,6 +66,10 @@ interface Service {
     createdAt: string
     updatedAt: string
   }[]
+  reviews: {
+    averageRating: number;
+    totalReviews: number;
+  };
 }
 
 // Availability interface for service availability
@@ -856,8 +860,8 @@ const IndividualForm = ({ isWorker }: { isWorker: boolean }) => {
                   languages="English, Kinyarwanda"
                   location={service.areaServed || service.serviceAreas?.join(", ") || "No location provided"}
                   price={`${service.price} RWF/day`}
-                  rating={4.5}
-                  reviews={12}
+                  rating={service.reviews.averageRating || 0}
+                  reviews={service.reviews.totalReviews || 0}
                   distance="2.5 km"
                   available={service.isActive}
                   verified={service?.provider?.userType === "VERIFIED"}

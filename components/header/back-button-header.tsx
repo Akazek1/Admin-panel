@@ -24,7 +24,7 @@ const BackButtonHeader: React.FC<PageProp> = ({
       <Link href={defaultBackHref} className="">
         <ArrowLeft className="w-6 h-6 text-[#1B2431]" />
       </Link>
-      <h1 className="text-2xl leading-7 font-bold text-[#1B2431]">{text}</h1>
+      <h1 className="text-2xl leading-7 font-bold text-[#1B2431] capitalize">{text}</h1>
     </div>
   );
 };
