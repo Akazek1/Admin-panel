@@ -77,6 +77,7 @@ interface Service {
   description: string;
   price: number;
   category: string;
+  serviceImage?: string;
   provider: {
     id: string;
     firstName: string;
@@ -205,7 +206,7 @@ const SearchResults = ({ query: initialQuery, onBack }: SearchResultsProps) => {
                 className="p-2 border bg-white border-[#E5E5E5] rounded-lg hover:border-[#145B10] transition-colors flex items-center gap-5"
               >
                 <Avatar className={`w-[50px] h-[50px]`}>
-                  <AvatarImage src={service?.provider?.profileImg || "/images/user.png"} className="object-cover" />
+                  <AvatarImage src={service?.serviceImage || "/images/user.png"} className="object-cover" />
                 </Avatar>
                 <div>
                   <div className="w-full flex items-center gap-2">
