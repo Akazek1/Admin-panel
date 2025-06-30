@@ -6,6 +6,7 @@ import Scroller from "../scroller";
 import { Icons } from "@/components/icons";
 import api from "@/lib/axios";
 import { getUnsplashImageUrl } from "@/lib/unsplash";
+import { Loader2 } from "lucide-react";
 
 interface Category {
   title: string;
@@ -71,7 +72,9 @@ export default function Categories() {
       </div>
 
       {isLoading ? (
-        <div className="text-sm text-gray-400">Loading categories...</div>
+        <div className="w-full flex items-center justify-center">
+          <Loader2 className="w-6 h-6 animate-spin text-[#145B10]" />
+        </div>
       ) : (
         <div className="flex items-center gap-3">
           <Scroller
@@ -98,6 +101,11 @@ export default function Categories() {
               </div>
             )}
           />
+        </div>
+      )}
+      {!isLoading  && categories.length === 0 && (
+        <div className="text-center text-[#878787]">
+          No categories found.
         </div>
       )}
     </div>

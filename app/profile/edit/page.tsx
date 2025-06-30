@@ -18,6 +18,7 @@ import { updateUser } from "@/store/slices/auth-slice";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
+import Image from "next/image";
 
 // Interface for form data to ensure type safety
 interface FormData {
@@ -322,14 +323,31 @@ const EditProfile = () => {
 
         {/* Phone Number */}
         <div className="space-y-2">
-          <Input
-            id="phone"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.phone ? "border-red-500" : "border-none"} focus:ring-[#145B10]`}
-            placeholder="Enter phone number"
-          />
+          <div className="flex items-center border border-black rounded-xl overflow-hidden w-full h-14">
+            <div className="flex items-center gap-2 pl-2 pr-4 h-full border-r border-black bg-white">
+              <Image
+                height={16}
+                width={24}
+                src="https://flagcdn.com/w40/rw.png"
+                alt="Rwanda Flag"
+                className="w-6 h-4 object-cover rounded-sm"
+              />
+              <span className="text-[#212121] font-semibold text-sm">+256</span>
+            </div>
+            <input
+              id="phone"
+              type="tel"
+              inputMode="numeric"
+              value={formData?.phone || ""}
+              placeholder="Phone Number"
+              onChange={handleChange}
+              className="h-full w-full px-4 text-[#212121] font-semibold text-sm
+                                                             placeholder:text-[#212121] placeholder:font-semibold placeholder:text-sm
+                                                             border-none outline-none focus:outline-none focus:ring-0 focus:border-none
+                                                             active:outline-none active:ring-0 active:border-none shadow-none"
+              maxLength={10}
+            />
+          </div>
           {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
         </div>
 

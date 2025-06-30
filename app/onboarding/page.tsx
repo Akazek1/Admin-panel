@@ -146,18 +146,22 @@ const OnboardingPage = () => {
   }
 
   const handleVerifyOtp = async (otpCode: string) => {
-    const result = await verifyOtp(otpCode)
+    const user = await verifyOtp(otpCode);
 
-    if (result) {
-      // Use the userType from the verifyOtp response
-      const profileSuccess = await updateUserProfile({ userType: result.userType })
+    if (user) {
+      const profileSuccess = await updateUserProfile(
+        { userType: user.userType },
+        user
+      );
+
       if (profileSuccess) {
-        router.push("/")
+        router.push("/");
       } else {
-        toast.error("Failed to complete signup")
+        toast.error("Failed to complete signup");
       }
     }
-  }
+  };
+
 
   const handleNext = async () => {
     if (currentStep === 3) {

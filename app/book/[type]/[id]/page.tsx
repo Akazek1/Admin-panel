@@ -16,6 +16,7 @@ import { Loader2 } from "lucide-react";
 import ReviewSection from "@/components/review-section";
 import { useBookmark } from "@/context/bookmark-context";
 import { Provider, Service } from "@/types";
+import Link from "next/link";
 
 
 // Sample date and time data
@@ -57,8 +58,8 @@ const Page = () => {
           name: `${service.provider.firstName} ${service.provider.lastName}`,
           title: service.title,
           experience: service.description || "No experience provided",
-          languages: Array.isArray(service?.worker?.languages) && service.worker.languages.join(", ") || "",
-          location: Array.isArray(service.serviceAreas) ? service.serviceAreas.join(", ") : service.serviceAreas || "",
+          languages: Array.isArray(service?.worker?.languages) && service.worker.languages.join(", ") || "No Languages Specified",
+          location: Array.isArray(service.serviceAreas) ? service.serviceAreas.join(", ") : service.serviceAreas || "No Location Specified",
           price: `${service.price} RWF/day`,
           rating: 4.8,
           reviews: 8289,
@@ -184,7 +185,7 @@ const Page = () => {
             </div>
 
             <div className="flex gap-5 py-4 justify-center">
-              <a href={`tel:${provider.phone}`}>
+              <a href={`tel:${provider.phoneNumber}`}>
                 <div className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white">
                   <span className="px-6 pt-4">
                     <Phone className="w-5 h-5" />
@@ -192,14 +193,14 @@ const Page = () => {
                   Call
                 </div>
               </a>
-              <a href="sms:+250123456789">
+              <Link href="/conversations">
                 <div className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white">
                   <span className="px-6 pt-4">
                     <MessageCircleMore className="w-5 h-5" />
                   </span>
                   Message
                 </div>
-              </a>
+              </Link>
               <div
                 className="flex flex-col items-center gap-1 pb-2 text-xs font-medium bg-white text-[#145B10] border-[#145B10] rounded-[10px] border-2 hover:bg-[#145B10] hover:text-white cursor-pointer"
                 onClick={handleShare}

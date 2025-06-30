@@ -658,7 +658,7 @@ const IndividualForm = ({ isWorker }: { isWorker: boolean }) => {
       )
 
       toast.success("Service submitted successfully")
-      const newService = response.data
+      const newService = response.data.data
       setServices([...services, newService])
       setIndividualData({
         category: "",
@@ -860,8 +860,8 @@ const IndividualForm = ({ isWorker }: { isWorker: boolean }) => {
                   languages="English, Kinyarwanda"
                   location={service.areaServed || service.serviceAreas?.join(", ") || "No location provided"}
                   price={`${service.price} RWF/day`}
-                  rating={service.reviews.averageRating || 0}
-                  reviews={service.reviews.totalReviews || 0}
+                  rating={service?.reviews?.averageRating || 0}
+                  reviews={service?.reviews?.totalReviews || 0}
                   distance="2.5 km"
                   available={service.isActive}
                   verified={service?.provider?.userType === "VERIFIED"}

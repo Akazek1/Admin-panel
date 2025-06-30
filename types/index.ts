@@ -56,5 +56,5 @@ export interface Provider {
   available: boolean;
   verified: boolean;
   type: string;
-  phone?: string;
+  phoneNumber?: string;
 }

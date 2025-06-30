@@ -1,13 +1,12 @@
 "use client";
+import dynamic from "next/dynamic";
 import React, { useState } from "react";
 import Header from "@/components/header/header";
 import Categories from "@/components/home/category-scroller";
 import PromoBanner from "@/components/home/promo-banner";
 import PopulerService from "@/components/home/service-scroller";
-import { motion, AnimatePresence } from "framer-motion";
 import SearchResults from "@/components/search/search-result";
 import SearchBar from "@/components/search/search";
-import dynamic from "next/dynamic";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
 
@@ -32,43 +31,28 @@ const HomeContent = () => {
 
   return (
     <div className="space-y-6 p-6 relative">
-      <AnimatePresence mode="wait">
-        {isSearching ? (
-          <motion.div
-            key="search-results"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            <SearchResults query={searchQuery} onBack={handleBack} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="home-content"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            <div className="space-y-6">
-              {user?.userType === "Individual" && (
-                <>
-                  <Header />
-                  <SearchBar
-                    onSearch={handleSearch}
-                    placeholder="Search baby sitter, carpenter etc"
-                  />
-                  <PromoBanner />
-                  <Categories />
-                  <PopulerService />
-                </>
-              )}
-              <ServiceProvider showHeader={true} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isSearching ? (
+        <SearchResults query={searchQuery} onBack={handleBack} />
+      ) : (
+
+        <div className="space-y-6">
+          {
+            user?.userType === "Individual"
+            &&
+            <>
+              <Header />
+              <SearchBar
+                onSearch={handleSearch}
+                placeholder="Search baby sitter, carpenter etc"
+              />
+              <PromoBanner />
+              <Categories />
+              <PopulerService />
+            </>
+          }
+          <ServiceProvider showHeader={true} />
+        </div>
+      )}
     </div>
   );
 };

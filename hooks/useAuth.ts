@@ -13,7 +13,11 @@ import {
   setPhoneNumber,
   updateUser,
 } from "@/store/slices/auth-slice";
-import type { SendOtpRequest, VerifyOtpRequest } from "@/services/auth-service";
+import type {
+  AuthResponse,
+  SendOtpRequest,
+  VerifyOtpRequest,
+} from "@/services/auth-service";
 import { toast } from "react-hot-toast";
 
 export const useAuth = () => {
@@ -93,14 +97,16 @@ export const useAuth = () => {
   };
 
   // Update user profile with userType locally
-  const updateUserProfile = async (data: { userType: string }) => {
+  const updateUserProfile = async (
+    data: { userType: string },
+    user: AuthResponse["data"]["user"] | null
+  ) => {
     try {
       if (!data.userType) {
         toast.error("User type is required");
         return false;
       }
 
-      // Normalize userType input (capitalize each word)
       const toTitleCase = (str: string) =>
         str
           .toLowerCase()
@@ -110,10 +116,7 @@ export const useAuth = () => {
 
       const normalizedUserType = toTitleCase(data.userType.trim());
 
-      const validUserTypes = [
-        "Individual",
-        "Agency",
-      ] as const;
+      const validUserTypes = ["Individual", "Agency"] as const;
 
       if (
         !validUserTypes.includes(
@@ -136,7 +139,7 @@ export const useAuth = () => {
         })
       );
 
-      // Update localStorage
+      // Use the passed-in user directly
       if (typeof window !== "undefined" && user) {
         const updatedUser = {
           ...user,

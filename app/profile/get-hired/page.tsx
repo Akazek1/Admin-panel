@@ -15,6 +15,7 @@ import { toast } from "react-hot-toast";
 import IndividualForm from "@/components/get-hired/individual-form";
 import { Label } from "@/components/ui/label";
 import AgencyWorkerForm from "@/components/get-hired/agency-worker-form";
+import Link from "next/link";
 
 interface CommonProfile {
     name: string;
@@ -118,7 +119,7 @@ const GetHired: React.FC = () => {
             // Update the user profile on the server
             const success = await updateUserProfile({
                 userType: value,
-            });
+            }, user);
 
             if (success) {
                 // Update Redux state
@@ -183,8 +184,12 @@ const GetHired: React.FC = () => {
             <div className="p-6 flex items-center justify-between">
                 <BackButtonHeader text="Get Hired" backHref="/profile" />
                 {
-                    user?.userType === "Agency" && !showWorkerForm && (
+                    user?.userType === "Agency" && !showWorkerForm ? (
                         <SquarePlus onClick={handleAddWorker} className="text-[#145B10] w-6 h-6 cursor-pointer" />
+                    ) : (
+                        <Link href={"/profile/edit"} type="button" className="p-1.5 rounded-sm bg-transparent hover:bg-transparent text-[#145B10] border text-sm font-semibold border-[#145B10]">
+                            Edit Personal Info
+                        </Link>
                     )
                 }
             </div>
@@ -220,6 +225,7 @@ const GetHired: React.FC = () => {
                                         id="firstName"
                                         name="firstName"
                                         defaultValue={user?.firstName}
+                                        disabled
                                         className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]`}
                                         placeholder="Enter first name"
                                     />
@@ -231,6 +237,7 @@ const GetHired: React.FC = () => {
                                         id="lastName"
                                         name="lastName"
                                         defaultValue={user?.lastName}
+                                        disabled
                                         className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
                                         placeholder="Enter last name(Optional)"
                                     />
@@ -241,6 +248,7 @@ const GetHired: React.FC = () => {
                                         type="date"
                                         placeholder="Date of Birth"
                                         value={user?.dateOfBirth || ""}
+                                        disabled
                                         onChange={(e) => handleIndividualChange("email", e.target.value)}
                                         className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
                                     />
@@ -249,6 +257,7 @@ const GetHired: React.FC = () => {
                                     <Input
                                         id="email"
                                         defaultValue={user?.email || ""}
+                                        disabled
                                         onChange={(e) => handleIndividualChange("email", e.target.value)}
                                         className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
                                     />
@@ -259,11 +268,11 @@ const GetHired: React.FC = () => {
                                         name="country"
                                         value={individualData.country || "Rwanda"}
                                         disabled
-                                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10] text-gray-500"
+                                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10] "
                                     />
                                 </div>
                                 <div className="flex items-center border border-black rounded-xl overflow-hidden w-full h-14">
-                                    <div className="flex items-center gap-2 px-4 h-full border-r border-black bg-white">
+                                    <div className="flex items-center gap-2 pl-2 pr-4 h-full border-r border-black bg-white">
                                         <Image
                                             height={16}
                                             width={24}
@@ -278,6 +287,7 @@ const GetHired: React.FC = () => {
                                         type="tel"
                                         inputMode="numeric"
                                         value={user?.phoneNumber || ""}
+                                        disabled
                                         placeholder="Phone Number"
                                         onChange={(e) => handleIndividualChange("phone", e.target.value)}
                                         className="h-full w-full px-4 text-[#212121] font-semibold text-sm
@@ -287,29 +297,10 @@ const GetHired: React.FC = () => {
                                         maxLength={10}
                                     />
                                 </div>
-
-                                <div>
-                                    <Input
-                                        id="certificate"
-                                        type="file"
-                                        onChange={handleCertificateChange}
-                                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                                        accept="application/pdf"
-                                    />
-                                    {agencyData.certificate instanceof File && (
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            Selected file: {agencyData.certificate.name}
-                                        </p>
-                                    )}
-                                    {typeof agencyData.certificate === "string" && agencyData.certificate && (
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            Current file: {agencyData.certificate}
-                                        </p>
-                                    )}
-                                </div>
                                 <div className="space-y-2">
                                     <Select
-                                        value={user?.gender}
+                                        value={"MALE"}
+                                        disabled
                                     >
                                         <SelectTrigger
                                             id="gender"
@@ -327,7 +318,8 @@ const GetHired: React.FC = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <Select
-                                        value={user?.gender}
+                                        value={"English"}
+                                        disabled
                                     >
                                         <SelectTrigger
                                             id="gender"
@@ -345,6 +337,26 @@ const GetHired: React.FC = () => {
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
+                                </div>
+                                <div>
+                                    <Input
+                                        id="certificate"
+                                        type="file"
+                                        onChange={handleCertificateChange}
+                                        disabled
+                                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
+                                        accept="application/pdf"
+                                    />
+                                    {agencyData.certificate instanceof File && (
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Selected file: {agencyData.certificate.name}
+                                        </p>
+                                    )}
+                                    {typeof agencyData.certificate === "string" && agencyData.certificate && (
+                                        <p className="text-sm text-gray-500 mt-1">
+                                            Current file: {agencyData.certificate}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="text-[#1B2431] text-lg font-medium">
                                     Services Offered
