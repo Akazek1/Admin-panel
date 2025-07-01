@@ -14,7 +14,7 @@ import IndividualForm from "@/components/get-hired/individual-form";
 import { Label } from "@/components/ui/label";
 import AgencyWorkerForm from "@/components/get-hired/agency-worker-form";
 import Link from "next/link";
-import EditProfile from "../edit/page";
+import EditProfile from "@/components/edit-profile";
 
 
 const GetHired: React.FC = () => {
@@ -94,7 +94,7 @@ const GetHired: React.FC = () => {
                     {user?.userType === "Individual" ? (
                         // Individual Profile Form
                         <div className="">
-                            <EditProfile idEditable={false} />
+                           <EditProfile idEditable={false} />
                             <div className="px-6 space-y-6">
 
 

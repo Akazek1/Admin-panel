@@ -17,7 +17,7 @@ const ImagePicker: React.FC<ImagePickerProps> = ({ onImageSelect, initialPreview
 
     return (
         <div className="w-full max-w-sm">
-            <Label className="font-semibold text-secondary-foreground/50">Service Image</Label>
+            <Label className="font-semibold text-secondary-foreground/50 text-xs">Service Image</Label>
             <label
                 htmlFor="image-upload"
                 className="flex flex-col items-center justify-center w-full h-44 p-4 border-2 border-dashed border-gray-300 bg-white rounded-lg cursor-pointer hover:border-[#145B10] transition"
