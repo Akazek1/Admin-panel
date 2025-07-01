@@ -219,7 +219,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
           )}
           {!isLoading && !error && workerList.length > 0 && (
             <div className="space-y-0.5">
-              <Label className="font-semibold text-secondary-foreground/50 text-sm">Select Worker</Label>
+              <Label className="font-semibold text-secondary-foreground/50 text-xs">Select Worker</Label>
               <Select
                 value={selectedWorkerId}
                 onValueChange={(value) => {
@@ -251,7 +251,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
       <ImagePicker onImageSelect={handleImageSelect} initialPreview={imagePreview} />
 
       <div className="space-y-0.5">
-        <Label className="font-semibold text-secondary-foreground/50 text-sm">Service Category</Label>
+        <Label className="font-semibold text-secondary-foreground/50 text-xs">Service Category</Label>
         <Select
           value={initialData.category}
           onValueChange={(value) => setData((prev) => ({ ...prev, category: value }))}
@@ -291,7 +291,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
       </div>
 
       <div className="space-y-0.5">
-        <Label className="font-semibold text-secondary-foreground/50 text-sm">Service Price</Label>
+        <Label className="font-semibold text-secondary-foreground/50 text-xs">Service Price</Label>
         <Select
           value={
             initialData?.price && ["1500", "4500", "8000"].includes(initialData.price.toString())
@@ -319,7 +319,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
       </div>
 
       <div className="space-y-0.5">
-        <Label className="font-semibold text-secondary-foreground/50">Availability</Label>
+        <Label className="font-semibold text-secondary-foreground/50 text-xs">Availability</Label>
         <div className="space-y-2">
           <Select
             value={selectedDayGroup}
@@ -384,7 +384,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
       </div>
 
       <div className="space-y-0.5">
-        <Label className="font-semibold text-secondary-foreground/50 text-sm">Area of Service</Label>
+        <Label className="font-semibold text-secondary-foreground/50 text-xs">Area of Service</Label>
         <Select
           value={initialData.areaServed}
           onValueChange={(value) => setData((prev) => ({ ...prev, areaServed: value }))}
@@ -414,7 +414,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
       </div>
 
       <div className="space-y-0.5">
-        <Label className="font-semibold text-secondary-foreground/50 text-sm">Service Type</Label>
+        <Label className="font-semibold text-secondary-foreground/50 text-xs">Service Type</Label>
         <Select
           value={initialData.serviceType}
           onValueChange={(value) => setData((prev) => ({ ...prev, serviceType: value }))}
@@ -438,7 +438,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
       </div>
 
       <div className="space-y-0.5">
-        <Label className="font-semibold text-secondary-foreground/50 text-sm">Service Scope</Label>
+        <Label className="font-semibold text-secondary-foreground/50 text-xs">Service Scope</Label>
         <Select
           value={initialData.scopeOfService}
           onValueChange={(value) => setData((prev) => ({ ...prev, scopeOfService: value }))}

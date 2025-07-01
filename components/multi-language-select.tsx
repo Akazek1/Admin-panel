@@ -1,10 +1,12 @@
 import { Check, ChevronDown } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 type MultiSelectLanguageProps = {
     selectedLanguages: string[];
     onChange: (languages: string[]) => void;
+    label?: string;
 };
 
 const allLanguages = ["English", "Kinyarwanda", "Swahili", "French"];
@@ -12,6 +14,7 @@ const allLanguages = ["English", "Kinyarwanda", "Swahili", "French"];
 export const MultiSelectLanguage = ({
     selectedLanguages,
     onChange,
+    label,
 }: MultiSelectLanguageProps) => {
     const [open, setOpen] = useState(false);
 
@@ -25,9 +28,14 @@ export const MultiSelectLanguage = ({
 
     return (
         <div className="w-full relative">
+            {Label && (
+                <Label className="text-xs font-semibold text-secondary-foreground/50">
+                    {label}
+                </Label>
+            )}
             <Button
                 variant="outline"
-                className="relative w-full justify-between bg-white text-sm font-semibold rounded-lg px-5 py-[18px] border-none focus:ring-[#145B10]"
+                className="relative w-full justify-between bg-white text-sm font-semibold rounded-lg h-14 border-none focus:ring-[#145B10]"
                 onClick={() => setOpen(!open)}
             >
                 <span>

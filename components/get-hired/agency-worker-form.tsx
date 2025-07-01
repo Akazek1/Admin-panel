@@ -265,73 +265,96 @@ const AgencyWorkerManagement: React.FC = () => {
         <div className="space-y-8 max-w-2xl mx-auto">
             {/* Worker Form */}
             <form onSubmit={handleSubmit} className="space-y-6 flex flex-col items-center mb-5">
-                <Input
-                    id="firstName"
-                    value={agencyWorker.firstName}
-                    onChange={(e) => setAgencyWorker((prev) => ({ ...prev, firstName: e.target.value }))}
-                    className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                    placeholder="Worker's First Name"
-                    required
-                />
-                <Input
-                    id="lastName"
-                    value={agencyWorker.lastName}
-                    onChange={(e) => setAgencyWorker((prev) => ({ ...prev, lastName: e.target.value }))}
-                    className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                    placeholder="Worker's Last Name"
-                    required
-                />
-                <Input
-                    id="email"
-                    type="email"
-                    value={agencyWorker.email}
-                    onChange={(e) => setAgencyWorker((prev) => ({ ...prev, email: e.target.value }))}
-                    className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                    placeholder="Worker's Email"
-                    required
-                />
-                <Input
-                    id="phoneNumber"
-                    type="tel"
-                    value={agencyWorker.phoneNumber}
-                    onChange={(e) => setAgencyWorker((prev) => ({ ...prev, phoneNumber: e.target.value }))}
-                    className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                    placeholder="Worker's Phone Number"
-                    required
-                />
+                <div className="space-y-0.5 w-full">
+                    <Label className="text-xs font-semibold text-secondary-foreground/50">Worker&apos;s First Name</Label>
+                    <Input
+                        id="firstName"
+                        value={agencyWorker.firstName}
+                        onChange={(e) => setAgencyWorker((prev) => ({ ...prev, firstName: e.target.value }))}
+                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
+                        placeholder="Worker's First Name"
+                        required
+                    />
+                </div>
+                <div className="space-y-0.5 w-full">
+                    <Label className="text-xs font-semibold text-secondary-foreground/50">Worker&apos;s Last Name</Label>
+                    <Input
+                        id="lastName"
+                        value={agencyWorker.lastName}
+                        onChange={(e) => setAgencyWorker((prev) => ({ ...prev, lastName: e.target.value }))}
+                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
+                        placeholder="Worker's Last Name"
+                        required
+                    />
+                </div>
+                <div className="space-y-0.5 w-full">
+                    <Label className="text-xs font-semibold text-secondary-foreground/50">Worker&apos;s Email</Label>
+                    <Input
+                        id="email"
+                        type="email"
+                        value={agencyWorker.email}
+                        onChange={(e) => setAgencyWorker((prev) => ({ ...prev, email: e.target.value }))}
+                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
+                        placeholder="Worker's Email"
+                        required
+                    />
+                </div>
+                <div className="space-y-0.5 w-full">
+                    <Label className="text-xs font-semibold text-secondary-foreground/50">Worker&apos;s Phone Number</Label>
+                    <Input
+                        id="phoneNumber"
+                        type="tel"
+                        value={agencyWorker.phoneNumber}
+                        onChange={(e) => setAgencyWorker((prev) => ({ ...prev, phoneNumber: e.target.value }))}
+                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
+                        placeholder="Worker's Phone Number"
+                        required
+                    />
+                </div>
                 <MultiSelectLanguage
                     selectedLanguages={agencyWorker.languages}
                     onChange={(langs) => setAgencyWorker((prev) => ({ ...prev, languages: langs }))}
+                    label="Worker's Languages"
                 />
-                <Select
-                    value={agencyWorker.gender}
-                    onValueChange={(value) => setAgencyWorker((prev) => ({ ...prev, gender: value }))}
-                >
-                    <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border focus:ring-[#145B10]">
-                        <SelectValue placeholder="Select gender" />
-                        <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 transition" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="MALE">Male</SelectItem>
-                        <SelectItem value="FEMALE">Female</SelectItem>
-                        <SelectItem value="OTHER">Other</SelectItem>
-                    </SelectContent>
-                </Select>
-                <Input
-                    id="dateOfBirth"
-                    type="date"
-                    value={agencyWorker.dateOfBirth}
-                    onChange={(e) => setAgencyWorker((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
-                    className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                />
-                <Input
-                    id="nationalId"
-                    type="file"
-                    accept=".pdf,image/*"
-                    onChange={(e) => setNationalIdFile(e.target.files?.[0] || null)}
-                    className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
-                    required={!editingWorkerId}
-                />
+                <div className="space-y-0.5 w-full">
+                    <Label className="text-xs font-semibold text-secondary-foreground/50">Worker&apos;s Gender</Label>
+                    <Select
+                        value={agencyWorker.gender}
+                        onValueChange={(value) => setAgencyWorker((prev) => ({ ...prev, gender: value }))}
+                    >
+                        <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border focus:ring-[#145B10]">
+                            <SelectValue placeholder="Select gender" />
+                            <ChevronDown className="w-5 h-5 text-black fill-black absolute right-5 transition" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="MALE">Male</SelectItem>
+                            <SelectItem value="FEMALE">Female</SelectItem>
+                            <SelectItem value="OTHER">Other</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-0.5 w-full">
+                    <Label className="text-xs font-semibold text-secondary-foreground/50">Worker&apos;s Date of Birth()</Label>
+                    <Input
+                        id="dateOfBirth"
+                        type="date"
+                        value={agencyWorker.dateOfBirth}
+                        onChange={(e) => setAgencyWorker((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
+                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
+                    />
+                    <span className="text-[10px] text-secondary-foreground/50">Must be older than 18</span>
+                </div>
+                <div className="space-y-0.5 w-full">
+                    <Label className="text-xs font-semibold text-secondary-foreground/50">Worker&apos;s National ID</Label>
+                    <Input
+                        id="nationalId"
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => setNationalIdFile(e.target.files?.[0] || null)}
+                        className="bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border-none focus:ring-[#145B10]"
+                        required={!editingWorkerId}
+                    />
+                </div>
                 <Button
                     type="submit"
                     disabled={isLoading}
