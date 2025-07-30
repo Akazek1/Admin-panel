@@ -161,9 +161,9 @@ const SearchResults = ({ query: initialQuery, onBack }: SearchResultsProps) => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-4">
       {/* Header with Back Arrow */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" onClick={onBack} className="p-2">
           <ArrowLeft className="w-8 h-8" />
         </Button>
@@ -240,10 +240,10 @@ const SearchResults = ({ query: initialQuery, onBack }: SearchResultsProps) => {
             {popularSearches.map((search, index) => (
               <button
                 key={index}
-                className="flex items-center py-2 px-3 rounded-[50px] border border-[#E5E5E5] text-sm text-[#1B2431] hover:text-[#145B10] hover:border-[#145B10]"
+                className="flex items-center py-1 px-2 sm:py-2 sm:px-3 rounded-[50px] border border-[#E5E5E5] text-[13px] sm:text-sm text-[#1B2431] hover:text-[#145B10] hover:border-[#145B10]"
                 onClick={() => setQuery(search)}
               >
-                {search} <ArrowLeft className="w-5 h-5 rotate-[145deg]" />
+                {search} <ArrowLeft className="w-3.5 h-3.5 sm:w-5 sm:h-5 rotate-[145deg]" />
               </button>
             ))}
           </div>

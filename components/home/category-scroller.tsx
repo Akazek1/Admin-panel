@@ -60,7 +60,7 @@ export default function Categories() {
   };
 
   return (
-    <div className="pt-6 pb-4 space-y-3">
+    <div className="pt-4 pb-4 space-y-3">
       <div className="flex items-center justify-between">
         <h1 className="text-[#1B2431] font-normal text-[18px]">
           Browse all categories

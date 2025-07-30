@@ -55,7 +55,7 @@ const GetHired: React.FC = () => {
 
     return (
         <div className="">
-            <div className="p-6 flex items-center justify-between">
+            <div className="p-4 sm:p-6 flex items-center justify-between">
                 <BackButtonHeader text="Get Hired" backHref="/profile" />
                 {
                     user?.userType === "Agency" && !showWorkerForm ? (
@@ -68,7 +68,7 @@ const GetHired: React.FC = () => {
                 }
             </div>
             {
-                showWorkerForm ? <div className="px-6 pb-6">
+                showWorkerForm ? <div className="px-4 sm:px-6 pb-6">
                     <AgencyWorkerForm />
                 </div> : <div className="pb-10">
                     <ProfileImageUploader />
@@ -108,7 +108,7 @@ const GetHired: React.FC = () => {
                         // Agency Profile Form
                         <>
                             <EditProfile idEditable={false} />
-                            <div className="p-6">
+                            <div className="p-3 sm:p-6">
                                 <Label className="text-base pb-5 font-semibold">Add Service</Label>
                                 <IndividualForm isWorker={true} />
                             </div>

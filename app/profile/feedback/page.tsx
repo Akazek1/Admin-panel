@@ -59,7 +59,7 @@ const Feedback = () => {
   };
 
   return (
-    <div className={`bg-[#F1FCEF] px-6 py-11 space-y-6 ${inter.className}`}>
+    <div className={`bg-[#F1FCEF] p-6 pb-16 space-y-6 ${inter.className}`}>
       {/* Header */}
       <BackButtonHeader text="Share Feedback" />
       <div className="flex flex-col cursor-pointer gap-5">

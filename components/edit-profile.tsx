@@ -256,7 +256,7 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
     const availableLanguages = ["Kinyarwanda", "English", "French", "Swahili"];
 
     return (
-        <div className={`bg-[#F1FCEF] px-3 sm:px-4 md:px-6 ${idEditable ? "pt-6 pb-12" : "py-4"} min-h-screen overflow-y-auto touch-pan-y`}>
+        <div className={`bg-[#F1FCEF] px-3 sm:px-4 md:px-6 ${idEditable ? "pt-6 pb-16" : "py-4"} min-h-screen overflow-y-auto touch-pan-y`}>
             {idEditable && <BackButtonHeader text="Edit Profile" backHref="/profile" className="pb-6" />}
 
             <form onSubmit={handleSubmit} className="space-y-4 max-w-lg mx-auto">
@@ -380,7 +380,7 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
                             className={`relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.gender ? "border-red-500" : "border-none"} focus:ring-[#145B10] touch-manipulation`}
                         >
                             <SelectValue placeholder="Select gender" />
-                            <ChevronDown className="w-4 h-4 text-black fill-black absolute right-3 focus-within:rotate-180 transition ease-in duration-150" />
+                            <ChevronDown className="w-4 h-4 text-black fill-black absolute right-5 focus-within:rotate-180 transition ease-in duration-150" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="MALE">Male</SelectItem>

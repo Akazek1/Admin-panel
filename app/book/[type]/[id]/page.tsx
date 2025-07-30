@@ -129,10 +129,10 @@ const Page = () => {
                   <AvatarFallback>{provider.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col items-start">
-                  <h2 className="text-sm sm:text-base md:text-lg font-semibold text-[#1B2431] line-clamp-1">
+                  <h2 className="text-base md:text-lg font-semibold text-[#1B2431] line-clamp-1">
                     {provider.name}
                   </h2>
-                  <p className="text-xs sm:text-sm text-[#212121] font-bold line-clamp-1">
+                  <p className="text-xs sm:text-sm capitalize text-[#212121] font-bold line-clamp-1">
                     {provider.title}
                   </p>
                 </div>
@@ -145,7 +145,7 @@ const Page = () => {
                 className={`cursor-pointer ${isLoading ? "opacity-50" : ""}`}
               >
                 <Icons.BookMarkIcon
-                  className={`w-5 h-5 sm:w-6 sm:h-6 ${isBookmarked(provider.id)
+                  className={`w-6 h-6 ${isBookmarked(provider.id)
                     ? "fill-[#145B10] stroke-white"
                     : "stroke-[#145B10] hover:stroke-green-600"
                     }`}
@@ -154,19 +154,19 @@ const Page = () => {
             </div>
 
             <div className="space-y-2 md:space-y-3">
-              <p className="flex items-center gap-2 text-[#616161] text-xs sm:text-sm font-medium">
-                <Icons.BagIcon className="w-3 h-3 sm:w-4 sm:h-4 stroke-[#212121]" />
+              <p className="flex items-center gap-2 text-[#616161] text-sm font-medium">
+                <Icons.BagIcon className="w-4 h-4 stroke-[#212121]" />
                 <span className="line-clamp-1">{provider.experience}</span>
               </p>
-              <p className="flex items-center gap-2 text-[#616161] text-xs sm:text-sm font-medium">
-                <Languages className="w-3 h-3 sm:w-4 sm:h-4 text-[#212121]" />
+              <p className="flex items-center gap-2 text-[#616161] text-sm font-medium">
+                <Languages className="w-4 h-4 text-[#212121]" />
                 <span className="line-clamp-1">{provider.languages}</span>
               </p>
-              <p className="flex items-center gap-2 text-[#616161] text-xs sm:text-sm font-medium capitalize">
-                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 text-[#212121]" />
+              <p className="flex items-center gap-2 text-[#616161] text-sm font-medium capitalize">
+                <MapPin className="w-4 h-4 text-[#212121]" />
                 <span className="line-clamp-1">{provider.location}</span>
               </p>
-              <p className="flex flex-col gap-2 md:gap-3 text-[#616161] font-semibold leading-[120%] text-xs sm:text-sm">
+              <p className="flex flex-col gap-2 md:gap-3 text-[#616161] font-semibold leading-[120%] text-sm">
                 <strong className="font-bold text-[#212121] text-base md:text-lg leading-[100%]">
                   Description
                 </strong>

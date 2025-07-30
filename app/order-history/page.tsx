@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Define interfaces based on API response
 interface Address {
@@ -67,7 +67,7 @@ const OrderHistory: React.FC = () => {
   const [rating, setRating] = useState<number>(0);
   const [comment, setComment] = useState<string>('');
   const [submitting, setSubmitting] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'All' | 'Pending' | 'Completed'>('All');
+  const [activeTab, setActiveTab] = useState<'All' | 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled'>('All');
 
   // Format ISO date to "Monday, 26th January 2024"
   const formatDate = (isoDate: string): string => {
@@ -141,6 +141,22 @@ const OrderHistory: React.FC = () => {
     throw lastError || new Error('Retry failed');
   }
 
+  // Function to get status display text and color
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+        return { text: 'Pending', color: 'bg-[#C01212]' };
+      case 'CONFIRMED':
+        return { text: 'Confirmed', color: 'bg-[#145B10]' };
+      case 'COMPLETED':
+        return { text: 'Job Completed', color: 'bg-[#145B10]' };
+      case 'CANCELLED':
+        return { text: 'Job Cancelled', color: 'bg-[#C01212]' };
+      default:
+        return { text: status, color: 'bg-gray-500' };
+    }
+  };
+
   // Fetch bookings
   useEffect(() => {
     const fetchBookings = async () => {
@@ -154,12 +170,7 @@ const OrderHistory: React.FC = () => {
           const category = booking.service.title.toUpperCase();
           const order = {
             id: booking.id,
-            status:
-              booking.status === 'COMPLETED'
-                ? 'Job Completed'
-                : booking.status === 'CANCELLED'
-                  ? 'Job Cancelled'
-                  : booking.status,
+            status: booking.status,
             provider: booking.worker
               ? `${booking.worker.firstName} ${booking.worker.lastName}`
               : 'Agency Worker',
@@ -215,6 +226,17 @@ const OrderHistory: React.FC = () => {
     setReviewModalOpen(true);
   };
 
+  // Handle message click
+  const handleMessageClick = (status: string, bookingId: string) => {
+    if (status === 'PENDING') {
+      toast.error('Booking not yet confirmed');
+      return;
+    }
+    if (status === 'CONFIRMED') {
+      window.location.href = `/conversations/inbox/${bookingId}`;
+    }
+  };
+
   // Handle review submission
   const handleSubmitReview = async () => {
     if (!selectedBookingId) return;
@@ -265,7 +287,9 @@ const OrderHistory: React.FC = () => {
       orders: category.orders.filter((order) => {
         if (activeTab === 'All') return true;
         if (activeTab === 'Pending') return order.status === 'PENDING';
-        if (activeTab === 'Completed') return order.status === 'Job Completed';
+        if (activeTab === 'Confirmed') return order.status === 'CONFIRMED';
+        if (activeTab === 'Completed') return order.status === 'COMPLETED';
+        if (activeTab === 'Cancelled') return order.status === 'CANCELLED';
         return false;
       }),
     }))
@@ -291,24 +315,27 @@ const OrderHistory: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F1FCEF]">
-      <BackButtonHeader text="Order History" className="p-4 sm:p-6" backHref="/" />
+    <div className="min-h-screen bg-[#F1FCEF] pb-8">
+      <BackButtonHeader text="Order History" className="p-3 sm:p-6" backHref="/" />
 
-      {/* Tabs Navigation */}
+      {/* Dropdown Navigation */}
       <div className="px-4 sm:px-6 pb-4">
-        <div className="flex sm:space-x-2 bg-white/50 rounded-md p-1 border border-gray-100">
-          {['All', 'Pending', 'Completed'].map((tab) => (
-            <button
-              key={tab}
-              className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${activeTab === tab
-                  ? 'bg-[#145B10] text-white'
-                  : 'text-[#616161] hover:bg-gray-100'
-                }`}
-              onClick={() => setActiveTab(tab as 'All' | 'Pending' | 'Completed')}
-            >
-              {tab}
-            </button>
-          ))}
+        <div className="bg-white/50 rounded-md p-1 border border-gray-100">
+          <Select
+            value={activeTab}
+            onValueChange={(value) => setActiveTab(value as 'All' | 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled')}
+          >
+            <SelectTrigger className="w-full py-3 text-sm font-semibold text-[#616161] bg-transparent rounded-md border-none focus:ring-2 focus:ring-[#145B10]">
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent className="bg-white text-[#616161]">
+              {['All', 'Pending', 'Confirmed', 'Completed', 'Cancelled'].map((tab) => (
+                <SelectItem key={tab} value={tab} className="text-[#616161] font-semibold">
+                  {tab}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -388,14 +415,9 @@ const OrderHistory: React.FC = () => {
                     {/* Status and Expand Icon */}
                     <div className="flex justify-between items-center">
                       <span
-                        className={`text-[10px] sm:text-xs text-white font-bold py-1 px-2.5 rounded-full ${order.status === 'PENDING'
-                            ? 'bg-[#C01212]'
-                            : order.status === 'Job Completed'
-                              ? 'bg-[#145B10]'
-                              : 'bg-[#C01212]'
-                          }`}
+                        className={`text-[10px] sm:text-xs text-white font-bold py-1 px-2.5 rounded-full ${getStatusDisplay(order.status).color}`}
                       >
-                        {order.status}
+                        {getStatusDisplay(order.status).text}
                       </span>
                     </div>
 
@@ -409,9 +431,18 @@ const OrderHistory: React.FC = () => {
                           {order.profession}
                         </p>
                       </div>
-                      <Link href={`/conversations/inbox/${order.id}`} className="flex items-center">
-                        <MessageCircleMore className="w-5 h-5 sm:w-6 sm:h-6 stroke-[#145B10]" />
-                      </Link>
+                      <button
+                        onClick={() => handleMessageClick(order.status, order.id)}
+                        className="flex items-center"
+                        disabled={order.status !== 'CONFIRMED' && order.status !== 'IN_PROGRESS'}
+                      >
+                        <MessageCircleMore
+                          className={`w-5 h-5 sm:w-6 sm:h-6 ${order.status === 'CONFIRMED' || order.status === 'IN_PROGRESS'
+                            ? 'stroke-[#145B10]'
+                            : 'stroke-[#616161] opacity-50'
+                            }`}
+                        />
+                      </button>
                     </div>
 
                     {/* Date */}
@@ -435,7 +466,7 @@ const OrderHistory: React.FC = () => {
 
                     <div className="flex items-center justify-between w-full">
                       {/* Amount Paid (if applicable) */}
-                      {order.status === 'Job Completed' && order.amount && (
+                      {order.status === 'COMPLETED' && order.amount && (
                         <div className="flex w-full items-center">
                           <CircleCheck className="w-4 h-4 sm:w-5 sm:h-5 mr-1 text-[#145B10]" />
                           <p className="text-xs sm:text-sm text-[#145B10] font-bold">
@@ -446,7 +477,7 @@ const OrderHistory: React.FC = () => {
 
                       {/* Give Feedback Button */}
                       <div className="flex items-center justify-end">
-                        {order.status === 'Job Completed' && !order.reviewSubmitted && (
+                        {order.status === 'COMPLETED' && !order.reviewSubmitted && (
                           <Button
                             className="w-max rounded-full border border-[#145B10] text-[#145B10] font-bold bg-transparent hover:bg-[#145B10] hover:text-white py-1 sm:py-1.5 text-xs sm:text-sm"
                             onClick={() => openReviewModal(order.id)}

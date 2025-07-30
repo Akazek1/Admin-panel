@@ -909,24 +909,25 @@ const IndividualForm = ({ isWorker }: { isWorker: boolean }) => {
       </div>
 
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent className="sm:max-w-[425px] top-1/3 translate-y-1/3">
-          <DialogHeader>
+        <DialogContent className="w-[90%] top-1/3 translate-y-1/3">
+          <DialogHeader className="text-start">
             <DialogTitle>Confirm Deletion</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete this service? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col w-full items-center gap-2">
             <Button
               variant="outline"
               onClick={() => {
                 setDeleteModalOpen(false)
                 setServiceToDelete(null)
               }}
+               className="w-full"
             >
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteService} disabled={submitting}>
+            <Button variant="destructive" className="w-full" onClick={handleDeleteService} disabled={submitting}>
               {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Delete"}
             </Button>
           </DialogFooter>
@@ -934,7 +935,7 @@ const IndividualForm = ({ isWorker }: { isWorker: boolean }) => {
       </Dialog>
 
       <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
-        <DialogContent className="w-[400px] max-h-[90vh] overflow-y-auto top-16">
+        <DialogContent className="w-[380px] max-h-[80vh] overflow-y-auto top-10">
           <DialogHeader>
             <DialogTitle>Edit Service</DialogTitle>
           </DialogHeader>

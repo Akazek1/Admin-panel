@@ -30,7 +30,7 @@ const HomeContent = () => {
   };
 
   return (
-    <div className="space-y-6 p-6 relative">
+    <div className="space-y-6 p-3 sm:p-6 relative">
       {isSearching ? (
         <SearchResults query={searchQuery} onBack={handleBack} />
       ) : (

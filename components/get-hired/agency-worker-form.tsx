@@ -256,7 +256,7 @@ const AgencyWorkerManagement: React.FC = () => {
     }
 
     return (
-        <div className="space-y-8 max-w-2xl mx-auto">
+        <div className="space-y-8 max-w-2xl mx-auto pb-8">
             {/* Worker Form */}
             <form onSubmit={handleSubmit} className="space-y-6 flex flex-col items-center mb-5">
                 <div className="space-y-0.5 w-full">

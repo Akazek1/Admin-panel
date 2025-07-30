@@ -67,14 +67,13 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
         {/* Profile Section */}
         <div className="flex justify-between items-start w-full">
           <div className="flex flex-col items-start gap-1">
-            <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
-              <span></span>
+            <span className="text-[13px] sm:text-sm font-medium text-gray-700 flex items-center gap-1">
               {name || "Unknown Provider"}
               {verified && (
                 <BadgeCheck className="fill-blue-500 stroke-white w-5 h-5" />
               )}
             </span>
-            <h3 className="text-lg font-bold leading-5 text-[#212121] capitalize">
+            <h3 className="text-base sm:text-lg font-bold leading-5 text-[#212121] capitalize">
               {title || "Untitled Service"}
             </h3>
           </div>
@@ -98,17 +97,17 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
           <Icons.BagIcon className="w-4 h-4 stroke-[#212121]" />
           {experience.length > 25 ? experience.slice(0, 22) + "..." : experience || "No experience provided"}
         </p> */}
-        <p className="text-sm text-[#616161] font-medium flex items-center gap-2 capitalize">
+        <p className="text-[13px] sm:text-sm text-[#616161] font-medium flex items-center gap-2 capitalize">
           <Languages className="w-5 h-5 text-[#212121]" />
           {languages || "No languages specified"}
         </p>
-        <p className="text-sm text-[#616161] font-medium flex items-center gap-2 capitalize">
+        <p className="text-[13px] sm:text-sm text-[#616161] font-medium flex items-center gap-2 capitalize">
           <MapPin className="w-4 h-4 text-[#212121]" />
           {location || "No location provided"}
         </p>
         <p className="text-[#145B10] font-semibold">{price || "Price not available"}</p>
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-1 text-sm leading-[14px] text-[#616161] font-medium">
+          <div className="flex items-center gap-1 text-[13px] sm:text-sm leading-[14px] text-[#616161] font-medium">
             <Star className="w-4 h-4 text-yellow-500" />
             {rating || "N/A"} |<span>{reviews || 0} reviews</span>
             {/* <span className="flex items-center gap-1">

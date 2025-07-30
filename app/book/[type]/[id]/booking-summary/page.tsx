@@ -7,7 +7,7 @@ import { useRouter, useSearchParams, useParams } from "next/navigation";
 import BackButtonHeader from "@/components/header/back-button-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ArrowDown, ArrowUp, Calendar, MapPin } from "lucide-react";
+import { ArrowDown, ArrowUp, Calendar, MapPin, Ticket } from "lucide-react";
 import { Icons } from "@/components/icons";
 import {
     Select,
@@ -246,7 +246,7 @@ const BookingSummary = () => {
     const grandTotal = itemTotal - discount + deliveryFee;
 
     return (
-        <div className="flex flex-col bg-[#F1FCEF] min-h-screen overflow-y-auto touch-pan-y">
+        <div className="flex flex-col bg-[#F1FCEF] min-h-screen overflow-y-auto touch-pan-y pb-12">
             <main className="flex-1 p-3 sm:p-4 md:p-6 space-y-4 max-w-lg mx-auto">
                 <BackButtonHeader text="Booking Summary" backHref={`/book/${provider.type}/${provider.id}`} />
 
@@ -373,7 +373,7 @@ const BookingSummary = () => {
 
                     {/* Coupon */}
                     <div className="flex items-center gap-2 rounded-lg bg-white">
-                        <Icons.BagIcon className="w-4 h-4 stroke-black" />
+                        <Ticket className="w-4 h-4 stroke-black" />
                         <span className="text-[#145B10] font-medium text-sm">Apply Coupons</span>
                     </div>
                 </div>
@@ -414,7 +414,6 @@ const BookingSummary = () => {
                     </Button>
                 </div>
             </main>
-
         </div>
     );
 };

@@ -450,7 +450,7 @@ export default function ChatInbox({ searchQuery }: ChatInboxProps) {
                       </Avatar>
                       <div className="ml-3 flex flex-col gap-1">
                         <p
-                          className={`text-xl font-bold leading-5 ${!msg.isRead ? "text-[#212121]" : "text-gray-700"}`}
+                          className={`text-lg sm:text-xl font-bold leading-5 ${!msg.isRead ? "text-[#212121]" : "text-gray-700"}`}
                         >
                           {booking?.user?.id === userId ? `${booking.service.provider.firstName} ${booking.service.provider.lastName}` : `${booking.user.firstName} ${booking.user.lastName}`}
                         </p>

@@ -12,7 +12,7 @@ interface ScrollerProps<T> {
 const Scroller = <T,>({
   items,
   renderItem,
-  gap = 16,
+  gap = 13,
   className = "",
 }: ScrollerProps<T>) => {
   const containerRef = useRef<HTMLDivElement>(null);

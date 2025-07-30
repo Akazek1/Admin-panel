@@ -258,15 +258,16 @@ const Conversation: React.FC = () => {
     }
 
     return (
-        <div className="relative flex flex-col h-screen p-6 bg-gray-50 rounded-lg">
+        <div className="relative flex flex-col h-screen p-4 sm:p-6 bg-gray-50 rounded-lg">
             <div className="flex items-center justify-between">
                 <BackButtonHeader
                     text={booking.userId === user?.id ? `${booking.service.provider.firstName} ${booking.service.provider.lastName}` : `${booking.user.firstName} ${booking.user.lastName}`}
                     backHref="/conversations"
+                    
                 />
                 <div className="flex items-center space-x-3">
                     <Phone className="text-[#222222] w-6 h-6" />
-                    <span className="cursor-pointer">
+                    {/* <span className="cursor-pointer">
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="24"
@@ -283,7 +284,7 @@ const Conversation: React.FC = () => {
                             <path d="M12 12h.01" />
                             <path d="M16 12h.01" />
                         </svg>
-                    </span>
+                    </span> */}
                 </div>
             </div>
 

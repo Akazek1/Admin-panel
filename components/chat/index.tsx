@@ -15,7 +15,7 @@ const Chat = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Sticky header area */}
-      <div className="bg-[#f1faee] sticky top-0 p-6 z-10 space-y-4">
+      <div className="bg-[#f1faee] sticky top-0 p-4 sm:p-6 z-10 space-y-4">
         <ChatHeader />
         <CustomSearch
           onSearch={handleSearch}

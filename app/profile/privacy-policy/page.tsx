@@ -5,7 +5,7 @@ import { PrivacyPolicyData } from "@/constant";
 
 const PrivacyPolicy = () => {
   return (
-    <div className="bg-[#F1FCEF] px-6 py-11 space-y-6 font-urbanist">
+    <div className="bg-[#F1FCEF] p-4 sm:p-5 pb-16 space-y-6 font-urbanist">
       {/* Header */}
       <BackButtonHeader text="Privacy Policy" />
       <Separator />

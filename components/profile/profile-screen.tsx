@@ -33,7 +33,6 @@ const ProfileScreen = () => {
     },
     { name: "Bookmarks", Icon: Icons.BookMarkIcon, href: "/profile/bookmark" },
     { name: "Transactions", Icon: Icons.WalletIcon, href: "/profile/transactions" },
-    { name: "Order History", Icon: Icons.OrderHistoryIcon, href: "/profile/orders" },
     { name: "Address Book", Icon: Icons.BookIcon, href: "/profile/address-book" },
     { name: "Privacy Policy", Icon: Icons.LockIcon, href: "/profile/privacy-policy" },
     { name: "Terms & Conditions", Icon: ShieldX, href: "/profile/terms-&-conditions" },
@@ -54,7 +53,7 @@ const ProfileScreen = () => {
   }
 
   return (
-    <div className="bg-[#F1FCEF] px-6 py-11 space-y-6">
+    <div className="bg-[#F1FCEF] p-4 sm:p-6 pb-16 space-y-6">
       <div className="flex justify-between items-center bg-[#F1FCEF]">
         <h1 className="text-2xl leading-[120%] text-[#212121] font-bold flex items-center gap-4">
           <Image src={"/images/hwa-green-icon.png"} width={20} height={20} alt="icon" />
