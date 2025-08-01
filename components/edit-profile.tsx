@@ -340,8 +340,8 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
                 </div>
 
                 {/* Phone Number */}
-                <div className={`${idEditable ? "" : "pointer-events-none opacity-50"} space-y-1`}>
-                    <Label className={`font-semibold text-xs ${idEditable ? "text-secondary-foreground/50" : "text-secondary-foreground"}`}>Phone Number</Label>
+                <div className={`pointer-events-none opacity-50 space-y-1`}>
+                    <Label className={`font-semibold text-xs text-secondary-foreground`}>Phone Number</Label>
                     <div className="flex items-center border border-black rounded-lg overflow-hidden w-full h-14">
                         <div className="flex items-center gap-1.5 pl-2 pr-4 h-full border-r border-black bg-white">
                             <Image

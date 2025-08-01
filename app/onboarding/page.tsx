@@ -91,7 +91,6 @@ const OnboardingPage = () => {
     const nextIndex = index + 1;
 
     if (numericValue && nextIndex < CODE_LENGTH) {
-      // Delay to prevent flicker but still auto-focus next input
       setTimeout(() => {
         setActiveInputIndex(nextIndex);
         inputsRef.current[nextIndex]?.focus();
@@ -102,7 +101,6 @@ const OnboardingPage = () => {
       handleVerifyOtp(newCode.join(""));
     }
   };
-
 
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
     if (e.key === "Backspace" && !code[index] && index > 0) {
@@ -137,7 +135,6 @@ const OnboardingPage = () => {
     setActiveInputIndex(index);
   };
 
-
   const handleSendOtp = async () => {
     if (!phoneNumber || phoneNumber.length < 9) {
       toast.error("Please enter a valid phone number (at least 9 digits)")
@@ -155,7 +152,6 @@ const OnboardingPage = () => {
 
     if (success) {
       setCurrentStep(4)
-      // Focus first OTP input after transition
       setTimeout(() => {
         inputsRef.current[0]?.focus()
       }, 500)
@@ -172,7 +168,11 @@ const OnboardingPage = () => {
       );
 
       if (profileSuccess) {
-        router.push("/");
+        if (user.firstName === "") {
+          router.push("/profile/edit");
+        } else {
+          router.push("/");
+        }
       } else {
         toast.error("Failed to complete signup");
       }
@@ -197,6 +197,14 @@ const OnboardingPage = () => {
 
     if (currentStep < ONBOARDING_STEPS.length - 1) {
       setCurrentStep((prev) => prev + 1)
+    }
+  }
+
+  const handleBack = () => {
+    if (currentStep === 4) {
+      setCurrentStep(3)
+      setCode(Array(CODE_LENGTH).fill(""))
+      setActiveInputIndex(0)
     }
   }
 
@@ -332,38 +340,58 @@ const OnboardingPage = () => {
         )
       case 4:
         return (
-          <div className="flex flex-col items-center gap-10 sm:gap-20">
-            <span className="flex flex-col items-center gap-2 mb-6 sm:mb-8">
-              <h2 className="font-bold text-2xl sm:text-3xl text-[#212121]">Enter Verification Code</h2>
-              <p className="text-sm font-bold text-center text-[#212121] max-w-[300px]">
-                We have sent a {CODE_LENGTH} digit verification code to your registered mobile
-              </p>
-            </span>
-            <div onPaste={handlePaste} className="flex gap-1 sm:gap-2">
-              {code.map((digit, index) => (
-                <Input
-                  key={index}
-                  ref={(el) => {
-                    inputsRef.current[index] = el
-                  }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleChange(e.target.value, index)}
-                  onKeyDown={(e) => handleKeyDown(e, index)}
-                  onFocus={() => {
-                    const firstEmptyIndex = code.findIndex(d => !d);
-                    if (index === firstEmptyIndex || index === activeInputIndex) {
-                      handleInputFocus(index);
-                    } else {
-                      inputsRef.current[index]?.blur();
-                    }
-                  }}
-                  autoFocus={activeInputIndex === index}
-                  className="w-10 h-10 sm:w-12 sm:h-12 text-center text-lg font-medium border border-black rounded-md focus:ring-2 focus:ring-none focus:outline-none outline-none"
+          <div className="relative w-full">
+            <button
+              onClick={handleBack}
+              className="absolute -top-60 sm:-top-80 left-0 p-2 text-[#1B5E20] font-semibold flex items-center gap-1"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                  clipRule="evenodd"
                 />
-              ))}
+              </svg>
+              Back
+            </button>
+            <div className="flex flex-col items-center gap-10 sm:gap-20 pt-12">
+              <span className="flex flex-col items-center gap-2 mb-6 sm:mb-8">
+                <h2 className="font-bold text-2xl sm:text-3xl text-[#212121]">Enter Verification Code</h2>
+                <p className="text-sm font-bold text-center text-[#212121] max-w-[300px]">
+                  We have sent a {CODE_LENGTH} digit verification code to your registered mobile
+                </p>
+              </span>
+              <div onPaste={handlePaste} className="flex gap-1 sm:gap-2">
+                {code.map((digit, index) => (
+                  <Input
+                    key={index}
+                    ref={(el) => {
+                      inputsRef.current[index] = el
+                    }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleChange(e.target.value, index)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    onFocus={() => {
+                      const firstEmptyIndex = code.findIndex(d => !d);
+                      if (index === firstEmptyIndex || index === activeInputIndex) {
+                        handleInputFocus(index);
+                      } else {
+                        inputsRef.current[index]?.blur();
+                      }
+                    }}
+                    autoFocus={activeInputIndex === index}
+                    className="w-10 h-10 sm:w-12 sm:h-12 text-center text-lg font-medium border border-black rounded-md focus:ring-2 focus:ring-none focus:outline-none outline-none"
+                  />
+                ))}
+              </div>
             </div>
           </div>
         )
