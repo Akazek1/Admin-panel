@@ -72,7 +72,7 @@ export const BookmarkProvider: React.FC<BookmarkProviderProps> = ({ children }) 
                 toast.success("Bookmark added");
             }
         } catch (error) {
-            toast.error("Failed to update bookmark. Please try again.");
+            toast.error("Please wait and try again.");
             console.error("Bookmark error:", error);
         } finally {
             setIsLoading(false);

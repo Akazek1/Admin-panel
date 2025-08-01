@@ -19,6 +19,8 @@ interface ServiceCardProps {
   available: boolean;
   verified?: boolean;
   onClick: () => void;
+  onRemoveBookmark?: () => void; // Optional prop for removing bookmark
+  isBookmarked?: boolean; // Optional prop to override context bookmark state
 }
 
 const ServiceCard: React.FC<ServiceCardProps> = ({
@@ -36,8 +38,25 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   available,
   verified,
   onClick,
+  onRemoveBookmark,
+  isBookmarked: isBookmarkedProp,
 }) => {
-  const { isBookmarked, toggleBookmark, isLoading } = useBookmark("services");
+  const { isBookmarked: isBookmarkedContext, toggleBookmark, isLoading } = useBookmark("services");
+  
+  const isServiceBookmarked = isBookmarkedProp !== undefined ? isBookmarkedProp : isBookmarkedContext(id);
+
+  const handleBookmarkClick = async (e: React.MouseEvent) => {
+    if (isLoading) return;
+    e.stopPropagation(); 
+
+    
+    if (isServiceBookmarked && onRemoveBookmark) {
+      await onRemoveBookmark();
+    } else {
+
+      await toggleBookmark(id);
+    }
+  };
 
   return (
     <div
@@ -78,14 +97,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
             </h3>
           </div>
           <span
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleBookmark(id);
-            }}
-            className={`cursor-pointer ${isLoading ? "opacity-50" : ""}`}
+            onClick={handleBookmarkClick}
+            className={`cursor-pointer ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             <Icons.BookMarkIcon
-              className={`w-6 h-6 ${isBookmarked(id)
+              className={`w-6 h-6 ${isServiceBookmarked
                 ? "fill-[#145B10] stroke-white"
                 : "stroke-[#145B10] hover:stroke-green-600"
                 }`}
@@ -93,7 +109,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
           </span>
         </div>
 
-        {/* <p className="text-sm text-[#616161] font-medium flex  items-center gap-2 line-clamp-1">
+        {/* <p className="text-sm text-[#616161] font-medium flex items-center gap-2 line-clamp-1">
           <Icons.BagIcon className="w-4 h-4 stroke-[#212121]" />
           {experience.length > 25 ? experience.slice(0, 22) + "..." : experience || "No experience provided"}
         </p> */}

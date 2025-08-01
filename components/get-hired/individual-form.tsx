@@ -254,6 +254,7 @@ const ServiceForm: React.FC<ServiceFormProps> = ({
         <Label className="font-semibold text-secondary-foreground/50 text-xs">Service Category</Label>
         <Select
           value={initialData.category}
+          disabled={initialData.category !== ""}
           onValueChange={(value) => setData((prev) => ({ ...prev, category: value }))}
         >
           <SelectTrigger className="relative bg-white text-sm font-semibold rounded-lg px-5 py-[18px] border-none focus:ring-2 focus:ring-[#145B10] w-full">
