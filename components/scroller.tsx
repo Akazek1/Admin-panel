@@ -17,6 +17,7 @@ const Scroller = <T,>({
 }: ScrollerProps<T>) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [totalWidth, setTotalWidth] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -33,15 +34,22 @@ const Scroller = <T,>({
     containerRef.current?.getBoundingClientRect().width || 400;
 
   return (
-    <div className={`overflow-hidden w-full ${className}`}>
+    <div className={`overflow-x-auto overflow-y-hidden w-full ${className}`} 
+         style={{ 
+           scrollbarWidth: 'thin',
+           scrollbarColor: '#145B10 transparent'
+         }}>
       <motion.div
         ref={containerRef}
-        className="flex cursor-grab active:cursor-grabbing"
+        className={`flex ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
         drag="x"
         dragConstraints={{
           left: -(totalWidth - containerWidth),
           right: 0,
         }}
+        dragElastic={0.1}
+        onDragStart={() => setIsDragging(true)}
+        onDragEnd={() => setIsDragging(false)}
         style={{ gap: `${gap}px`, paddingLeft: "4px", paddingRight: "4px" }}
       >
         {items.map((item, index) => (

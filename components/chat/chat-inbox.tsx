@@ -232,9 +232,14 @@ export default function ChatInbox({ searchQuery }: ChatInboxProps) {
 
         // Initialize socket after data is loaded
         initializeSocketConnection(bookingsData)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        toast.error("Failed to load messages")
+      } catch (error: any) {
+        // Silently handle 404 - endpoint not implemented yet
+        if (error?.response?.status === 404) {
+          setBookings([])
+        } else {
+          console.error("Error fetching data:", error)
+          toast.error("Failed to load messages")
+        }
       } finally {
         setLoading(false)
       }
@@ -291,8 +296,11 @@ export default function ChatInbox({ searchQuery }: ChatInboxProps) {
           if (hasChanges || updatedBookings.length !== bookings.length) {
             setBookings(updatedBookings)
           }
-        } catch (error) {
-          console.error("Error polling for updates:", error)
+        } catch (error: any) {
+          // Silently handle 404 during polling
+          if (error?.response?.status !== 404) {
+            console.error("Error polling for updates:", error)
+          }
         }
       }
 
@@ -475,9 +483,33 @@ export default function ChatInbox({ searchQuery }: ChatInboxProps) {
                 )
               })
             ) : (
-              <p className="text-center text-gray-500">
-                {bookings.length === 0 ? "No bookings available" : "No messages found"}
-              </p>
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                  <svg
+                    className="w-10 h-10 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {bookings.length === 0 ? "No messages yet" : "No messages found"}
+                </h3>
+                <p className="text-sm text-gray-500 text-center max-w-sm">
+                  {bookings.length === 0
+                    ? "When you book a service, you'll be able to chat with providers here."
+                    : searchQuery
+                    ? "Try adjusting your search or filters"
+                    : "No messages match the selected filter"}
+                </p>
+              </div>
             )}
           </motion.div>
         )}

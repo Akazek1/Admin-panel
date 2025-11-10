@@ -21,9 +21,8 @@ const PromoBanner = () => {
         const res = await api.get("/admin/banner");
         setBanner(res.data.data as Banner);
       } catch (error: unknown) {
-        console.error("Failed to fetch banner:", error);
+        // Silently fall back to default banner
         setBanner({ url: fallbackBannerUrl });
-        toast.error("Failed to fetch banner. Showing placeholder.");
       } finally {
         setLoading(false);
       }
