@@ -6,6 +6,7 @@ import Layout from "@/components/layout/pwa-layout";
 import { Toaster } from "react-hot-toast";
 import { Providers } from "@/store/provider";
 import { BookmarkProvider } from "@/context/bookmark-context"; // Ensure this import is correct
+import { ViewModeProvider } from "@/context/view-mode-context";
 
 // Load Geist fonts
 const geistSans = Geist({
@@ -40,12 +41,14 @@ export default function RootLayout({
       </head>
       <body className="antialiased">
         <Providers>
-          <Layout>
-            <BookmarkProvider>
-              <Toaster position="top-center" />
-              {children}
-            </BookmarkProvider>
-          </Layout>
+          <ViewModeProvider>
+            <Layout>
+              <BookmarkProvider>
+                <Toaster position="top-center" />
+                {children}
+              </BookmarkProvider>
+            </Layout>
+          </ViewModeProvider>
         </Providers>
       </body>
     </html>

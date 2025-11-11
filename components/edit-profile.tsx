@@ -25,6 +25,7 @@ import toast from "react-hot-toast";
 interface FormData {
     firstName: string;
     lastName: string;
+    username: string;
     dateOfBirth: string;
     email: string;
     country: string;
@@ -46,10 +47,11 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
     const [formData, setFormData] = useState<FormData>({
         firstName: user?.firstName || "",
         lastName: user?.lastName || "",
+        username: user?.username || "",
         dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth).toISOString().split("T")[0] : "",
         email: user?.email || "",
         country: user?.country || "Rwanda",
-        phone: user?.phoneNumber || "",
+        phone: user?.phoneNumber || "", // Preserve phone number from user, don't overwrite
         gender: user?.gender || "",
         languages: user?.languages || [],
         street: "",
@@ -74,6 +76,7 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
                         ...prev,
                         firstName: userData.firstName || "",
                         lastName: userData.lastName || "",
+                        username: userData.username || "",
                         dateOfBirth: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split("T")[0] : "",
                         email: userData.email || "",
                         country: userData.country || "Rwanda",
@@ -206,10 +209,34 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
                 throw new Error("Invalid date of birth");
             }
 
+            // Validate username if provided
+            if (formData.username) {
+                const usernameRegex = /^[a-z0-9_-]{3,30}$/;
+                if (!usernameRegex.test(formData.username)) {
+                    throw new Error("Username must be 3-30 characters, lowercase letters, numbers, underscores, or hyphens only");
+                }
+                
+                // Check username availability
+                try {
+                    const checkResponse = await api.get(`/users/username/${formData.username}/check`);
+                    if (!checkResponse.data.available && user?.username !== formData.username) {
+                        throw new Error("Username is already taken");
+                    }
+                } catch (checkErr: any) {
+                    if (checkErr.response?.status === 400) {
+                        throw new Error(checkErr.response?.data?.message || "Invalid username format");
+                    }
+                    if (checkErr.message?.includes("already taken")) {
+                        throw checkErr;
+                    }
+                }
+            }
+
             const payload = {
                 phoneNumber: String(formData.phone),
                 firstName: String(formData.firstName),
                 lastName: String(formData.lastName),
+                username: formData.username ? String(formData.username) : undefined,
                 email: String(formData.email),
                 gender,
                 dateOfBirth: dateOfBirth.toISOString(),
@@ -218,12 +245,14 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
                 // certificate: formData.certificate ?? null,
             };
 
-            const profileResponse = await api.post("/users/complete-profile", payload);
+            // Use PATCH for profile updates (username can be updated via PATCH)
+            const profileResponse = await api.patch("/users/profile", payload);
 
             const userData = profileResponse?.data?.data;
 
             const updatedUser = {
                 id: userData.id,
+                username: userData.username,
                 phoneNumber: userData.phoneNumber,
                 firstName: userData.firstName,
                 lastName: userData.lastName,
@@ -289,6 +318,34 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
                     />
                 </div>
 
+                {/* Username */}
+                <div className="space-y-1">
+                    <Label className="font-semibold text-secondary-foreground/50 text-xs">
+                        Username <span className="text-gray-400 text-xs">(for sharing your profile)</span>
+                    </Label>
+                    <Input
+                        id="username"
+                        name="username"
+                        value={formData.username}
+                        disabled={!idEditable}
+                        onChange={(e) => {
+                            // Convert to lowercase and remove invalid characters
+                            const value = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+                            setFormData((prev) => ({ ...prev, username: value }));
+                            setErrors((prev) => ({ ...prev, username: "" }));
+                        }}
+                        className={`bg-white text-sm font-semibold rounded-lg px-5 py-[18px] focus:outline-none border ${errors.username ? "border-red-500" : "border-none"} focus:ring-[#145B10] touch-manipulation`}
+                        placeholder="your-username"
+                        maxLength={30}
+                    />
+                    {errors.username && <p className="text-red-500 text-xs">{errors.username}</p>}
+                    {formData.username && (
+                        <p className="text-xs text-gray-500">
+                            Your profile link: {typeof window !== "undefined" ? window.location.origin : ""}/provider/{formData.username}
+                        </p>
+                    )}
+                </div>
+
                 {/* Date of Birth */}
                 <div className="space-y-1">
                     <Label className="font-semibold text-secondary-foreground/50 text-xs">Date of Birth</Label>
@@ -339,10 +396,10 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
                     {errors.country && <p className="text-red-500 text-xs">{errors.country}</p>}
                 </div>
 
-                {/* Phone Number */}
-                <div className={`pointer-events-none opacity-50 space-y-1`}>
+                {/* Phone Number - Read Only */}
+                <div className={`space-y-1`}>
                     <Label className={`font-semibold text-xs text-secondary-foreground`}>Phone Number</Label>
-                    <div className="flex items-center border border-black rounded-lg overflow-hidden w-full h-14">
+                    <div className="flex items-center border border-black rounded-lg overflow-hidden w-full h-14 bg-gray-100">
                         <div className="flex items-center gap-1.5 pl-2 pr-4 h-full border-r border-black bg-white">
                             <Image
                                 height={14}
@@ -357,14 +414,15 @@ const EditProfile = ({ idEditable = true }: { idEditable?: boolean }) => {
                             id="phone"
                             type="tel"
                             inputMode="numeric"
-                            value={formData.phone}
+                            value={formData.phone || user?.phoneNumber?.replace(/^250/, "") || ""}
                             placeholder="Phone Number"
-                            onChange={handleChange}
-                            className="h-full w-full px-3 text-[#212121] font-semibold text-sm placeholder:text-[#212121] placeholder:font-semibold placeholder:text-sm border-none outline-none focus:outline-none focus:ring-0 focus:border-none active:outline-none active:ring-0 active:border-none shadow-none touch-manipulation"
+                            readOnly
+                            disabled
+                            className="h-full w-full px-3 text-[#212121] font-semibold text-sm bg-gray-100 cursor-not-allowed border-none outline-none focus:outline-none focus:ring-0 focus:border-none active:outline-none active:ring-0 active:border-none shadow-none touch-manipulation"
                             maxLength={10}
                         />
                     </div>
-                    {errors.phone && <p className="text-red-500 text-xs">{errors.phone}</p>}
+                    <p className="text-xs text-gray-500">Phone number cannot be changed</p>
                 </div>
 
                 {/* Gender */}

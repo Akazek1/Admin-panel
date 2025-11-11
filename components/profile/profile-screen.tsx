@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
 import {
   Briefcase,
@@ -47,8 +47,16 @@ const ProfileScreen = () => {
     window.dispatchEvent(new StorageEvent("storage", { key: "token", newValue: null }));
     router.push("/onboarding");
   };
+
+  // Redirect to onboarding if not authenticated - use useEffect to avoid render-time side effects
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      router.push("/onboarding");
+    }
+  }, [isAuthenticated, user, router]);
+
+  // Return null while redirecting
   if (!isAuthenticated || !user) {
-    router.push("/onboarding");
     return null;
   }
 

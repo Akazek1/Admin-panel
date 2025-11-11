@@ -77,7 +77,15 @@ interface ApiResponse {
     data: Booking[];
 }
 
-const RecievedBookings: React.FC = () => {
+interface RecievedBookingsProps {
+    title?: string;
+    emptyMessage?: string;
+}
+
+const RecievedBookings: React.FC<RecievedBookingsProps> = ({ 
+    title = "Received Bookings",
+    emptyMessage = "No bookings found."
+}) => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
@@ -92,8 +100,13 @@ const RecievedBookings: React.FC = () => {
                 });
                 setBookings(response.data.data);
                 setError(null);
-            } catch {
-                setError('Failed to fetch bookings');
+            } catch (error: any) {
+                // Silently handle 404 - endpoint not implemented yet
+                if (error?.response?.status === 404) {
+                    setBookings([]);
+                } else {
+                    setError('Failed to fetch bookings');
+                }
             } finally {
                 setLoading(false);
             }
@@ -120,9 +133,9 @@ const RecievedBookings: React.FC = () => {
 
     return (
         <div className="container mx-auto pb-8">
-            <h1 className="text-2xl font-bold mb-4">Received Bookings</h1>
+            <h1 className="text-2xl font-bold mb-4">{title}</h1>
             {bookings.length === 0 ? (
-                <p className="text-gray-500">No bookings found.</p>
+                <p className="text-gray-500">{emptyMessage}</p>
             ) : (
                 <div className="grid gap-2 grid-cols-2">
                     {bookings.map((booking) => (

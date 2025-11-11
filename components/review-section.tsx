@@ -50,8 +50,16 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ serviceId }) => {
                         ? reviewsData.reduce((sum: number, review: Review) => sum + review.rating, 0) / reviewsData.length
                         : 0;
                 setAverageRating(avgRating);
-            } catch {
-                toast.error("Failed to fetch reviews");
+            } catch (error: any) {
+                // Silently handle 404 - endpoint not implemented yet
+                if (error?.response?.status === 404) {
+                    setReviews([]);
+                    setTotalReviews(0);
+                    setAverageRating(0);
+                } else {
+                    // Only show error for actual failures
+                    console.error("Failed to fetch reviews:", error);
+                }
             } finally {
                 setLoading(false);
             }

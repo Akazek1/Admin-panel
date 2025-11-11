@@ -61,7 +61,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
   return (
     <div
       onClick={onClick}
-      className="bg-white shadow-[#04060F0D] rounded-2xl p-5 flex items-center gap-4 cursor-pointer"
+      className="bg-white border border-gray-100 shadow-sm hover:shadow-lg rounded-2xl p-5 flex items-center gap-4 cursor-pointer transition-all duration-200 hover:-translate-y-0.5"
     >
       {/* Image */}
       <div className="relative">
@@ -74,8 +74,11 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
           className="max-w-[120px] h-44 object-cover rounded-t-[20px] rounded-br-[20px]"
         />
         <span
-          className={`absolute bottom-0 left-0 text-xs font-medium px-2 py-1 rounded-tr-[20px] ${available ? "bg-[#FFFFFF] text-green-700" : "bg-[#FFFFFF] text-red-700"
-            }`}
+          className={`absolute bottom-0 left-0 text-xs font-semibold px-2.5 py-1 rounded-tr-[20px] shadow-sm ${
+            available 
+              ? "bg-green-50 text-green-700 border border-green-200" 
+              : "bg-red-50 text-red-700 border border-red-200"
+          }`}
         >
           {available ? "Available" : "Unavailable"}
         </span>
@@ -124,8 +127,20 @@ const ServiceCard: React.FC<ServiceCardProps> = ({
         <p className="text-[#145B10] font-semibold">{price || "Price not available"}</p>
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-1 text-[13px] sm:text-sm leading-[14px] text-[#616161] font-medium">
-            <Star className="w-4 h-4 text-yellow-500" />
-            {rating || "N/A"} |<span>{reviews || 0} reviews</span>
+            <div className="relative w-4 h-4">
+              {/* Background star (empty) */}
+              <Star className="w-4 h-4 stroke-gray-400 fill-none absolute" />
+              {/* Filled star with clip based on rating */}
+              {rating > 0 && (
+                <div 
+                  className="absolute overflow-hidden" 
+                  style={{ width: `${(rating / 5) * 100}%`, height: '100%' }}
+                >
+                  <Star className="w-4 h-4 fill-yellow-400 stroke-yellow-400" />
+                </div>
+              )}
+            </div>
+            {rating || "N/A"} | {reviews || 0} reviews
             {/* <span className="flex items-center gap-1">
               <Icons.ClockIcon className="w-3 h-3 stroke-[#212121]" /> {distance || "N/A"}
             </span> */}

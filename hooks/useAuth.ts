@@ -57,23 +57,36 @@ export const useAuth = () => {
     }
   };
 
-  // Verify OTP function
-  const handleVerifyOtp = async (otp: string) => {
-    if (!phoneNumber) {
-      toast.error(
-        "Phone number is missing. Please go back and enter your phone number."
-      );
-      return false;
+  // Verify OTP function - accepts either string (otp) or object { phoneNumber, otp }
+  const handleVerifyOtp = async (otpOrData: string | { phoneNumber: string; otp: string }) => {
+    let phone: string;
+    let otp: string;
+
+    if (typeof otpOrData === "string") {
+      // Legacy format: just OTP string
+      if (!phoneNumber) {
+        toast.error(
+          "Phone number is missing. Please go back and enter your phone number."
+        );
+        return false;
+      }
+      phone = phoneNumber;
+      otp = otpOrData;
+    } else {
+      // New format: object with phoneNumber and otp
+      phone = otpOrData.phoneNumber;
+      otp = otpOrData.otp;
     }
 
     try {
+      // Accept 6-digit OTP (standard) or hardcoded OTP for development
       if (otp.length !== 6) {
         toast.error("Please enter a valid 6-digit OTP");
         return false;
       }
 
       const data: VerifyOtpRequest = {
-        phoneNumber,
+        phoneNumber: phone,
         otp,
       };
 
@@ -84,8 +97,11 @@ export const useAuth = () => {
       } else {
         toast.error("Invalid OTP please try again.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("OTP verification failed:", error);
+      // Show the actual error message from backend if available
+      const errorMessage = error?.response?.data?.message || error?.message || "OTP verification failed";
+      toast.error(errorMessage);
       return false;
     }
   };

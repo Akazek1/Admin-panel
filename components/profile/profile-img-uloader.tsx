@@ -36,11 +36,8 @@ const ProfileImageUploader: React.FC<ProfileImageUploaderProps> = ({
             const formData = new FormData();
             formData.append("avatar", file);
 
-            const response = await api.patch("/users/profile/image", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
+            // Don't set Content-Type header - let axios set it automatically with boundary
+            const response = await api.patch("/users/profile/image", formData);
 
             if (response.data.data?.profilePicture) {
                 dispatch(updateUser({ profilePicture: response.data.data.profilePicture }));
@@ -90,7 +87,7 @@ const ProfileImageUploader: React.FC<ProfileImageUploaderProps> = ({
                 )}
             </div>
             <p className="text-sm text-center text-[#212121] font-bold leading-[140%]">
-                {user?.email || user?.phoneNumber}
+                @{user?.username || "username"}
             </p>
         </div>
     );

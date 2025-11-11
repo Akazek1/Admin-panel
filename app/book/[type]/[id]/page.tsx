@@ -24,6 +24,8 @@ const Page = () => {
   const router = useParams();
   const id = router.id as string;
   const [provider, setProvider] = useState<Provider | null>(null);
+  const [providerId, setProviderId] = useState<string | null>(null);
+  const [providerUsername, setProviderUsername] = useState<string | null>(null);
   const [availability, setAvailabity] = useState([])
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +44,10 @@ const Page = () => {
         const response = await api.get(`/services/${id}`);
         const service: Service = response.data.data;
         setAvailabity(service?.availability || [])
+        
+        // Store provider ID and username for sharing
+        setProviderId(service.provider.id);
+        setProviderUsername(service.provider.username || null);
 
         const mappedProvider: Provider = {
           id: service.id,
@@ -79,15 +85,43 @@ const Page = () => {
   };
 
   const handleShare = () => {
-    const shareLink = window.location.href;
-    navigator.clipboard
-      .writeText(shareLink)
-      .then(() => {
-        toast.success("Link copied to clipboard!");
-      })
-      .catch(() => {
-        toast.error("Failed to copy link");
-      });
+    // Share provider profile link using username (shorter, editable)
+    // This ensures unique links even if providers have the same name
+    if (providerUsername) {
+      const baseUrl = window.location.origin;
+      const shareLink = `${baseUrl}/provider/${providerUsername}`;
+      navigator.clipboard
+        .writeText(shareLink)
+        .then(() => {
+          toast.success("Provider link copied to clipboard!");
+        })
+        .catch(() => {
+          toast.error("Failed to copy link");
+        });
+    } else if (providerId) {
+      // Fallback to ID if username not available
+      const baseUrl = window.location.origin;
+      const shareLink = `${baseUrl}/provider/${providerId}`;
+      navigator.clipboard
+        .writeText(shareLink)
+        .then(() => {
+          toast.success("Provider link copied to clipboard!");
+        })
+        .catch(() => {
+          toast.error("Failed to copy link");
+        });
+    } else {
+      // Fallback to current page if neither available
+      const shareLink = window.location.href;
+      navigator.clipboard
+        .writeText(shareLink)
+        .then(() => {
+          toast.success("Link copied to clipboard!");
+        })
+        .catch(() => {
+          toast.error("Failed to copy link");
+        });
+    }
   };
 
   if (loading) {

@@ -12,15 +12,25 @@ export function middleware(request: NextRequest) {
   // Protected routes that require authentication
   const protectedRoutes = ["/profile", "/get-hired", "/book", "/checkout"];
 
+  // Public routes that don't require authentication
+  const publicRoutes = ["/provider"];
+
+  const isPublicRoute = publicRoutes.some(
+    (route) => request.nextUrl.pathname.startsWith(route + "/")
+  );
+
   const isProtectedRoute = ["/", ...protectedRoutes].some(
     (route) =>
       request.nextUrl.pathname === route ||
       request.nextUrl.pathname.startsWith(route + "/")
-  );
+  ) && !isPublicRoute; // Exclude public routes from protection
 
   // If trying to access a protected route without being logged in, redirect to onboarding
+  // Store the intended URL so we can redirect back after login
   if (isProtectedRoute && !isAuthenticated) {
-    return NextResponse.redirect(new URL("/onboarding", request.url));
+    const onboardingUrl = new URL("/onboarding", request.url);
+    onboardingUrl.searchParams.set("redirect", request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(onboardingUrl);
   }
 
   // If trying to access onboarding while logged in, redirect to home
@@ -39,6 +49,7 @@ export const config = {
     "/get-hired/:path*",
     "/book/:path*",
     "/checkout/:path*",
+    "/provider/:path*",
     "/onboarding",
   ],
 };
