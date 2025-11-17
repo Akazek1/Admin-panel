@@ -1,55 +1,34 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+// Define public routes that don't require authentication
+const publicRoutes = ["/auth/login"];
+
 export function middleware(request: NextRequest) {
-  // Check for token in cookies or Authorization header
-  const token =
-    request.cookies.get("token")?.value ||
-    request.headers.get("Authorization")?.replace("Bearer ", "");
+  // Get the token from cookies
+  const token = request.cookies.get("access_token")?.value;
 
-  const isAuthenticated = !!token;
+  // Get the current path
+  const path = request.nextUrl.pathname;
 
-  // Protected routes that require authentication
-  const protectedRoutes = ["/profile", "/get-hired", "/book", "/checkout"];
-
-  // Public routes that don't require authentication
-  const publicRoutes = ["/provider"];
-
-  const isPublicRoute = publicRoutes.some(
-    (route) => request.nextUrl.pathname.startsWith(route + "/")
-  );
-
-  const isProtectedRoute = ["/", ...protectedRoutes].some(
-    (route) =>
-      request.nextUrl.pathname === route ||
-      request.nextUrl.pathname.startsWith(route + "/")
-  ) && !isPublicRoute; // Exclude public routes from protection
-
-  // If trying to access a protected route without being logged in, redirect to onboarding
-  // Store the intended URL so we can redirect back after login
-  if (isProtectedRoute && !isAuthenticated) {
-    const onboardingUrl = new URL("/onboarding", request.url);
-    onboardingUrl.searchParams.set("redirect", request.nextUrl.pathname + request.nextUrl.search);
-    return NextResponse.redirect(onboardingUrl);
+  // If it's a public route, allow access
+  if (publicRoutes.includes(path)) {
+    return NextResponse.next();
   }
 
-  // If trying to access onboarding while logged in, redirect to home
-  if (request.nextUrl.pathname === "/onboarding" && isAuthenticated) {
-    return NextResponse.redirect(new URL("/", request.url));
+  // If no token and trying to access protected route, redirect to login
+  if (!token) {
+    return NextResponse.redirect(new URL("/auth/login", request.url));
   }
 
+  // If token exists, allow the request to proceed
   return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
+// Configure which paths the middleware should run on
 export const config = {
   matcher: [
-    "/",
-    "/profile/:path*",
-    "/get-hired/:path*",
-    "/book/:path*",
-    "/checkout/:path*",
-    "/provider/:path*",
-    "/onboarding",
+    // Apply to all routes except static files and Next.js internals
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 };
