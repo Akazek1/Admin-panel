@@ -15,13 +15,13 @@ export function LogoutButton() {
             // Clear any other stored auth data
             localStorage.removeItem("token")
 
-            // Redirect to onboarding page
-            window.location.reload()
+            // Redirect to login page
             router.push("/auth/login")
+            window.location.reload()
         } catch (error) {
             console.error("Logout failed:", error)
-            // Still redirect to onboarding even if API call fails
-            router.push("/onboarding")
+            // Still redirect to login even if API call fails
+            router.push("/auth/login")
         }
     }
 
