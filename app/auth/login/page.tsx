@@ -13,7 +13,8 @@ import {
     CardTitle,
 } from '@/components/ui/card'
 import api from '@/lib/axios-instance'
-import Cookies from 'js-cookie' 
+import Cookies from 'js-cookie'
+import { APP_CONFIG } from '@/constant/app.config' 
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
@@ -60,7 +61,7 @@ export default function LoginPage() {
             <Card className="w-full max-w-md bg-darkCard text-darkText border-gray-700">
                 <CardHeader className="text-center">
                     <CardTitle className="text-3xl font-bold text-[#145B10]">
-                        HWA Login
+                        {APP_CONFIG.name} Admin
                     </CardTitle>
                     <CardDescription className="text-muted-foreground">
                         Enter your credentials to access the dashboard.

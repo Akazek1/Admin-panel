@@ -37,24 +37,13 @@ export default function UserManagementPage() {
     }, [])
 
     const fetchUsers = async () => {
-        try {
-            const res = await api.get('/admin/users', { withCredentials: true })
-            setUsers(res.data.data)
-        } catch (error) {
-            console.error('Failed to fetch users:', error)
-        } finally {
-            setLoading(false)
-        }
+        setUsers({ customers: [], agencies: [] })
+        setLoading(false)
     }
 
     const handleDelete = async (userId: string) => {
-        if (!confirm('Are you sure you want to delete this user?')) return
-        try {
-            await api.delete(`/admin/users/${userId}`)
-            fetchUsers()
-        } catch (error) {
-            console.error('Failed to delete user:', error)
-        }
+        void userId;
+        alert('User management coming soon');
     }
 
     const filteredUsers = (type: 'customers' | 'agencies') => {

@@ -55,53 +55,18 @@ const PendingBookingsPage = () => {
     const [processing, setProcessing] = useState<string | null>(null);
 
     useEffect(() => {
-        const fetchBookings = async () => {
-            try {
-                const response = await api.get("/admin/bookings/pending");
-                setBookings(response.data.data);
-                setLoading(false);
-            } catch (err) {
-                setError("Failed to fetch bookings");
-                setLoading(false);
-                toast.error("Failed to fetch bookings");
-            }
-        };
-
-        fetchBookings();
+        setBookings([]);
+        setLoading(false);
     }, []);
 
     const handleApprove = async (id: string) => {
-        setProcessing(id);
-        try {
-            await api.patch(`/admin/bookings/${id}/approve`);
-            setBookings((prev) =>
-                prev.map((booking) =>
-                    booking.id === id ? { ...booking, status: "APPROVED" } : booking
-                )
-            );
-            toast.success("Booking approved successfully");
-        } catch (err) {
-            toast.error("Failed to approve booking");
-        } finally {
-            setProcessing(null);
-        }
+        void id;
+        toast.error("Booking management coming soon");
     };
 
     const handleDisapprove = async (id: string) => {
-        setProcessing(id);
-        try {
-            await api.patch(`/admin/bookings/${id}/disapprove`);
-            setBookings((prev) =>
-                prev.map((booking) =>
-                    booking.id === id ? { ...booking, status: "DISAPPROVED" } : booking
-                )
-            );
-            toast.success("Booking disapproved successfully");
-        } catch (err) {
-            toast.error("Failed to disapprove booking");
-        } finally {
-            setProcessing(null);
-        }
+        void id;
+        toast.error("Booking management coming soon");
     };
 
     const getStatusBadge = (status: string) => {

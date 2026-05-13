@@ -6,6 +6,7 @@ import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LogoutButton } from "./logout-button"
+import { APP_CONFIG } from "@/constant/app.config"
 
 const mainNavigation = [
   {
@@ -46,9 +47,9 @@ export function PortfolioSidebar() {
   return (
     <aside className="w-64 flex-shrink-0 border-r border-gray-800 bg-darkBackground p-4 flex flex-col fixed top-0 left-0 h-screen">
       <div className="flex items-center gap-3 mb-8">
-        <Image src="/hwa-green-icon.png" width={28} height={28} alt="Toby Belhome" className="" />
+        <Image src="/hwa-green-icon.png" width={28} height={28} alt={APP_CONFIG.name} className="" />
         <div>
-          <h2 className="text-lg font-semibold text-darkText">HWA</h2>
+          <h2 className="text-lg font-semibold text-darkText">{APP_CONFIG.name}</h2>
           <p className="text-sm text-muted-foreground">ADMIN DASHBOARD</p>
         </div>
       </div>

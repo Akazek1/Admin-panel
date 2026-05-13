@@ -68,37 +68,8 @@ export default function AdminBannerPage() {
         }
     };
 
-    // Handle banner upload
     const handleUpload = async () => {
-        if (!file) {
-            toast({ title: "Error", description: "Please select an image to upload.", variant: "destructive" });
-            return;
-        }
-
-        setUploading(true);
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            const res = await axiosInstance.post("/admin/banner", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-            setBanner(res.data.data as Banner);
-            setFile(null);
-            setFileName("");
-            const input = document.getElementById("banner") as HTMLInputElement;
-            if (input) input.value = "";
-            toast({ title: "Success", description: "Banner uploaded successfully." });
-        } catch (error: any) {
-            console.error("Failed to upload banner:", error);
-            const errorMessage =
-                error.response?.status === 500
-                    ? "Server error: The server failed to process the file upload. Please contact support."
-                    : error.response?.data?.message || "Failed to upload banner.";
-            toast({ title: "Error", description: errorMessage, variant: "destructive" });
-        } finally {
-            setUploading(false);
-            console.log("Upload attempt finished, uploading state reset to false");
-        }
+        toast({ title: "Coming Soon", description: "Banner upload is not yet available.", variant: "destructive" });
     };
 
     if (loading) {

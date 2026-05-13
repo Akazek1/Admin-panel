@@ -37,21 +37,8 @@ export default function UserDetailPage() {
     const [formData, setFormData] = useState<Partial<User>>({})
 
     useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const res = await api.get(`/admin/users/${userId}`)
-
-                setUser(res.data.data)
-                setFormData(res.data.data)
-            } catch (err) {
-                console.error('Failed to fetch user:', err)
-                setError('Failed to load user data')
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        fetchUser()
+        setError('User management coming soon')
+        setLoading(false)
     }, [userId])
 
 
@@ -65,21 +52,13 @@ export default function UserDetailPage() {
     }
 
     const handleSave = async () => {
-        try {
-            await api.patch(`/admin/users/${userId}`, formData)
-            setUser(prev => prev ? { ...prev, ...formData } : null)
-            setIsEditing(false)
-        } catch (error) {
-            console.error('Failed to update user:', error)
-            setError('Failed to update user')
-        }
+        alert('User management coming soon')
     }
 
     const handleDelete = async () => {
-        if (!confirm('Are you sure you want to delete this user?')) return
+        alert('User management coming soon')
         try {
-            await api.delete(`/admin/users/${userId}`)
-            router.push('/users')
+            void userId;
         } catch (error) {
             console.error('Failed to delete user:', error)
             setError('Failed to delete user')
