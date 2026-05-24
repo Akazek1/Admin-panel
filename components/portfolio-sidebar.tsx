@@ -1,6 +1,6 @@
 "use client"
 
-import { Home, Store, User, Rss, Mail, Twitter, Facebook, Dribbble, Users, Workflow, Settings } from "lucide-react"
+import { Home, Users, Workflow, Settings, ShieldCheck, Flag, Star, ScrollText, Tag, Building2, Clock, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -22,17 +22,47 @@ const mainNavigation = [
   {
     title: "Pending Bookings",
     url: "/admin/pending-bookings",
-    icon: Users,
+    icon: Clock,
   },
   {
     title: "Completed Bookings",
     url: "/admin/completed-bookings",
-    icon: Users,
+    icon: CheckCircle,
   },
   {
     title: "Services",
     url: "/admin/services",
     icon: Workflow,
+  },
+  {
+    title: "Verifications",
+    url: "/admin/verifications",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Reports",
+    url: "/admin/reports",
+    icon: Flag,
+  },
+  {
+    title: "Reviews",
+    url: "/admin/reviews",
+    icon: Star,
+  },
+  {
+    title: "Categories",
+    url: "/admin/categories",
+    icon: Tag,
+  },
+  {
+    title: "Organizations",
+    url: "/admin/organizations",
+    icon: Building2,
+  },
+  {
+    title: "Audit Logs",
+    url: "/admin/audit-logs",
+    icon: ScrollText,
   },
   {
     title: "Settings",

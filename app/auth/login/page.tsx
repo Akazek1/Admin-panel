@@ -28,16 +28,29 @@ export default function LoginPage() {
         setIsPending(true)
         setStatus({ success: false, message: '' })
 
+        console.log('Attempting login to:', '/auth/admin/login')
+        console.log('Payload:', { email, password })
+
         try {
             const res = await api.post(
-                '/admin/login',
+                '/auth/admin/login',
                 { email, password },
                 { withCredentials: true }
             )
 
-            const accessToken = res.data?.data?.accessToken
+            console.log('Response status:', res.status)
+            console.log('Response data:', res.data)
 
-            if (res.status === 201 && accessToken) {
+            // Backend wraps responses as { data: { token, user } } via its
+            // TransformInterceptor, so the token lives at res.data.data.token.
+            // Keep older shapes as fallbacks.
+            const accessToken =
+                res.data?.data?.token ||
+                res.data?.token ||
+                res.data?.data?.accessToken
+
+            if ((res.status === 200 || res.status === 201) && accessToken) {
+                console.log('Login success! Redirecting...')
                 // Store token in cookie for reuse
                 Cookies.set('access_token', accessToken, {
                     expires: 7, // 7 days
@@ -47,10 +60,18 @@ export default function LoginPage() {
 
                 router.push('/admin')
             } else {
+                console.warn('Login response missing token')
                 setStatus({ success: false, message: 'Invalid credentials' })
             }
-        } catch (err) {
-            setStatus({ success: false, message: 'Something went wrong.' })
+        } catch (err: any) {
+            console.error('Login Error Details:', {
+                status: err.response?.status,
+                data: err.response?.data,
+                message: err.message,
+                config: err.config
+            })
+            const errorMsg = err.response?.data?.message || 'Something went wrong.'
+            setStatus({ success: false, message: errorMsg })
         } finally {
             setIsPending(false)
         }

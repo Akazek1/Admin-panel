@@ -3,8 +3,10 @@
  * Centralized configuration for admin app-wide constants
  */
 
+const APP_NAME = "Akazek";
+
 export const APP_CONFIG = {
-  name: "Akazek",
+  name: APP_NAME,
   tagline: "Admin Dashboard",
   description: "Akazek Marketplace Administration",
 
@@ -23,7 +25,7 @@ export const APP_CONFIG = {
 
   // Admin Portal
   admin: {
-    title: `${this.name} Admin Portal`,
+    title: `${APP_NAME} Admin Portal`,
     defaultTheme: "light",
   },
 
