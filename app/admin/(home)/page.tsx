@@ -1,9 +1,12 @@
 "use client"
 
 import React from "react"
+import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { getStats } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Users,
   Briefcase,
@@ -12,7 +15,8 @@ import {
   FileCheck,
   Building2,
   TrendingUp,
-  Loader2,
+  Flag,
+  ArrowRight,
 } from "lucide-react"
 
 const StatCard = ({ title, value, icon: Icon, description }: any) => (
@@ -34,12 +38,30 @@ export default function DashboardPage() {
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: getStats,
+    refetchInterval: 60 * 1000,
   })
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="space-y-8 p-6">
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-72" />
+          <Skeleton className="h-5 w-96 max-w-full" />
+        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-8 w-8" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20" />
+                <Skeleton className="mt-3 h-3 w-36" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     )
   }
@@ -49,6 +71,36 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Platform Overview</h1>
         <p className="text-muted-foreground mt-1">Real-time health and growth metrics for Akazek.</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <Button asChild variant="outline" className="h-auto justify-between px-4 py-3">
+          <Link href="/admin/verifications">
+            <span className="flex items-center gap-2">
+              <FileCheck className="h-4 w-4 text-primary" />
+              Review verifications
+            </span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+        <Button asChild variant="outline" className="h-auto justify-between px-4 py-3">
+          <Link href="/admin/reports">
+            <span className="flex items-center gap-2">
+              <Flag className="h-4 w-4 text-primary" />
+              Triage reports
+            </span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
+        <Button asChild variant="outline" className="h-auto justify-between px-4 py-3">
+          <Link href="/admin/pending-bookings">
+            <span className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              Check bookings
+            </span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -130,8 +182,7 @@ export default function DashboardPage() {
             <CardTitle>Platform Health</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center py-8">
-            <div className="relative w-32 h-32 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin-slow" />
+            <div className="relative flex h-32 w-32 items-center justify-center rounded-full border border-primary/25 bg-primary/10">
               <TrendingUp className="w-12 h-12 text-primary" />
             </div>
             <p className="mt-6 text-center text-sm text-muted-foreground">

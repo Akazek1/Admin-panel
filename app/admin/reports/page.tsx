@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useDeferredValue, useEffect, useMemo, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getReports, resolveReport, Report } from "@/lib/api"
 import {
@@ -14,6 +14,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
 import {
   Dialog,
   DialogContent,
@@ -30,18 +32,26 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, AlertCircle, CheckCircle, Eye, ExternalLink } from "lucide-react"
+import { Loader2, AlertCircle, CheckCircle, Eye, Search } from "lucide-react"
 import { formatDate } from "@/lib/utils"
+
+const PAGE_SIZE = 50
 
 export default function ReportsPage() {
   const queryClient = useQueryClient()
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [resolutionStatus, setResolutionStatus] = useState<string>("")
   const [resolutionNote, setResolutionNote] = useState<string>("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("ALL")
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const deferredSearchTerm = useDeferredValue(searchTerm)
 
   const { data: reports, isLoading } = useQuery({
     queryKey: ["admin-reports"],
     queryFn: getReports,
+    staleTime: 2 * 60 * 1000,
   })
 
   const resolveMutation = useMutation({
@@ -89,13 +99,84 @@ export default function ReportsPage() {
     }
   }
 
+  const filteredReports = useMemo(() => {
+    const normalizedSearch = deferredSearchTerm.trim().toLowerCase()
+    return (reports ?? []).filter((report) => {
+      const searchStr = `${report.reporter.firstName || ""} ${report.reporter.lastName || ""} ${report.target.firstName || ""} ${report.target.lastName || ""} ${report.reason}`.toLowerCase()
+      const matchesSearch = !normalizedSearch || searchStr.includes(normalizedSearch)
+      const matchesStatus = statusFilter === "ALL" || report.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [reports, deferredSearchTerm, statusFilter])
+
+  const pageCount = Math.max(1, Math.ceil(filteredReports.length / PAGE_SIZE))
+  const visibleReports = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredReports.slice(start, start + PAGE_SIZE)
+  }, [filteredReports, currentPage])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [deferredSearchTerm, statusFilter])
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, pageCount))
+  }, [pageCount])
+
+  const allVisibleSelected =
+    visibleReports.length > 0 && visibleReports.every((report) => selectedIds.includes(report.id))
+  const toggleVisible = (checked: boolean) => {
+    const ids = visibleReports.map((report) => report.id)
+    setSelectedIds((prev) => checked ? Array.from(new Set([...prev, ...ids])) : prev.filter((id) => !ids.includes(id)))
+  }
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <h1 className="text-3xl font-bold">User Reports</h1>
-        <Badge variant="outline" className="px-3 py-1">
-          {reports?.filter((r) => r.status === "PENDING").length || 0} New
-        </Badge>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative sm:w-72">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search reports..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Statuses</SelectItem>
+              <SelectItem value="PENDING">Pending</SelectItem>
+              <SelectItem value="REVIEWING">Reviewing</SelectItem>
+              <SelectItem value="RESOLVED">Resolved</SelectItem>
+              <SelectItem value="DISMISSED">Dismissed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Badge variant="outline" className="px-3 py-1">
+            {filteredReports.filter((r) => r.status === "PENDING").length} New
+          </Badge>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Checkbox
+            checked={allVisibleSelected}
+            onCheckedChange={(value) => toggleVisible(!!value)}
+            aria-label="Select visible reports"
+          />
+          Select visible
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">{selectedIds.length} selected</span>
+          <Button variant="outline" size="sm" disabled={selectedIds.length === 0}>
+            Review Selected
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -104,7 +185,7 @@ export default function ReportsPage() {
             <div className="flex justify-center py-20">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          ) : !reports || reports.length === 0 ? (
+          ) : filteredReports.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground">
               <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-20" />
               <p>No reports found.</p>
@@ -113,6 +194,7 @@ export default function ReportsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10" />
                   <TableHead>Reporter</TableHead>
                   <TableHead>Target</TableHead>
                   <TableHead>Reason</TableHead>
@@ -122,8 +204,19 @@ export default function ReportsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reports.map((report) => (
+                {visibleReports.map((report) => (
                   <TableRow key={report.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(report.id)}
+                        onCheckedChange={(value) =>
+                          setSelectedIds((prev) =>
+                            value ? Array.from(new Set([...prev, report.id])) : prev.filter((id) => id !== report.id)
+                          )
+                        }
+                        aria-label={`Select report ${report.id}`}
+                      />
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium">
                         {report.reporter.firstName} {report.reporter.lastName}
@@ -161,6 +254,32 @@ export default function ReportsPage() {
           )}
         </CardContent>
       </Card>
+
+      {filteredReports.length > PAGE_SIZE && (
+        <div className="flex flex-col items-center justify-between gap-3 rounded-lg border bg-muted/20 px-4 py-3 sm:flex-row">
+          <p className="text-sm text-muted-foreground">
+            Showing {visibleReports.length} of {filteredReports.length} reports · page {currentPage} of {pageCount}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((page) => Math.min(pageCount, page + 1))}
+              disabled={currentPage === pageCount}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedReport} onOpenChange={(open) => !open && setSelectedReport(null)}>

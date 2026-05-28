@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div>
       {token && <PortfolioSidebar />}
-      <main className={`flex-1 overflow-auto ${token ? "ml-64" : ""}`}>
+      <main className={`min-h-screen flex-1 overflow-auto ${token ? "lg:ml-64" : ""}`}>
         {children}
       </main>
     </div>

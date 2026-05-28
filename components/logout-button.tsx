@@ -14,6 +14,7 @@ export function LogoutButton() {
 
             // Clear any other stored auth data
             localStorage.removeItem("token")
+            localStorage.removeItem("access_token")
 
             // Redirect to login page
             router.push("/auth/login")

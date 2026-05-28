@@ -34,7 +34,11 @@ api.interceptors.response.use(
       try {
         // Clear token and redirect to login
         if (typeof window !== "undefined") {
+          Cookies.remove("access_token", { path: "/" });
           localStorage.removeItem("token");
+          localStorage.removeItem("access_token");
+          document.cookie =
+            "access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           document.cookie =
             "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           window.location.href = "/auth/login";

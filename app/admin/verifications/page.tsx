@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { getPendingVerifications, approveVerification, rejectVerification, VerificationRequest } from "@/lib/api"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -16,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, CheckCircle, XCircle, Eye } from "lucide-react"
+import { Loader2, CheckCircle, XCircle, Eye, GraduationCap, MapPin, Star, Briefcase } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 
 export default function VerificationsPage() {
@@ -120,9 +121,14 @@ export default function VerificationsPage() {
                     </TableCell>
                     <TableCell>{formatDate(request.createdAt)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => setSelectedRequest(request)}>
-                        <Eye className="w-4 h-4 mr-2" /> Review
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedRequest(request)}>
+                          <Eye className="w-4 h-4 mr-2" /> Review
+                        </Button>
+                        <Button asChild size="sm">
+                          <Link href={`/admin/verifications/${request.id}`}>Open</Link>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -134,29 +140,100 @@ export default function VerificationsPage() {
 
       {/* Detail Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Review ID Verification</DialogTitle>
           </DialogHeader>
           {selectedRequest && (
             <div className="space-y-6 pt-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">User</p>
-                  <p className="font-semibold">{selectedRequest.user.firstName} {selectedRequest.user.lastName}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Phone</p>
-                  <p className="font-semibold">{selectedRequest.user.phoneNumber}</p>
-                </div>
-              </div>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Profile Comparison</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="h-16 w-16 overflow-hidden rounded-full bg-muted">
+                        {selectedRequest.user.profilePicture ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={selectedRequest.user.profilePicture} alt="Profile" className="h-full w-full object-cover" />
+                        ) : null}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{selectedRequest.user.firstName} {selectedRequest.user.lastName}</p>
+                        <p className="text-muted-foreground">{selectedRequest.user.phoneNumber}</p>
+                        <p className="text-muted-foreground">{selectedRequest.user.email || "No email"}</p>
+                      </div>
+                    </div>
 
-              <div className="border rounded-lg overflow-hidden bg-muted flex items-center justify-center min-h-[300px]">
-                <img
-                  src={selectedRequest.document.documentUrl}
-                  alt="Government ID"
-                  className="max-w-full h-auto"
-                />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Gender</p>
+                        <p>{selectedRequest.user.gender || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">DOB</p>
+                        <p>{selectedRequest.user.dateOfBirth ? formatDate(selectedRequest.user.dateOfBirth) : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><GraduationCap className="w-3 h-3" /> Education</p>
+                        <p>{selectedRequest.user.educationLevel || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><Star className="w-3 h-3" /> Trust</p>
+                        <p>{selectedRequest.user.trustScore ?? 0}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="w-3 h-3" /> Addresses</p>
+                      <div className="mt-1 space-y-1">
+                        {selectedRequest.user.addresses?.length ? selectedRequest.user.addresses.map((address: any) => (
+                          <p key={address.id}>{[address.sector, address.district, address.city].filter(Boolean).join(", ")}</p>
+                        )) : <p>—</p>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1"><Briefcase className="w-3 h-3" /> Services</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {selectedRequest.user.services?.length ? selectedRequest.user.services.map((service: any) => (
+                          <Badge key={service.id} variant="outline">{service.title}</Badge>
+                        )) : <span>—</span>}
+                      </div>
+                    </div>
+
+                    {selectedRequest.user.verificationRequests?.length ? (
+                      <div>
+                        <p className="text-xs text-muted-foreground">Recent verification history</p>
+                        <div className="mt-1 space-y-1">
+                          {selectedRequest.user.verificationRequests.map((request: any) => (
+                            <div key={request.id} className="rounded border px-2 py-1">
+                              <Badge variant="outline" className="text-[10px]">{request.status}</Badge>
+                              {request.reviewNote && <p className="mt-1 text-xs text-muted-foreground">{request.reviewNote}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="outline">{selectedRequest.document.type}</Badge>
+                    <Badge variant="outline">{selectedRequest.document.status}</Badge>
+                    <Badge variant="secondary">Submitted {formatDate(selectedRequest.createdAt)}</Badge>
+                  </div>
+                  <div className="border rounded-lg overflow-hidden bg-muted flex items-center justify-center min-h-[520px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selectedRequest.document.documentUrl}
+                      alt="Government ID"
+                      className="max-w-full h-auto"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="flex gap-4 pt-4">
