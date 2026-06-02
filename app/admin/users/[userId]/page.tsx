@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
-import { unlockOtp } from "@/lib/api"
+import { forceLogoutUser, unlockOtp } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +22,7 @@ import {
   AlertCircle, Briefcase, Star, Activity,
   GraduationCap, FileText, Bell, Layers, Building2,
   Clock, ShieldAlert, ClipboardCheck,
+  LogOut,
 } from "lucide-react"
 
 async function fetchUserDetail(id: string) {
@@ -138,6 +139,17 @@ export default function UserDetailPage() {
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.response?.data?.message || "Could not unlock OTP.", variant: "destructive" })
+    },
+  })
+
+  const forceLogoutMutation = useMutation({
+    mutationFn: () => forceLogoutUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+      toast({ title: "User logged out", description: "All existing sessions for this user were invalidated." })
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.response?.data?.message || "Could not log out user.", variant: "destructive" })
     },
   })
 
@@ -271,6 +283,22 @@ export default function UserDetailPage() {
           <Button variant="outline" onClick={() => unlockOtpMutation.mutate()} disabled={unlockOtpMutation.isPending}>
             {unlockOtpMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             Unlock OTP
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (confirm(`Log out ${fullName} from all devices?`)) {
+                forceLogoutMutation.mutate()
+              }
+            }}
+            disabled={forceLogoutMutation.isPending}
+          >
+            {forceLogoutMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            ) : (
+              <LogOut className="w-4 h-4 mr-2" />
+            )}
+            Log out
           </Button>
         </div>
       </div>

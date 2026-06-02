@@ -76,6 +76,11 @@ export async function unbanUser(id: string) {
   return response.data?.data ?? response.data;
 }
 
+export async function forceLogoutUser(id: string) {
+  const response = await axiosInstance.post(`/admin/users/${id}/force-logout`);
+  return response.data?.data ?? response.data;
+}
+
 export async function updateUserProfile(id: string, data: any) {
   const response = await axiosInstance.patch(`/admin/users/${id}/profile`, data);
   return response.data?.data ?? response.data;
