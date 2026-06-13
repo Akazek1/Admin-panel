@@ -7,6 +7,7 @@ import {
   CheckCircle,
   Clock,
   Flag,
+  FolderTree,
   Home,
   Image as ImageIcon,
   Layers,
@@ -57,6 +58,7 @@ const navigationGroups = [
   {
     title: "Content",
     items: [
+      { title: "Service Categories", url: "/admin/service-categories", icon: FolderTree },
       { title: "Categories", url: "/admin/categories", icon: Layers },
       { title: "Hero Banners", url: "/admin/banners", icon: ImageIcon },
       { title: "Announcements", url: "/admin/announcements", icon: Bell },
