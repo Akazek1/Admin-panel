@@ -31,4 +31,4 @@ COPY --from=production-build /app/public ./public
 
 EXPOSE 3002
 
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "start", "--", "-p", "3002"]
