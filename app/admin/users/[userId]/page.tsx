@@ -183,7 +183,7 @@ export default function UserDetailPage() {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unnamed User"
   const roles = Array.isArray(user.roles) ? user.roles : []
   const isWorker = roles.includes("WORKER")
-  const isEmployer = roles.some((role: string) => ["EMPLOYER", "COMPANY", "AGENCY"].includes(role))
+  const isEmployer = roles.some((role: string) => ["EMPLOYER", "COMPANY", "STAFFING_AGENCY"].includes(role))
   const allBookings = [
     ...(user.bookingsAsWorker ?? []),
     ...(user.bookingsAsEmployer ?? []),

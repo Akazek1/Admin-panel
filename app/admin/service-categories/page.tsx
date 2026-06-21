@@ -20,7 +20,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Plus, Edit, Trash2, Link2, Tags, X, Search } from "lucide-react"
+import { BriefcaseBusiness, FolderTree, Languages, Loader2, Plus, Edit, Trash2, Link2, Tags, X, Search } from "lucide-react"
 
 type Lang = "EN" | "RW" | "FR"
 type TagKind = "PRIMARY" | "ALIAS" | "SYNONYM" | "MISSPELLING"
@@ -170,14 +170,18 @@ export default function ServiceCategoriesPage() {
   const filtered = (groups ?? []).filter((g) =>
     `${g.name} ${g.nameKn || ""} ${g.nameFr || ""}`.toLowerCase().includes(searchTerm.toLowerCase()),
   )
+  const activeCount = (groups ?? []).filter((g) => g.isActive).length
+  const serviceTypeCount = new Set((groups ?? []).flatMap((g) => g.assignments.map((a) => a.categoryId))).size
+  const tagCount = (groups ?? []).reduce((sum, g) => sum + (g.tags?.length || 0), 0)
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-[#101211] p-6">
+      <div className="mx-auto max-w-[1780px] space-y-4">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold">Service Categories</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Service Groupings</h1>
           <p className="text-sm text-muted-foreground">
-            Broad groupings that organise your job types. One job type can sit in several groupings.
+            Broad browse shelves that help users discover service types. One service type can sit in several groupings.
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -186,13 +190,52 @@ export default function ServiceCategoriesPage() {
             <Input placeholder="Search groupings..." className="pl-8" value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
-          <Button onClick={() => { resetForm(); setIsDialogOpen(true) }}>
+          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { resetForm(); setIsDialogOpen(true) }}>
             <Plus className="w-4 h-4 mr-2" /> Add Grouping
           </Button>
         </div>
       </div>
 
-      <Card>
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-lg border border-white/5 bg-card/70 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-300"><FolderTree className="h-5 w-5" /></span>
+            <div>
+              <p className="text-2xl font-semibold">{groups?.length ?? 0}</p>
+              <p className="text-sm text-muted-foreground">Total groupings</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-white/5 bg-card/70 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10 text-green-300"><FolderTree className="h-5 w-5" /></span>
+            <div>
+              <p className="text-2xl font-semibold">{activeCount}</p>
+              <p className="text-sm text-muted-foreground">Visible to users</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-white/5 bg-card/70 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/10 text-sky-300"><BriefcaseBusiness className="h-5 w-5" /></span>
+            <div>
+              <p className="text-2xl font-semibold">{serviceTypeCount}</p>
+              <p className="text-sm text-muted-foreground">Assigned service types</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-white/5 bg-card/70 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/10 text-purple-300"><Languages className="h-5 w-5" /></span>
+            <div>
+              <p className="text-2xl font-semibold">{tagCount}</p>
+              <p className="text-sm text-muted-foreground">Search tags</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Card className="border-white/5 bg-card/70 shadow-sm shadow-black/10">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
@@ -203,7 +246,7 @@ export default function ServiceCategoriesPage() {
                   <TableHead>Order</TableHead>
                   <TableHead>Name (EN)</TableHead>
                   <TableHead>Kinyarwanda</TableHead>
-                  <TableHead>Job Types</TableHead>
+                  <TableHead>Service Types</TableHead>
                   <TableHead>Tags</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -316,9 +359,9 @@ export default function ServiceCategoriesPage() {
       <Dialog open={!!jobTypesFor} onOpenChange={(o) => !o && setJobTypesFor(null)}>
         <DialogContent className="sm:max-w-[520px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Job Types — {liveJobTypesFor?.name}</DialogTitle>
+            <DialogTitle>Service Types — {liveJobTypesFor?.name}</DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Tick the job types that belong in this grouping. Changes save instantly.
+              Tick the service types that should appear in this browse grouping. Changes save instantly.
             </p>
           </DialogHeader>
           <div className="space-y-1 pt-2">
@@ -400,6 +443,7 @@ export default function ServiceCategoriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }

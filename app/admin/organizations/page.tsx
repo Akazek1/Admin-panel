@@ -127,7 +127,7 @@ export default function OrganizationsPage() {
             <SelectTrigger className="sm:w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ALL">All types</SelectItem>
-              <SelectItem value="PLACEMENT_AGENCY">Placement agencies</SelectItem>
+              <SelectItem value="STAFFING_AGENCY">Staffing agencies</SelectItem>
               <SelectItem value="SERVICE_COMPANY">Service companies</SelectItem>
             </SelectContent>
           </Select>

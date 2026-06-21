@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useMemo, useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
 import {
@@ -21,7 +21,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Plus, Edit, Trash2, Settings2, GripVertical, X, Search } from "lucide-react"
+import { BriefcaseBusiness, ImagePlus, Layers, Loader2, Plus, Edit, Trash2, Settings2, X, Search, ShieldCheck } from "lucide-react"
 
 export interface CategoryField {
   key: string
@@ -37,6 +37,7 @@ export interface Category {
   name: string
   nameKn: string | null
   nameFr: string | null
+  icon: string | null
   description: string | null
   isActive: boolean
   sortOrder: number
@@ -72,7 +73,7 @@ export default function CategoriesPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
-    name: "", nameKn: "", nameFr: "", description: "", isActive: true, sortOrder: 0,
+    name: "", nameKn: "", nameFr: "", icon: "", description: "", isActive: true, sortOrder: 0,
   })
 
   const { data: categories, isLoading } = useQuery<Category[]>({
@@ -93,7 +94,7 @@ export default function CategoriesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
-      toast({ title: "Success", description: `Category ${selectedCategory ? "updated" : "created"}.` })
+      toast({ title: "Success", description: `Service type ${selectedCategory ? "updated" : "created"}.` })
       setIsDialogOpen(false)
       resetForm()
     },
@@ -106,7 +107,7 @@ export default function CategoriesPage() {
     mutationFn: (id: string) => axiosInstance.delete(`/admin/categories/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
-      toast({ title: "Deleted", description: "Category removed." })
+      toast({ title: "Deleted", description: "Service type removed." })
     },
   })
 
@@ -125,14 +126,14 @@ export default function CategoriesPage() {
 
   const resetForm = () => {
     setSelectedCategory(null)
-    setFormData({ name: "", nameKn: "", nameFr: "", description: "", isActive: true, sortOrder: 0 })
+    setFormData({ name: "", nameKn: "", nameFr: "", icon: "", description: "", isActive: true, sortOrder: 0 })
   }
 
   const handleEdit = (cat: Category) => {
     setSelectedCategory(cat)
     setFormData({
       name: cat.name, nameKn: cat.nameKn || "", nameFr: cat.nameFr || "",
-      description: cat.description || "", isActive: cat.isActive, sortOrder: cat.sortOrder,
+      icon: cat.icon || "", description: cat.description || "", isActive: cat.isActive, sortOrder: cat.sortOrder,
     })
     setIsDialogOpen(true)
   }
@@ -160,6 +161,12 @@ export default function CategoriesPage() {
       (statusFilter === "INACTIVE" && !cat.isActive)
     return matchesSearch && matchesStatus
   })
+  const activeCount = (categories ?? []).filter((cat) => cat.isActive).length
+  const withFieldsCount = (categories ?? []).filter((cat) => (cat.fieldSchema?.length ?? 0) > 0).length
+  const totalFieldCount = (categories ?? []).reduce((sum, cat) => sum + (cat.fieldSchema?.length ?? 0), 0)
+  const mostConfigured = useMemo(() => {
+    return [...(categories ?? [])].sort((a, b) => (b.fieldSchema?.length ?? 0) - (a.fieldSchema?.length ?? 0))[0]
+  }, [categories])
   const allVisibleSelected =
     filteredCategories.length > 0 && filteredCategories.every((cat) => selectedIds.includes(cat.id))
   const toggleVisible = (checked: boolean) => {
@@ -179,14 +186,20 @@ export default function CategoriesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-[#101211] p-6">
+      <div className="mx-auto max-w-[1780px] space-y-4">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <h1 className="text-3xl font-bold">Categories</h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Service Types</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The admin catalog users choose from when creating provider listings. Groupings only help users browse these types.
+          </p>
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search categories..."
+              placeholder="Search service types..."
               className="pl-8"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -202,13 +215,67 @@ export default function CategoriesPage() {
               <SelectItem value="INACTIVE">Disabled</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={() => { resetForm(); setIsDialogOpen(true) }}>
-            <Plus className="w-4 h-4 mr-2" /> Add Category
+          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => { resetForm(); setIsDialogOpen(true) }}>
+            <Plus className="w-4 h-4 mr-2" /> Add Service Type
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-lg border border-white/5 bg-card/70 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-300"><BriefcaseBusiness className="h-5 w-5" /></span>
+            <div>
+              <p className="text-2xl font-semibold">{categories?.length ?? 0}</p>
+              <p className="text-sm text-muted-foreground">Service types</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-white/5 bg-card/70 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/10 text-green-300"><ShieldCheck className="h-5 w-5" /></span>
+            <div>
+              <p className="text-2xl font-semibold">{activeCount}</p>
+              <p className="text-sm text-muted-foreground">Available to users</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-white/5 bg-card/70 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/10 text-sky-300"><Layers className="h-5 w-5" /></span>
+            <div>
+              <p className="text-2xl font-semibold">{totalFieldCount}</p>
+              <p className="text-sm text-muted-foreground">Creation fields</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-lg border border-white/5 bg-card/70 p-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10 text-amber-300"><ImagePlus className="h-5 w-5" /></span>
+            <div>
+              <p className="text-2xl font-semibold">{withFieldsCount}</p>
+              <p className="truncate text-sm text-muted-foreground">Types with custom fields</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 rounded-lg border border-white/5 bg-card/70 p-4 text-sm text-muted-foreground lg:grid-cols-3">
+        <div>
+          <p className="font-medium text-foreground">Current backend-backed controls</p>
+          <p className="mt-1">Name, translations, icon, description, active status, sort order, and custom service fields.</p>
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Next catalog controls to persist</p>
+          <p className="mt-1">Default image, default description, allowed provider type, and maximum user-uploaded photos.</p>
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Most configured type</p>
+          <p className="mt-1">{mostConfigured ? `${mostConfigured.name} · ${mostConfigured.fieldSchema?.length ?? 0} fields` : "No service types yet"}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/5 bg-card/70 px-4 py-3">
         <p className="text-sm text-muted-foreground">
           {filteredCategories.length} shown · {selectedIds.length} selected
         </p>
@@ -217,7 +284,7 @@ export default function CategoriesPage() {
         </Button>
       </div>
 
-      <Card>
+      <Card className="border-white/5 bg-card/70 shadow-sm shadow-black/10">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center py-20">
@@ -234,11 +301,12 @@ export default function CategoriesPage() {
                       aria-label="Select visible categories"
                     />
                   </TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Name (EN)</TableHead>
+                  <TableHead>Icon</TableHead>
+                  <TableHead>Service Type</TableHead>
                   <TableHead>Kinyarwanda</TableHead>
-                  <TableHead>Card Fields</TableHead>
+                  <TableHead>Creation Fields</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Order</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -256,8 +324,11 @@ export default function CategoriesPage() {
                         aria-label={`Select ${cat.name}`}
                       />
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{cat.sortOrder}</TableCell>
-                    <TableCell className="font-medium">{cat.name}</TableCell>
+                    <TableCell className="text-xl">{cat.icon || "•"}</TableCell>
+                    <TableCell>
+                      <p className="font-medium">{cat.name}</p>
+                      <p className="line-clamp-1 max-w-[340px] text-xs text-muted-foreground">{cat.description || "No default description yet"}</p>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{cat.nameKn || "—"}</TableCell>
                     <TableCell>
                       <span className="text-muted-foreground text-sm">
@@ -271,6 +342,7 @@ export default function CategoriesPage() {
                         ? <Badge className="bg-green-600">Active</Badge>
                         : <Badge variant="secondary">Disabled</Badge>}
                     </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{cat.sortOrder}</TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" title="Edit card fields" onClick={() => handleOpenFieldBuilder(cat)}>
                         <Settings2 className="w-4 h-4" />
@@ -279,7 +351,7 @@ export default function CategoriesPage() {
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="icon" className="text-destructive" onClick={() => {
-                        if (confirm("Delete this category?")) deleteMutation.mutate(cat.id)
+                        if (confirm("Delete this service type? Existing listings may still reference it.")) deleteMutation.mutate(cat.id)
                       }}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -292,11 +364,11 @@ export default function CategoriesPage() {
         </CardContent>
       </Card>
 
-      {/* Category info dialog */}
+      {/* Service type info dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{selectedCategory ? "Edit Category" : "New Category"}</DialogTitle>
+            <DialogTitle>{selectedCategory ? "Edit Service Type" : "New Service Type"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={e => { e.preventDefault(); saveMutation.mutate(formData) }} className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
@@ -320,8 +392,15 @@ export default function CategoriesPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Description</Label>
+              <Label>Icon / emoji</Label>
+              <Input value={formData.icon} onChange={e => setFormData({ ...formData, icon: e.target.value })} placeholder="e.g. 🧹 or wrench" />
+            </div>
+            <div className="space-y-2">
+              <Label>Default Description</Label>
               <Textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} />
+            </div>
+            <div className="rounded-lg border border-dashed border-white/10 bg-muted/20 p-3 text-xs text-muted-foreground">
+              Default picture, allowed provider type, and maximum uploaded photos need backend fields before they can be saved here.
             </div>
             <div className="flex items-center space-x-2">
               <Switch checked={formData.isActive} onCheckedChange={checked => setFormData({ ...formData, isActive: checked })} />
@@ -331,7 +410,7 @@ export default function CategoriesPage() {
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={saveMutation.isPending}>
                 {saveMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                {selectedCategory ? "Save Changes" : "Create Category"}
+                {selectedCategory ? "Save Changes" : "Create Service Type"}
               </Button>
             </DialogFooter>
           </form>
@@ -342,9 +421,9 @@ export default function CategoriesPage() {
       <Dialog open={isFieldDialogOpen} onOpenChange={setIsFieldDialogOpen}>
         <DialogContent className="sm:max-w-[680px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Card Fields — {fieldSchemaCategory?.name}</DialogTitle>
+            <DialogTitle>Creation Fields — {fieldSchemaCategory?.name}</DialogTitle>
             <p className="text-sm text-muted-foreground">
-              Define what information workers in this category fill in on their profile card.
+              Define extra questions providers answer when creating this service type.
             </p>
           </DialogHeader>
 
@@ -431,6 +510,7 @@ export default function CategoriesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   )
 }
