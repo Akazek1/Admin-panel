@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
+import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
@@ -35,8 +36,8 @@ import { toast } from "@/components/ui/use-toast"
 import { cn, formatDate } from "@/lib/utils"
 
 type StatusFilter = "ALL" | "ACTIVE" | "HIDDEN" | "FLAGGED" | "NEEDS_REVIEW"
-type QualityFilter = "ALL" | "HIGH_RATING" | "HAS_BOOKINGS" | "INCOMPLETE"
-type SortMode = "RECENT" | "BOOKINGS" | "RATING" | "PRICE_HIGH" | "PRICE_LOW"
+type QualityFilter = "ALL" | "HIGH_REHIRE" | "HAS_BOOKINGS" | "INCOMPLETE"
+type SortMode = "RECENT" | "BOOKINGS" | "REHIRE" | "PRICE_HIGH" | "PRICE_LOW"
 
 const currencyFormatter = new Intl.NumberFormat("en-US")
 
@@ -83,16 +84,19 @@ function priceTypeLabel(value?: string | null) {
   return value.replace("_", " ").toLowerCase()
 }
 
-function ratingFor(service: Service, index = 0) {
-  const seed = service.id.charCodeAt(0) + index
-  return [4.8, 4.7, 4.6, 4.9, 3.8, 3.2, 4.1][seed % 7]
+// Would-rehire rate (0-100) from real review data, or null when not enough
+// answered reviews exist. The platform has no numeric rating.
+function rehireRateFor(service: Service): number | null {
+  return service.rehireStats?.rate ?? null
 }
 
-function statusFor(service: Service, index = 0): "Active" | "Hidden" | "Flagged" | "Needs Review" {
+function statusFor(service: Service): "Active" | "Hidden" | "Flagged" | "Needs Review" {
   if (!service.isActive) return "Hidden"
-  const rating = ratingFor(service, index)
-  if (rating < 3.5) return "Flagged"
-  if (rating < 4 || completenessScore(service) < 75) return "Needs Review"
+  const rate = rehireRateFor(service)
+  const answered = service.rehireStats?.answered ?? 0
+  // Flag listings with a poor rehire signal once there's enough feedback.
+  if (answered >= 3 && rate !== null && rate < 50) return "Flagged"
+  if (completenessScore(service) < 75) return "Needs Review"
   return "Active"
 }
 
@@ -210,8 +214,8 @@ export default function ServicesPage() {
   const filteredServices = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
     return [...services]
-      .filter((service, index) => {
-        const status = statusFor(service, index)
+      .filter((service) => {
+        const status = statusFor(service)
         const haystack = `${service.title} ${service.description} ${fullName(service.provider)} ${service.provider.phoneNumber || ""} ${service.category.name} ${service.id}`.toLowerCase()
         const matchesSearch = !normalizedSearch || haystack.includes(normalizedSearch)
         const matchesCategory = categoryFilter === "ALL" || service.category.name === categoryFilter
@@ -223,14 +227,14 @@ export default function ServicesPage() {
           (statusFilter === "NEEDS_REVIEW" && status === "Needs Review")
         const matchesQuality =
           qualityFilter === "ALL" ||
-          (qualityFilter === "HIGH_RATING" && ratingFor(service, index) >= 4.5) ||
+          (qualityFilter === "HIGH_REHIRE" && (rehireRateFor(service) ?? 0) >= 80) ||
           (qualityFilter === "HAS_BOOKINGS" && (service._count?.bookings ?? 0) > 0) ||
           (qualityFilter === "INCOMPLETE" && completenessScore(service) < 100)
         return matchesSearch && matchesCategory && matchesStatus && matchesQuality
       })
       .sort((a, b) => {
         if (sortMode === "BOOKINGS") return (b._count?.bookings ?? 0) - (a._count?.bookings ?? 0)
-        if (sortMode === "RATING") return ratingFor(b) - ratingFor(a)
+        if (sortMode === "REHIRE") return (rehireRateFor(b) ?? -1) - (rehireRateFor(a) ?? -1)
         if (sortMode === "PRICE_HIGH") return (Number(b.priceMax) || 0) - (Number(a.priceMax) || 0)
         if (sortMode === "PRICE_LOW") return (Number(a.priceMin) || 0) - (Number(b.priceMin) || 0)
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -238,14 +242,15 @@ export default function ServicesPage() {
   }, [categoryFilter, qualityFilter, searchTerm, services, sortMode, statusFilter])
 
   const selectedService = filteredServices.find((service) => service.id === selectedId) ?? filteredServices[0] ?? null
-  const activeCount = services.filter((service, index) => statusFor(service, index) === "Active").length
-  const hiddenCount = services.filter((service, index) => statusFor(service, index) === "Hidden").length
-  const flaggedCount = services.filter((service, index) => statusFor(service, index) === "Flagged").length
-  const needsReviewCount = services.filter((service, index) => statusFor(service, index) === "Needs Review").length
+  const activeCount = services.filter((service) => statusFor(service) === "Active").length
+  const hiddenCount = services.filter((service) => statusFor(service) === "Hidden").length
+  const flaggedCount = services.filter((service) => statusFor(service) === "Flagged").length
+  const needsReviewCount = services.filter((service) => statusFor(service) === "Needs Review").length
   const withBookingsCount = services.filter((service) => (service._count?.bookings ?? 0) > 0).length
-  const averageRating = services.length
-    ? (services.reduce((sum, service, index) => sum + ratingFor(service, index), 0) / services.length).toFixed(1)
-    : "0"
+  const ratedServices = services.filter((service) => rehireRateFor(service) !== null)
+  const averageRehire = ratedServices.length
+    ? `${Math.round(ratedServices.reduce((sum, service) => sum + (rehireRateFor(service) ?? 0), 0) / ratedServices.length)}%`
+    : "—"
 
   const clearFilters = () => {
     setSearchTerm("")
@@ -262,7 +267,8 @@ export default function ServicesPage() {
   if (showDetail && selectedService) {
     const providerName = fullName(selectedService.provider)
     const status = statusFor(selectedService)
-    const rating = ratingFor(selectedService)
+    const rehireRate = rehireRateFor(selectedService)
+    const rehireLabel = rehireRate === null ? "—" : `${rehireRate}%`
     const score = completenessScore(selectedService)
     const bookings = selectedService._count?.bookings ?? 0
     const reviews = selectedService._count?.reviews ?? 0
@@ -356,9 +362,9 @@ export default function ServicesPage() {
                         <p className="text-xs text-muted-foreground">Jobs</p>
                       </div>
                       <div className="border-l border-white/5 p-3">
-                        <Star className="mx-auto mb-1 h-4 w-4 text-amber-300" />
-                        <p className="font-semibold">{rating}</p>
-                        <p className="text-xs text-muted-foreground">Rating</p>
+                        <CheckCircle2 className="mx-auto mb-1 h-4 w-4 text-emerald-300" />
+                        <p className="font-semibold">{rehireLabel}</p>
+                        <p className="text-xs text-muted-foreground">Rehire</p>
                       </div>
                       <div className="border-l border-white/5 p-3">
                         <Bookmark className="mx-auto mb-1 h-4 w-4 text-muted-foreground" />
@@ -381,8 +387,8 @@ export default function ServicesPage() {
                   </p>
                   <div className="grid gap-3 md:grid-cols-5">
                     <div>
-                      <p className="text-lg font-semibold text-amber-300">{rating}</p>
-                      <p className="text-xs text-muted-foreground">Rating</p>
+                      <p className="text-lg font-semibold text-emerald-300">{rehireLabel}</p>
+                      <p className="text-xs text-muted-foreground">Would rehire</p>
                     </div>
                     <div>
                       <p className="text-lg font-semibold">{reviews}</p>
@@ -462,23 +468,28 @@ export default function ServicesPage() {
 
               <section className="rounded-lg border border-white/5 bg-card/70 p-4">
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold">Recent Reviews</p>
-                  <Button className="h-8 border-white/10 bg-background/60 text-xs" variant="outline" disabled>View all reviews</Button>
+                  <p className="font-semibold">Review Summary</p>
+                  <Link href="/admin/reviews" className="text-xs text-emerald-300 hover:underline">
+                    Open reviews
+                  </Link>
                 </div>
-                <div className="mt-4 overflow-hidden rounded-lg border border-white/5">
-                  {[
-                    ["Diane Mukeshimana", "Yes", "Very reliable and punctual. The work was completed well."],
-                    ["Jean Bosco", "Maybe", "Good work, but arrival time could be better."],
-                    ["Alice Uwimana", "Yes", "Excellent service and clear communication."],
-                  ].map(([reviewer, rehire, text]) => (
-                    <div key={reviewer} className="grid grid-cols-[180px_140px_1fr_80px] gap-4 border-b border-white/5 px-4 py-3 text-sm last:border-b-0">
-                      <span>{reviewer}</span>
-                      <span className={rehire === "Yes" ? "text-emerald-300" : "text-amber-300"}>{rehire}</span>
-                      <span className="text-muted-foreground">{text}</span>
-                      <Button className="h-7 border-white/10 bg-background/60 text-xs" variant="outline" disabled>View</Button>
-                    </div>
-                  ))}
+                <div className="mt-4 grid grid-cols-3 overflow-hidden rounded-lg border border-white/5 text-center text-sm">
+                  <div className="p-4">
+                    <p className="text-lg font-semibold text-emerald-300">{rehireLabel}</p>
+                    <p className="text-xs text-muted-foreground">Would rehire</p>
+                  </div>
+                  <div className="border-l border-white/5 p-4">
+                    <p className="text-lg font-semibold">{selectedService.rehireStats?.answered ?? 0}</p>
+                    <p className="text-xs text-muted-foreground">Rehire answers</p>
+                  </div>
+                  <div className="border-l border-white/5 p-4">
+                    <p className="text-lg font-semibold">{reviews}</p>
+                    <p className="text-xs text-muted-foreground">Total reviews</p>
+                  </div>
                 </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Open the Reviews page to read and moderate individual reviews for this provider.
+                </p>
               </section>
             </div>
 
@@ -568,7 +579,7 @@ export default function ServicesPage() {
           <StatCard title="Hidden Listings" value={hiddenCount} description="Not visible to users" icon={<EyeOff className="h-4 w-4" />} tone="amber" />
           <StatCard title="Flagged Listings" value={flaggedCount} description="Need admin review" icon={<Flag className="h-4 w-4" />} tone="red" />
           <StatCard title="With Bookings" value={withBookingsCount} description="Have marketplace usage" icon={<Calendar className="h-4 w-4" />} tone="blue" />
-          <StatCard title="Average Rating" value={averageRating} description="Frontend estimate" icon={<Star className="h-4 w-4" />} tone="purple" />
+          <StatCard title="Avg Would-rehire" value={averageRehire} description="Across reviewed services" icon={<CheckCircle2 className="h-4 w-4" />} tone="purple" />
         </div>
 
         <div className="rounded-lg border border-white/5 bg-card/70 p-3 shadow-sm shadow-black/10">
@@ -605,7 +616,7 @@ export default function ServicesPage() {
               <SelectTrigger className="h-9 border-white/10 bg-background/70"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">All Qualities</SelectItem>
-                <SelectItem value="HIGH_RATING">High rating</SelectItem>
+                <SelectItem value="HIGH_REHIRE">High would-rehire</SelectItem>
                 <SelectItem value="HAS_BOOKINGS">Has bookings</SelectItem>
                 <SelectItem value="INCOMPLETE">Incomplete</SelectItem>
               </SelectContent>
@@ -615,7 +626,7 @@ export default function ServicesPage() {
               <SelectContent>
                 <SelectItem value="RECENT">Recently updated</SelectItem>
                 <SelectItem value="BOOKINGS">Most bookings</SelectItem>
-                <SelectItem value="RATING">Highest rating</SelectItem>
+                <SelectItem value="REHIRE">Highest would-rehire</SelectItem>
                 <SelectItem value="PRICE_HIGH">Price high to low</SelectItem>
                 <SelectItem value="PRICE_LOW">Price low to high</SelectItem>
               </SelectContent>
@@ -678,8 +689,8 @@ export default function ServicesPage() {
 
             <div className="overflow-x-auto">
               <div className="min-w-[1120px]">
-                {filteredServices.map((service, index) => {
-                  const status = statusFor(service, index)
+                {filteredServices.map((service) => {
+                  const status = statusFor(service)
                   const score = completenessScore(service)
                   return (
                     <div
@@ -718,9 +729,9 @@ export default function ServicesPage() {
                         <Badge className={statusClass(status)}>{status}</Badge>
                       </div>
                       <div>
-                        <div className="flex items-center gap-1 text-sm font-medium text-amber-300">
-                          <Star className="h-3.5 w-3.5 fill-current" />
-                          {ratingFor(service, index)}
+                        <div className="flex items-center gap-1 text-sm font-medium text-emerald-300">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          {rehireRateFor(service) === null ? "No reviews" : `${rehireRateFor(service)}% rehire`}
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {service._count?.bookings ?? 0} bookings · {service._count?.reviews ?? 0} reviews · {service._count?.bookmarks ?? 0} saves

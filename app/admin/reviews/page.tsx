@@ -14,7 +14,6 @@ import {
   MessageSquareReply,
   Search,
   ShieldAlert,
-  Star,
   Trash2,
   UserRound,
 } from "lucide-react"
@@ -170,16 +169,6 @@ function StatCard({
         </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">{description}</p>
       </div>
-    </div>
-  )
-}
-
-function Stars({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-1 text-amber-300">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star key={star} className={cn("h-4 w-4", star <= rating ? "fill-current" : "text-muted-foreground/40")} />
-      ))}
     </div>
   )
 }
@@ -633,7 +622,7 @@ export default function ReviewModerationPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-6">
-          <StatCard title="Total Reviews" value={reviews.length} description="All shown" icon={<Star className="h-4 w-4" />} tone="purple" />
+          <StatCard title="Total Reviews" value={reviews.length} description="All shown" icon={<MessageSquareReply className="h-4 w-4" />} tone="purple" />
           <StatCard title="Visible" value={visibleCount} description="Public reviews" icon={<Eye className="h-4 w-4" />} tone="green" />
           <StatCard title="Hidden" value={hiddenCount} description="Moderated out" icon={<EyeOff className="h-4 w-4" />} tone="amber" />
           <StatCard title="Would Not Repeat" value={wouldNotRepeatCount} description="No repeat signal" icon={<ShieldAlert className="h-4 w-4" />} tone="red" />
@@ -794,9 +783,6 @@ export default function ReviewModerationPage() {
                     >
                       <div>
                         <Badge className={repeatClass(review)}>{repeatLabel(review)}</Badge>
-                        {review.rating ? (
-                          <p className="mt-2 text-xs text-muted-foreground">Legacy {review.rating}/5</p>
-                        ) : null}
                       </div>
                       <div className="min-w-0">
                         <p className="line-clamp-2 text-sm italic text-muted-foreground">"{review.comment || "No comment"}"</p>

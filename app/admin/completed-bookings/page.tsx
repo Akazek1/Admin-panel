@@ -15,7 +15,6 @@ import {
   MessageSquare,
   RefreshCw,
   Search,
-  Star,
   UserRound,
   Wallet,
 } from "lucide-react"
@@ -28,10 +27,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { cn, formatDate } from "@/lib/utils"
 
-type RatingFilter = "ALL" | "RATED" | "UNRATED"
+type RehireValue = "YES" | "MAYBE" | "NO" | null
+type RehireFilter = "ALL" | "YES" | "MAYBE" | "NO" | "NONE"
 type PaymentFilter = "ALL" | "PAID" | "REFUNDED"
 type DateFilter = "ALL" | "TODAY" | "WEEK" | "MONTH"
-type SortMode = "RECENT" | "PRICE_HIGH" | "PRICE_LOW" | "RATING"
+type SortMode = "RECENT" | "PRICE_HIGH" | "PRICE_LOW" | "REHIRE"
 
 const currencyFormatter = new Intl.NumberFormat("en-US")
 
@@ -81,13 +81,28 @@ function locationText(booking: Booking) {
   return parts.length ? parts.join(", ") : "Not provided"
 }
 
-function ratingFor(booking: Booking, index = 0) {
-  const seed = booking.id.charCodeAt(0) + index
-  return [4.5, 5, 4, 4.5, 3.5][seed % 5]
+// The platform has no numeric rating — reviews capture a would-rehire signal.
+function rehireFor(booking: Booking): RehireValue {
+  const answered = booking.reviews?.find((review) => review.wouldRehire)
+  return (answered?.wouldRehire ?? booking.reviews?.[0]?.wouldRehire) ?? null
 }
 
-function hasRating(booking: Booking, index = 0) {
-  return ratingFor(booking, index) >= 4
+function rehireLabel(value: RehireValue) {
+  if (value === "YES") return "Would rehire"
+  if (value === "MAYBE") return "Maybe"
+  if (value === "NO") return "Would not rehire"
+  return "No review"
+}
+
+function rehireClass(value: RehireValue) {
+  if (value === "YES") return "bg-emerald-500/10 text-emerald-300"
+  if (value === "MAYBE") return "bg-amber-500/10 text-amber-300"
+  if (value === "NO") return "bg-red-500/10 text-red-300"
+  return "bg-muted text-muted-foreground"
+}
+
+function rehireOrder(value: RehireValue) {
+  return value === "YES" ? 3 : value === "MAYBE" ? 2 : value === "NO" ? 1 : 0
 }
 
 function platformFee(booking: Booking) {
@@ -185,7 +200,7 @@ function PersonBlock({
 
 export default function CompletedBookingsPage() {
   const [searchTerm, setSearchTerm] = useState("")
-  const [ratingFilter, setRatingFilter] = useState<RatingFilter>("ALL")
+  const [rehireFilter, setRehireFilter] = useState<RehireFilter>("ALL")
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("ALL")
   const [dateFilter, setDateFilter] = useState<DateFilter>("ALL")
   const [sortMode, setSortMode] = useState<SortMode>("RECENT")
@@ -201,36 +216,40 @@ export default function CompletedBookingsPage() {
   const filteredBookings = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
     return [...bookings]
-      .filter((booking, index) => {
+      .filter((booking) => {
         const haystack = `${bookingTitle(booking)} ${booking.id} ${fullName(booking.employer)} ${booking.employer.phoneNumber || ""} ${fullName(booking.worker)} ${booking.worker.phoneNumber || ""}`.toLowerCase()
         const matchesSearch = !normalizedSearch || haystack.includes(normalizedSearch)
-        const matchesRating = ratingFilter === "ALL" || (ratingFilter === "RATED" && hasRating(booking, index)) || (ratingFilter === "UNRATED" && !hasRating(booking, index))
+        const rehire = rehireFor(booking)
+        const matchesRehire =
+          rehireFilter === "ALL" ||
+          (rehireFilter === "NONE" ? rehire === null : rehire === rehireFilter)
         const matchesPayment = paymentFilter === "ALL" || paymentFilter === "PAID"
-        return matchesSearch && matchesRating && matchesPayment && isWithinDateFilter(booking, dateFilter)
+        return matchesSearch && matchesRehire && matchesPayment && isWithinDateFilter(booking, dateFilter)
       })
       .sort((a, b) => {
         if (sortMode === "PRICE_HIGH") return (Number(b.agreedPrice) || 0) - (Number(a.agreedPrice) || 0)
         if (sortMode === "PRICE_LOW") return (Number(a.agreedPrice) || 0) - (Number(b.agreedPrice) || 0)
-        if (sortMode === "RATING") return ratingFor(b) - ratingFor(a)
+        if (sortMode === "REHIRE") return rehireOrder(rehireFor(b)) - rehireOrder(rehireFor(a))
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       })
-  }, [bookings, dateFilter, paymentFilter, ratingFilter, searchTerm, sortMode])
+  }, [bookings, dateFilter, paymentFilter, rehireFilter, searchTerm, sortMode])
 
   const selectedBooking = filteredBookings.find((booking) => booking.id === selectedId) ?? filteredBookings[0] ?? null
   const totalPaid = bookings.reduce((sum, booking) => sum + (Number(booking.agreedPrice) || 0), 0)
-  const ratedCount = bookings.filter(hasRating).length
-  const avgRating = bookings.length ? (bookings.reduce((sum, booking, index) => sum + ratingFor(booking, index), 0) / bookings.length).toFixed(1) : "0"
+  const rehireYesCount = bookings.filter((booking) => rehireFor(booking) === "YES").length
+  const rehireAnsweredCount = bookings.filter((booking) => rehireFor(booking) !== null).length
+  const rehireRate = rehireAnsweredCount ? `${Math.round((rehireYesCount / rehireAnsweredCount) * 100)}%` : "0%"
 
   const clearFilters = () => {
     setSearchTerm("")
-    setRatingFilter("ALL")
+    setRehireFilter("ALL")
     setPaymentFilter("ALL")
     setDateFilter("ALL")
     setSortMode("RECENT")
   }
 
   if (showDetail && selectedBooking) {
-    const rating = ratingFor(selectedBooking)
+    const rehire = rehireFor(selectedBooking)
     const fee = platformFee(selectedBooking)
     const payout = providerPayout(selectedBooking)
 
@@ -348,30 +367,25 @@ export default function CompletedBookingsPage() {
               <div className="rounded-lg border border-white/5 bg-card/70 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-semibold">Reviews</p>
-                  <Badge className="bg-amber-500/10 text-amber-300">{rating} average</Badge>
+                  <Badge className={rehireClass(rehire)}>{rehireLabel(rehire)}</Badge>
                 </div>
-                <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-lg border border-white/5 bg-background/35 p-4">
-                    <p className="text-sm font-semibold">Employer Review</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{fullName(selectedBooking.employer)}</p>
-                    <div className="mt-3 flex items-center gap-1 text-amber-300">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <Star key={index} className={cn("h-4 w-4", index + 1 <= Math.round(rating) && "fill-current")} />
-                      ))}
-                    </div>
-                    <p className="mt-3 text-sm text-muted-foreground">Good work, on time, and the job was completed professionally.</p>
+                {selectedBooking.reviews && selectedBooking.reviews.length > 0 ? (
+                  <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                    {selectedBooking.reviews.map((review) => (
+                      <div key={review.id} className="rounded-lg border border-white/5 bg-background/35 p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold">Review</p>
+                          <Badge className={rehireClass(review.wouldRehire)}>{rehireLabel(review.wouldRehire)}</Badge>
+                        </div>
+                        <p className="mt-3 text-sm text-muted-foreground">
+                          {review.comment || "No written comment."}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                  <div className="rounded-lg border border-white/5 bg-background/35 p-4">
-                    <p className="text-sm font-semibold">Provider Review</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{fullName(selectedBooking.worker)}</p>
-                    <div className="mt-3 flex items-center gap-1 text-amber-300">
-                      {Array.from({ length: 5 }).map((_, index) => (
-                        <Star key={index} className={cn("h-4 w-4", index + 1 <= Math.round(rating) && "fill-current")} />
-                      ))}
-                    </div>
-                    <p className="mt-3 text-sm text-muted-foreground">Clear instructions, smooth coordination, and no open issues.</p>
-                  </div>
-                </div>
+                ) : (
+                  <p className="mt-4 text-sm text-muted-foreground">No reviews submitted for this booking yet.</p>
+                )}
               </div>
             </div>
 
@@ -462,7 +476,7 @@ export default function CompletedBookingsPage() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">Completed Bookings</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Review completed jobs, ratings, payments, and dispute outcomes.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Review completed jobs, rehire signals, payments, and dispute outcomes.</p>
           </div>
           <Button className="border-white/10 bg-card/70" variant="outline" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={cn("mr-2 h-4 w-4", isFetching && "animate-spin")} />
@@ -473,7 +487,7 @@ export default function CompletedBookingsPage() {
         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-6">
           <StatCard title="Completed Bookings" value={bookings.length} description="All time" icon={<CheckCircle2 className="h-4 w-4" />} tone="green" />
           <StatCard title="Successfully Completed" value={bookings.length} description="Completed status" icon={<CheckCircle2 className="h-4 w-4" />} tone="green" />
-          <StatCard title="Rated Bookings" value={ratedCount} description={`${avgRating} average`} icon={<Star className="h-4 w-4" />} tone="amber" />
+          <StatCard title="Would-rehire Rate" value={rehireRate} description={`${rehireYesCount} of ${rehireAnsweredCount} reviewed`} icon={<CheckCircle2 className="h-4 w-4" />} tone="amber" />
           <StatCard title="Total Paid" value={formatMoney(totalPaid)} description="All time" icon={<Wallet className="h-4 w-4" />} tone="blue" />
           <StatCard title="Disputes Closed" value={0} description="Backend pending" icon={<History className="h-4 w-4" />} tone="purple" />
           <StatCard title="Refunds Issued" value={0} description="Backend pending" icon={<CreditCard className="h-4 w-4" />} tone="amber" />
@@ -507,19 +521,21 @@ export default function CompletedBookingsPage() {
                 <SelectItem value="REFUNDED">Refunded</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={ratingFilter} onValueChange={(value) => setRatingFilter(value as RatingFilter)}>
+            <Select value={rehireFilter} onValueChange={(value) => setRehireFilter(value as RehireFilter)}>
               <SelectTrigger className="h-9 border-white/10 bg-background/70"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="ALL">All ratings</SelectItem>
-                <SelectItem value="RATED">Rated</SelectItem>
-                <SelectItem value="UNRATED">Unrated</SelectItem>
+                <SelectItem value="ALL">All reviews</SelectItem>
+                <SelectItem value="YES">Would rehire</SelectItem>
+                <SelectItem value="MAYBE">Maybe</SelectItem>
+                <SelectItem value="NO">Would not rehire</SelectItem>
+                <SelectItem value="NONE">No review</SelectItem>
               </SelectContent>
             </Select>
             <Select value={sortMode} onValueChange={(value) => setSortMode(value as SortMode)}>
               <SelectTrigger className="h-9 border-white/10 bg-background/70"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="RECENT">Recently completed</SelectItem>
-                <SelectItem value="RATING">Highest rating</SelectItem>
+                <SelectItem value="REHIRE">Would rehire first</SelectItem>
                 <SelectItem value="PRICE_HIGH">Price high to low</SelectItem>
                 <SelectItem value="PRICE_LOW">Price low to high</SelectItem>
               </SelectContent>
@@ -534,16 +550,17 @@ export default function CompletedBookingsPage() {
         <div className="flex flex-wrap gap-2 rounded-lg border border-white/5 bg-card/70 p-2">
           {[
             ["ALL", "All Completed", bookings.length],
-            ["RATED", "Rated", ratedCount],
-            ["UNRATED", "Unrated", Math.max(0, bookings.length - ratedCount)],
+            ["YES", "Would rehire", rehireYesCount],
+            ["NO", "Would not rehire", bookings.filter((booking) => rehireFor(booking) === "NO").length],
+            ["NONE", "No review", bookings.filter((booking) => rehireFor(booking) === null).length],
           ].map(([value, label, count]) => (
             <button
               key={String(value)}
               className={cn(
                 "rounded-md border border-white/10 px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
-                ratingFilter === value && "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                rehireFilter === value && "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
               )}
-              onClick={() => setRatingFilter(value as RatingFilter)}
+              onClick={() => setRehireFilter(value as RehireFilter)}
             >
               {label}
               <span className="ml-2 rounded-full bg-white/10 px-2 py-0.5 text-xs">{count}</span>
@@ -573,7 +590,7 @@ export default function CompletedBookingsPage() {
               <div>Provider</div>
               <div>Completed On</div>
               <div>Price</div>
-              <div>Rating</div>
+              <div>Would rehire</div>
               <div className="text-right">Actions</div>
             </div>
 
@@ -623,11 +640,9 @@ export default function CompletedBookingsPage() {
                       <p className="text-xs text-muted-foreground">RWF</p>
                     </div>
                     <div>
-                      <div className="flex items-center gap-1 text-sm font-medium text-amber-300">
-                        <Star className="h-3.5 w-3.5 fill-current" />
-                        {ratingFor(booking, index)}
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">Both parties</p>
+                      <Badge className={cn("text-xs", rehireClass(rehireFor(booking)))}>
+                        {rehireLabel(rehireFor(booking))}
+                      </Badge>
                     </div>
                     <div className="flex items-center justify-end" onClick={(event) => event.stopPropagation()}>
                       <Button

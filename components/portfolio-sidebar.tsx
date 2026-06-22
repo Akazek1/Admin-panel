@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   Clock,
   Dot,
+  FileText,
   Flag,
   FolderTree,
   Home,
@@ -73,6 +74,7 @@ const navigationGroups = [
       { title: "Categories", url: "/admin/categories", icon: Layers },
       { title: "Hero Banners", url: "/admin/banners", icon: ImageIcon },
       { title: "Announcements", url: "/admin/announcements", icon: Bell },
+      { title: "Legal Documents", url: "/admin/legal", icon: FileText },
     ],
   },
   {

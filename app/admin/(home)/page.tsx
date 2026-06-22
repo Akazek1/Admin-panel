@@ -143,51 +143,44 @@ const attentionItems = [
   },
 ]
 
-const marketplaceMetrics = [
-  { label: "Bookings Created", value: 86, change: "+15%", tone: "green" as Tone },
-  { label: "Active Bookings", value: 1248, change: "+18%", tone: "green" as Tone },
-  { label: "Completed Bookings", value: 64, change: "+11%", tone: "green" as Tone },
-  { label: "Cancelled Bookings", value: 22, change: "-4%", tone: "red" as Tone },
-  { label: "New Services Added", value: 37, change: "+23%", tone: "green" as Tone },
-  { label: "New Providers Approved", value: 29, change: "+16%", tone: "green" as Tone },
-]
+// Percentage change between two periods, formatted for display.
+function pctChange(current: number, previous: number): string {
+  if (previous <= 0) return current > 0 ? "New" : "—"
+  const delta = Math.round(((current - previous) / previous) * 100)
+  return `${delta >= 0 ? "+" : ""}${delta}%`
+}
 
-const reportBars = [
-  { label: "Open", value: 67, width: "38%", tone: "purple" as Tone },
-  { label: "In Review", value: 23, width: "22%", tone: "amber" as Tone },
-  { label: "Resolved", value: 142, width: "82%", tone: "green" as Tone },
-  { label: "Rejected", value: 31, width: "28%", tone: "red" as Tone },
-]
+// Relative time for the activity feed.
+function relativeTime(iso: string): string {
+  const time = new Date(iso).getTime()
+  if (Number.isNaN(time)) return ""
+  const diff = Date.now() - time
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 1) return "Just now"
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`
+  const days = Math.floor(hours / 24)
+  return `${days} day${days === 1 ? "" : "s"} ago`
+}
 
-const safetySignals = [
-  { label: "Verifications Approved", value: "1,082", tone: "green" as Tone, icon: ShieldCheck },
-  { label: "Verifications Rejected", value: "78", tone: "red" as Tone, icon: ShieldAlert },
-  { label: "Banned / Suspended Users", value: "43", tone: "red" as Tone, icon: UserRoundX },
-  { label: "Flagged Reviews", value: "29", tone: "purple" as Tone, icon: Flag },
-  { label: "Repeat Reported Users", value: "15", tone: "red" as Tone, icon: AlertTriangle },
-]
+// Humanize an audit action key like "user.ban" → "User Ban".
+function humanizeAction(action: string): string {
+  return action.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+}
 
-const operationMetrics = [
-  { label: "Active Agencies", value: "81", detail: "+ 6", tone: "green" as Tone, icon: Building2 },
-  { label: "Active Companies", value: "23", detail: "+ 2", tone: "blue" as Tone, icon: BriefcaseBusiness },
-  { label: "Placements (This Month)", value: "148", detail: "+ 12%", tone: "green" as Tone, icon: Users },
-  { label: "Pending Handover", value: "7", detail: "New", tone: "amber" as Tone, icon: HelpCircle },
-  { label: "Worker Opt-outs", value: "11", detail: "+ 3", tone: "green" as Tone, icon: UserCheck },
-  { label: "Unresolved Issues", value: "9", detail: "+ 2", tone: "red" as Tone, icon: AlertTriangle },
-  { label: "Unpaid Commissions", value: "5", detail: "KES 245,000", tone: "amber" as Tone, icon: CircleDollarSign },
-]
-
-const recentActivity = [
-  { title: "You approved ID verification", detail: "Bosco Mugisha", time: "10 min ago", tone: "green" as Tone, icon: ShieldCheck },
-  { title: "New booking created", detail: "#BK-2026-1528 by Grace N.", time: "18 min ago", tone: "green" as Tone, icon: CalendarCheck },
-  { title: "New report submitted", detail: "Against user: John Kamau", time: "22 min ago", tone: "purple" as Tone, icon: Flag },
-  { title: "Agency approved", detail: "Clean & Care Services", time: "35 min ago", tone: "blue" as Tone, icon: Building2 },
-  { title: "Commission payout initiated", detail: "Karekezi Agency", time: "1 hour ago", tone: "amber" as Tone, icon: CircleDollarSign },
-  { title: "Dispute raised", detail: "Booking #BK-2026-1490", time: "2 hours ago", tone: "red" as Tone, icon: Gavel },
-  { title: "Verification approved", detail: "Beatrice Karekezi", time: "3 hours ago", tone: "green" as Tone, icon: ShieldCheck },
-  { title: "User suspended", detail: "Michael T.", time: "4 hours ago", tone: "red" as Tone, icon: UserRoundX },
-  { title: "Report resolved", detail: "Against user: Samuel Okello", time: "5 hours ago", tone: "purple" as Tone, icon: Flag },
-]
+// Icon + tone for an audit action, by keyword.
+function activityVisual(action: string): { icon: typeof ShieldCheck; tone: Tone } {
+  const a = action.toLowerCase()
+  if (a.includes("ban") || a.includes("suspend") || a.includes("delete")) return { icon: UserRoundX, tone: "red" }
+  if (a.includes("verif") || a.includes("approve")) return { icon: ShieldCheck, tone: "green" }
+  if (a.includes("report") || a.includes("review")) return { icon: Flag, tone: "purple" }
+  if (a.includes("organization") || a.includes("agency") || a.includes("company") || a.includes("placement"))
+    return { icon: Building2, tone: "blue" }
+  if (a.includes("booking")) return { icon: CalendarCheck, tone: "green" }
+  if (a.includes("commission") || a.includes("payout")) return { icon: CircleDollarSign, tone: "amber" }
+  return { icon: ShieldCheck, tone: "green" }
+}
 
 const quickActions = [
   { label: "Review Verifications", href: "/admin/verifications", icon: ShieldCheck, tone: "green" as Tone },
@@ -289,19 +282,96 @@ export default function DashboardPage() {
     refetchInterval: 60 * 1000,
   })
 
-  const totalUsers = numberValue(stats?.totalUsers, 12568)
-  const totalProviders = numberValue(stats?.totalWorkers, 11234)
-  const totalOrganizations = numberValue(stats?.totalOrganizations, 104)
-  const activeBookings = numberValue(stats?.totalBookings, 1248)
-  const pendingVerifications = numberValue(stats?.pendingVerifications, 134)
-  const agencyCount = Math.max(81, Math.round(totalOrganizations * 0.78))
-  const companyCount = Math.max(23, totalOrganizations - agencyCount)
-  const needsReview = pendingVerifications + 67 + 17
+  const totalUsers = numberValue(stats?.totalUsers, 0)
+  const totalProviders = numberValue(stats?.totalWorkers, 0)
+  const activeBookings = numberValue(stats?.activeBookings, 0)
+  const pendingVerifications = numberValue(stats?.pendingVerifications, 0)
+  const agencyCount = numberValue(stats?.agencyCount, 0)
+  const companyCount = numberValue(stats?.companyCount, 0)
+  const reports = stats?.reports ?? { pending: 0, reviewing: 0, resolved: 0, dismissed: 0, total: 0 }
+  const unresolvedIssues = numberValue(stats?.unresolvedIssues, 0)
+  // Real "needs attention" total: pending verifications + open reports + open issues.
+  const needsReview = pendingVerifications + reports.pending + unresolvedIssues
 
+  // Real counts for the "Needs Attention" list, keyed by item title.
+  const attentionCounts: Record<string, number> = {
+    "Pending ID verifications": pendingVerifications,
+    "Agencies awaiting approval": numberValue(stats?.pendingAgencies, 0),
+    "Companies awaiting approval": numberValue(stats?.pendingCompanies, 0),
+    "Reports needing review": reports.pending,
+    "Disputes needing action": unresolvedIssues,
+    "Stuck bookings": numberValue(stats?.stuckBookings, 0),
+    "Unpaid agency commissions": numberValue(stats?.unpaidCommissions?.count, 0),
+  }
   const resolvedAttentionItems = attentionItems.map((item) => ({
     ...item,
-    count: "count" in item ? item.count : numberValue(stats?.[item.countKey as keyof typeof stats], item.fallback),
+    count:
+      attentionCounts[item.title] ??
+      ("count" in item ? item.count : numberValue(stats?.[item.countKey as keyof typeof stats], item.fallback)),
   }))
+
+  // Marketplace activity — real counts, with month-over-month change where available.
+  const marketplaceMetrics: { label: string; value: number; change: string; tone: Tone }[] = [
+    {
+      label: "Bookings (This Month)",
+      value: numberValue(stats?.bookingsThisMonth, 0),
+      change: pctChange(numberValue(stats?.bookingsThisMonth, 0), numberValue(stats?.bookingsLastMonth, 0)),
+      tone: numberValue(stats?.bookingsThisMonth, 0) >= numberValue(stats?.bookingsLastMonth, 0) ? "green" : "red",
+    },
+    { label: "Active Bookings", value: activeBookings, change: "Now", tone: "green" },
+    { label: "Completed Bookings", value: numberValue(stats?.completedBookings, 0), change: "All time", tone: "green" },
+    { label: "Cancelled Bookings", value: numberValue(stats?.cancelledBookings, 0), change: "All time", tone: "red" },
+    {
+      label: "New Services (This Month)",
+      value: numberValue(stats?.servicesThisMonth, 0),
+      change: pctChange(numberValue(stats?.servicesThisMonth, 0), numberValue(stats?.servicesLastMonth, 0)),
+      tone: numberValue(stats?.servicesThisMonth, 0) >= numberValue(stats?.servicesLastMonth, 0) ? "green" : "red",
+    },
+    {
+      label: "New Providers (This Month)",
+      value: numberValue(stats?.providersThisMonth, 0),
+      change: pctChange(numberValue(stats?.providersThisMonth, 0), numberValue(stats?.providersLastMonth, 0)),
+      tone: numberValue(stats?.providersThisMonth, 0) >= numberValue(stats?.providersLastMonth, 0) ? "green" : "red",
+    },
+  ]
+
+  // Reports by status — bar width is the share of total reports.
+  const reportsTotal = reports.total || 1
+  const reportBars: { label: string; value: number; width: string; tone: Tone }[] = [
+    { label: "Open", value: reports.pending, width: `${Math.round((reports.pending / reportsTotal) * 100)}%`, tone: "purple" },
+    { label: "In Review", value: reports.reviewing, width: `${Math.round((reports.reviewing / reportsTotal) * 100)}%`, tone: "amber" },
+    { label: "Resolved", value: reports.resolved, width: `${Math.round((reports.resolved / reportsTotal) * 100)}%`, tone: "green" },
+    { label: "Rejected", value: reports.dismissed, width: `${Math.round((reports.dismissed / reportsTotal) * 100)}%`, tone: "red" },
+  ]
+
+  const safetySignals: { label: string; value: string; tone: Tone; icon: typeof ShieldCheck }[] = [
+    { label: "Verifications Approved", value: formatNumber(numberValue(stats?.verificationsApproved, 0)), tone: "green", icon: ShieldCheck },
+    { label: "Verifications Rejected", value: formatNumber(numberValue(stats?.verificationsRejected, 0)), tone: "red", icon: ShieldAlert },
+    { label: "Banned / Suspended Users", value: formatNumber(numberValue(stats?.bannedUsers, 0)), tone: "red", icon: UserRoundX },
+    { label: "Flagged Reviews", value: formatNumber(numberValue(stats?.flaggedReviews, 0)), tone: "purple", icon: Flag },
+    { label: "Repeat Reported Users", value: formatNumber(numberValue(stats?.repeatReportedUsers, 0)), tone: "red", icon: AlertTriangle },
+  ]
+
+  const unpaidCommissions = stats?.unpaidCommissions ?? { count: 0, amount: 0 }
+  const operationMetrics: { label: string; value: string; detail: string; tone: Tone; icon: typeof ShieldCheck }[] = [
+    { label: "Agencies", value: formatNumber(agencyCount), detail: "Registered", tone: "green", icon: Building2 },
+    { label: "Companies", value: formatNumber(companyCount), detail: "Registered", tone: "blue", icon: BriefcaseBusiness },
+    { label: "Placements (This Month)", value: formatNumber(numberValue(stats?.placementsThisMonth, 0)), detail: "This month", tone: "green", icon: Users },
+    { label: "Worker Opt-outs", value: formatNumber(numberValue(stats?.optedOutWorkers, 0)), detail: "All time", tone: "amber", icon: UserCheck },
+    { label: "Unresolved Issues", value: formatNumber(unresolvedIssues), detail: "Open", tone: unresolvedIssues > 0 ? "red" : "green", icon: AlertTriangle },
+    { label: "Unpaid Commissions", value: formatNumber(unpaidCommissions.count), detail: `RWF ${formatNumber(unpaidCommissions.amount)}`, tone: "amber", icon: CircleDollarSign },
+  ]
+
+  const recentActivity = (stats?.recentActivity ?? []).map((entry) => {
+    const visual = activityVisual(entry.action)
+    return {
+      title: humanizeAction(entry.action),
+      detail: `${entry.actorName} · ${entry.targetType}`,
+      time: relativeTime(entry.createdAt),
+      tone: visual.tone,
+      icon: visual.icon,
+    }
+  })
 
   if (isLoading) {
     return (
@@ -361,11 +431,11 @@ export default function DashboardPage() {
         </header>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1800px]:grid-cols-6">
-          <KpiCard title="Total Individuals" value={formatNumber(totalUsers)} description="+12% vs last month" icon={Users} tone="green" href="/admin/users" />
-          <KpiCard title="Active Providers" value={formatNumber(totalProviders)} description="89.4% of individuals" icon={ShieldCheck} tone="blue" href="/admin/users" />
-          <KpiCard title="Agencies" value={formatNumber(agencyCount)} description="+6 vs last month" icon={Building2} tone="purple" href="/admin/agencies" />
-          <KpiCard title="Companies" value={formatNumber(companyCount)} description="+2 vs last month" icon={BriefcaseBusiness} tone="blue" href="/admin/companies" />
-          <KpiCard title="Active Bookings" value={formatNumber(activeBookings)} description="+18% vs last month" icon={CalendarCheck} tone="green" href="/admin/active-bookings" />
+          <KpiCard title="Total Individuals" value={formatNumber(totalUsers)} description="All registered users" icon={Users} tone="green" href="/admin/users" />
+          <KpiCard title="Active Providers" value={formatNumber(totalProviders)} description={`${totalUsers ? Math.round((totalProviders / totalUsers) * 100) : 0}% of individuals`} icon={ShieldCheck} tone="blue" href="/admin/users" />
+          <KpiCard title="Agencies" value={formatNumber(agencyCount)} description="Registered agencies" icon={Building2} tone="purple" href="/admin/agencies" />
+          <KpiCard title="Companies" value={formatNumber(companyCount)} description="Registered companies" icon={BriefcaseBusiness} tone="blue" href="/admin/companies" />
+          <KpiCard title="Active Bookings" value={formatNumber(activeBookings)} description="Currently in progress" icon={CalendarCheck} tone="green" href="/admin/active-bookings" />
           <KpiCard title="Needs Review" value={formatNumber(needsReview)} description="Verifications + Reports + Disputes" icon={AlertTriangle} tone="amber" href="/admin/verifications" />
         </div>
 
@@ -448,7 +518,7 @@ export default function DashboardPage() {
                     ))}
                     <div className="flex justify-between border-t border-white/5 pt-3 text-sm font-semibold">
                       <span>Total</span>
-                      <span>263</span>
+                      <span>{formatNumber(reports.total)}</span>
                     </div>
                   </div>
                   <div className="space-y-2 border-t border-white/5 pt-4 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
@@ -523,19 +593,25 @@ export default function DashboardPage() {
             </div>
             <div className="px-4 pb-4">
               <div className="relative space-y-0">
-                <div className="absolute bottom-5 left-5 top-5 w-px bg-white/10" />
-                {recentActivity.map((activity) => (
-                  <div key={`${activity.title}-${activity.time}`} className="relative flex gap-3 border-b border-white/5 py-4 last:border-b-0">
-                    <div className={cn("z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-1", toneStyles[activity.tone].icon)}>
-                      <activity.icon className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{activity.title}</p>
-                      <p className="mt-1 truncate text-sm text-muted-foreground">{activity.detail}</p>
-                    </div>
-                    <p className="shrink-0 text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
-                ))}
+                {recentActivity.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">No recent activity yet.</p>
+                ) : (
+                  <>
+                    <div className="absolute bottom-5 left-5 top-5 w-px bg-white/10" />
+                    {recentActivity.map((activity, index) => (
+                      <div key={`${activity.title}-${index}`} className="relative flex gap-3 border-b border-white/5 py-4 last:border-b-0">
+                        <div className={cn("z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-1", toneStyles[activity.tone].icon)}>
+                          <activity.icon className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold">{activity.title}</p>
+                          <p className="mt-1 truncate text-sm text-muted-foreground">{activity.detail}</p>
+                        </div>
+                        <p className="shrink-0 text-xs text-muted-foreground">{activity.time}</p>
+                      </div>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           </Panel>

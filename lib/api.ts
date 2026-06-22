@@ -141,6 +141,8 @@ export interface Booking {
   agreedPrice: number | null;
   scheduledFor: string | null;
   createdAt: string;
+  // The platform uses a would-rehire signal instead of numeric ratings.
+  reviews?: { id: string; wouldRehire: "YES" | "MAYBE" | "NO" | null; authorId: string; targetId: string; comment: string | null }[];
 }
 
 export async function getBookings(status?: string): Promise<Booking[]> {
@@ -163,7 +165,51 @@ export async function unlockOtp(phoneNumber: string) {
   return response.data?.data ?? response.data;
 }
 
-export async function getStats() {
+export interface AdminActivity {
+  action: string;
+  targetType: string;
+  targetId: string;
+  actorName: string;
+  createdAt: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalWorkers: number;
+  totalEmployers: number;
+  totalBookings: number;
+  pendingBookings: number;
+  activeBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  bookingsThisMonth: number;
+  bookingsLastMonth: number;
+  activeJobs: number;
+  pendingVerifications: number;
+  verificationsApproved: number;
+  verificationsRejected: number;
+  totalOrganizations: number;
+  agencyCount: number;
+  companyCount: number;
+  pendingAgencies: number;
+  pendingCompanies: number;
+  stuckBookings: number;
+  servicesThisMonth: number;
+  servicesLastMonth: number;
+  providersThisMonth: number;
+  providersLastMonth: number;
+  bannedUsers: number;
+  flaggedReviews: number;
+  repeatReportedUsers: number;
+  reports: { pending: number; reviewing: number; resolved: number; dismissed: number; total: number };
+  placementsThisMonth: number;
+  optedOutWorkers: number;
+  unresolvedIssues: number;
+  unpaidCommissions: { count: number; amount: number };
+  recentActivity: AdminActivity[];
+}
+
+export async function getStats(): Promise<AdminStats> {
   const response = await axiosInstance.get("/admin/dashboard/stats");
   return response.data?.data ?? response.data;
 }
@@ -289,6 +335,8 @@ export interface Service {
   provider: User;
   category: { id?: string; name: string };
   _count?: { bookings: number; bookmarks: number; reviews: number };
+  // Would-rehire summary (the platform's review signal — no numeric rating).
+  rehireStats?: { yes: number; answered: number; rate: number | null };
   isActive: boolean;
   createdAt: string;
 }
