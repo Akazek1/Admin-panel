@@ -15,6 +15,9 @@ export interface User {
   email: string | null;
   phoneNumber: string;
   roles: string[];
+  accountType?: "INDIVIDUAL" | "STAFFING_AGENCY" | "COMPANY" | null;
+  isProvider?: boolean | null;
+  isAdmin?: boolean | null;
   isVerified: boolean;
   isBanned: boolean;
   banReason: string | null;
@@ -59,6 +62,9 @@ export interface User {
   auditHistory?: Array<{ id: string; action: string; actor?: { firstName: string; lastName: string }; createdAt: string; metadata?: any }>;
   verificationRequests?: Array<{ id: string; status: string; reviewNote?: string | null; reviewedAt?: string | null; createdAt: string }>;
   createdAt: string;
+  updatedAt?: string | null;
+  lastActiveAt?: string | null;
+  _count?: { bookingsAsWorker?: number; bookingsAsEmployer?: number; reportsReceived?: number; services?: number };
 }
 
 export async function getAllUsers(): Promise<User[]> {
@@ -126,6 +132,7 @@ export interface Booking {
   id: string;
   serviceId: string | null;
   service: { title: string; serviceImage: string | null; priceMin: number | null } | null;
+  job?: { title: string } | null;
   employer: User;
   worker: User & { profilePicture: string | null };
   address: { city: string; district: string | null; sector: string | null } | null;
@@ -134,6 +141,8 @@ export interface Booking {
   agreedPrice: number | null;
   scheduledFor: string | null;
   createdAt: string;
+  // The platform uses a would-rehire signal instead of numeric ratings.
+  reviews?: { id: string; wouldRehire: "YES" | "MAYBE" | "NO" | null; authorId: string; targetId: string; comment: string | null }[];
 }
 
 export async function getBookings(status?: string): Promise<Booking[]> {
@@ -156,7 +165,53 @@ export async function unlockOtp(phoneNumber: string) {
   return response.data?.data ?? response.data;
 }
 
-export async function getStats() {
+export interface AdminActivity {
+  action: string;
+  targetType: string;
+  targetId: string;
+  actorName: string;
+  createdAt: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalWorkers: number;
+  totalEmployers: number;
+  onlineUsers: number;
+  loggedInToday: number;
+  totalBookings: number;
+  pendingBookings: number;
+  activeBookings: number;
+  completedBookings: number;
+  cancelledBookings: number;
+  bookingsThisMonth: number;
+  bookingsLastMonth: number;
+  activeJobs: number;
+  pendingVerifications: number;
+  verificationsApproved: number;
+  verificationsRejected: number;
+  totalOrganizations: number;
+  agencyCount: number;
+  companyCount: number;
+  pendingAgencies: number;
+  pendingCompanies: number;
+  stuckBookings: number;
+  servicesThisMonth: number;
+  servicesLastMonth: number;
+  providersThisMonth: number;
+  providersLastMonth: number;
+  bannedUsers: number;
+  flaggedReviews: number;
+  repeatReportedUsers: number;
+  reports: { pending: number; reviewing: number; resolved: number; dismissed: number; total: number };
+  placementsThisMonth: number;
+  optedOutWorkers: number;
+  unresolvedIssues: number;
+  unpaidCommissions: { count: number; amount: number };
+  recentActivity: AdminActivity[];
+}
+
+export async function getStats(): Promise<AdminStats> {
   const response = await axiosInstance.get("/admin/dashboard/stats");
   return response.data?.data ?? response.data;
 }
@@ -190,7 +245,7 @@ export async function deleteCategory(id: string): Promise<void> {
 export interface Organization {
   id: string;
   name: string;
-  type: "SERVICE_COMPANY" | "PLACEMENT_AGENCY";
+  type: "SERVICE_COMPANY" | "STAFFING_AGENCY";
   phone: string | null;
   email: string | null;
   address: string | null;
@@ -218,7 +273,7 @@ export interface AgencyPlacement {
   endedAt: string | null;
 }
 
-export async function getOrganizations(params?: { verified?: string; type?: string }): Promise<Organization[]> {
+export async function getOrganizations(params?: { verified?: string; type?: "SERVICE_COMPANY" | "STAFFING_AGENCY" | string }): Promise<Organization[]> {
   const response = await axiosInstance.get("/admin/organizations", { params });
   return unwrapList<Organization>(response.data);
 }
@@ -282,6 +337,8 @@ export interface Service {
   provider: User;
   category: { id?: string; name: string };
   _count?: { bookings: number; bookmarks: number; reviews: number };
+  // Would-rehire summary (the platform's review signal — no numeric rating).
+  rehireStats?: { yes: number; answered: number; rate: number | null };
   isActive: boolean;
   createdAt: string;
 }
@@ -298,6 +355,53 @@ export async function updateService(id: string, data: any): Promise<Service> {
 
 export async function deleteService(id: string): Promise<void> {
   await axiosInstance.delete(`/admin/services/${id}`);
+}
+
+// --- Company service-card approval (Project 2 Phase E) ---
+// Company-owned service cards start PENDING and stay hidden until an admin
+// approves them. These power the /admin/company-services queue.
+export type ServiceApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface CompanyService {
+  id: string;
+  title: string;
+  description: string | null;
+  serviceImage?: string | null;
+  serviceImages?: string[];
+  priceMin: number | null;
+  priceMax: number | null;
+  priceType: string | null;
+  serviceAreas?: string[];
+  isActive: boolean;
+  approvalStatus: ServiceApprovalStatus;
+  company: {
+    id: string;
+    name: string;
+    type?: string;
+    logoUrl: string | null;
+    verified: boolean;
+  } | null;
+  category: { id?: string; name: string };
+  createdAt: string;
+}
+
+export async function getCompanyServices(
+  status?: ServiceApprovalStatus,
+): Promise<CompanyService[]> {
+  const response = await axiosInstance.get("/admin/company-services", {
+    params: status ? { status } : undefined,
+  });
+  return unwrapList<CompanyService>(response.data);
+}
+
+export async function approveCompanyService(id: string) {
+  const response = await axiosInstance.post(`/admin/company-services/${id}/approve`);
+  return response.data?.data ?? response.data;
+}
+
+export async function rejectCompanyService(id: string) {
+  const response = await axiosInstance.post(`/admin/company-services/${id}/reject`);
+  return response.data?.data ?? response.data;
 }
 
 export async function getReviews(): Promise<any[]> {

@@ -30,7 +30,7 @@ const ALL_PERMISSIONS: { key: string; label: string; description: string }[] = [
   { key: "canManageUsers",      label: "Manage Users",       description: "Edit profiles, ban/unban, create sub-admins" },
   { key: "canManageBookings",   label: "Manage Bookings",    description: "View and update booking status, monitor conversations" },
   { key: "canViewAnalytics",    label: "View Analytics",     description: "Access dashboard stats and service listings" },
-  { key: "canManageCategories", label: "Manage Categories",  description: "Create, edit, delete categories and banners" },
+  { key: "canManageCategories", label: "Manage Content & Ads", description: "Create, edit, delete categories, banners, and content settings" },
   { key: "canViewAuditLogs",    label: "View Audit Logs",    description: "Read admin action history" },
   { key: "canModerateReviews",  label: "Moderate Reviews",   description: "Delete inappropriate reviews" },
 ]

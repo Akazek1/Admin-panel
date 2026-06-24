@@ -183,7 +183,7 @@ export default function UserDetailPage() {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unnamed User"
   const roles = Array.isArray(user.roles) ? user.roles : []
   const isWorker = roles.includes("WORKER")
-  const isEmployer = roles.some((role: string) => ["EMPLOYER", "COMPANY", "AGENCY"].includes(role))
+  const isEmployer = roles.some((role: string) => ["EMPLOYER", "COMPANY", "STAFFING_AGENCY"].includes(role))
   const allBookings = [
     ...(user.bookingsAsWorker ?? []),
     ...(user.bookingsAsEmployer ?? []),
@@ -195,8 +195,11 @@ export default function UserDetailPage() {
   const cancelledBookings = relevantBookings.filter((booking: any) => booking.status === "CANCELLED").length
   const activeBookings = relevantBookings.filter((booking: any) => ["CONFIRMED", "IN_PROGRESS", "PENDING"].includes(booking.status)).length
   const totalSpend = employerBookings.reduce((sum: number, booking: any) => sum + (Number(booking.agreedPrice) || 0), 0)
-  const avgRating = user.reviewsReceived?.length
-    ? (user.reviewsReceived.reduce((sum: number, review: any) => sum + review.rating, 0) / user.reviewsReceived.length).toFixed(1)
+  // The platform uses a would-rehire signal, not numeric ratings.
+  const rehireAnswered = (user.reviewsReceived ?? []).filter((review: any) => review.wouldRehire)
+  const rehireYes = rehireAnswered.filter((review: any) => review.wouldRehire === "YES").length
+  const rehireRate = rehireAnswered.length
+    ? `${Math.round((rehireYes / rehireAnswered.length) * 100)}%`
     : "—"
   const reportsFiled = user.reportsFiled?.length ?? 0
   const reportsReceived = user.reportsReceived?.length ?? 0
@@ -215,7 +218,7 @@ export default function UserDetailPage() {
     ? [
         ["Active services", user.services?.filter((service: any) => service.isActive).length ?? 0],
         ["Completed work", completedBookings],
-        ["Average rating", avgRating],
+        ["Would-rehire rate", rehireRate],
         ["Reports received", reportsReceived],
       ]
     : [
@@ -643,11 +646,25 @@ export default function UserDetailPage() {
                   {user.reviewsReceived.map((r: any) => (
                     <div key={r.id} className="p-4 text-sm space-y-1">
                       <div className="flex items-center gap-2">
-                        <div className="flex">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`w-3 h-3 ${i < r.rating ? "text-yellow-400 fill-yellow-400" : "text-muted"}`} />
-                          ))}
-                        </div>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            r.wouldRehire === "YES"
+                              ? "bg-emerald-500/10 text-emerald-600"
+                              : r.wouldRehire === "MAYBE"
+                                ? "bg-amber-500/10 text-amber-600"
+                                : r.wouldRehire === "NO"
+                                  ? "bg-red-500/10 text-red-600"
+                                  : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {r.wouldRehire === "YES"
+                            ? "Would rehire"
+                            : r.wouldRehire === "MAYBE"
+                              ? "Maybe"
+                              : r.wouldRehire === "NO"
+                                ? "Would not rehire"
+                                : "No signal"}
+                        </span>
                         <span className="text-muted-foreground text-xs">by {r.author?.firstName} {r.author?.lastName}</span>
                         <span className="text-muted-foreground text-xs ml-auto">{formatDate(r.createdAt)}</span>
                       </div>
