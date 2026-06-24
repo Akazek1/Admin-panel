@@ -284,6 +284,8 @@ export default function DashboardPage() {
 
   const totalUsers = numberValue(stats?.totalUsers, 0)
   const totalProviders = numberValue(stats?.totalWorkers, 0)
+  const onlineUsers = numberValue(stats?.onlineUsers, 0)
+  const loggedInToday = numberValue(stats?.loggedInToday, 0)
   const activeBookings = numberValue(stats?.activeBookings, 0)
   const pendingVerifications = numberValue(stats?.pendingVerifications, 0)
   const agencyCount = numberValue(stats?.agencyCount, 0)
@@ -433,6 +435,8 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1800px]:grid-cols-6">
           <KpiCard title="Total Individuals" value={formatNumber(totalUsers)} description="All registered users" icon={Users} tone="green" href="/admin/users" />
           <KpiCard title="Active Providers" value={formatNumber(totalProviders)} description={`${totalUsers ? Math.round((totalProviders / totalUsers) * 100) : 0}% of individuals`} icon={ShieldCheck} tone="blue" href="/admin/users" />
+          <KpiCard title="Online Now" value={formatNumber(onlineUsers)} description="Users with a live connection" icon={UserCheck} tone="green" href="/admin/users" />
+          <KpiCard title="Logged In Today" value={formatNumber(loggedInToday)} description="Distinct logins since midnight" icon={Clock3} tone="blue" href="/admin/users" />
           <KpiCard title="Agencies" value={formatNumber(agencyCount)} description="Registered agencies" icon={Building2} tone="purple" href="/admin/agencies" />
           <KpiCard title="Companies" value={formatNumber(companyCount)} description="Registered companies" icon={BriefcaseBusiness} tone="blue" href="/admin/companies" />
           <KpiCard title="Active Bookings" value={formatNumber(activeBookings)} description="Currently in progress" icon={CalendarCheck} tone="green" href="/admin/active-bookings" />

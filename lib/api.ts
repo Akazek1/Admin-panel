@@ -177,6 +177,8 @@ export interface AdminStats {
   totalUsers: number;
   totalWorkers: number;
   totalEmployers: number;
+  onlineUsers: number;
+  loggedInToday: number;
   totalBookings: number;
   pendingBookings: number;
   activeBookings: number;
