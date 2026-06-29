@@ -13,7 +13,7 @@ export const APP_CONFIG = {
   // Branding
   brand: {
     primaryColor: "#145B10",
-    logo: "/logo.png",
+    logo: "/brand/akazek-logo-dark.png",
   },
 
   // Contact & Support
