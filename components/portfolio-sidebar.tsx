@@ -28,12 +28,12 @@ import {
   ChevronRight,
 } from "lucide-react"
 import Link from "next/link"
-import Image from "next/image"
 import React from "react"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LogoutButton } from "./logout-button"
 import { APP_CONFIG } from "@/constant/app.config"
+import { AkazekLogo } from "@/components/brand/akazek-logo"
 
 const navigationGroups = [
   {
@@ -146,7 +146,7 @@ export function PortfolioSidebar() {
   return (
     <aside className="fixed left-0 top-0 hidden h-screen w-64 flex-shrink-0 flex-col border-r border-white/10 bg-[#0f1110] p-4 lg:flex">
       <div className="mb-8 flex items-center gap-3">
-        <Image src="/hwa-green-icon.png" width={32} height={32} alt={APP_CONFIG.name} className="shrink-0" />
+        <AkazekLogo variant="mark" tone="light" markClassName="h-8 w-8" />
         <div className="min-w-0">
           <h2 className="truncate text-base font-semibold leading-tight text-darkText">{APP_CONFIG.name}</h2>
           <p className="truncate text-xs uppercase tracking-wide text-muted-foreground">Admin Portal</p>
