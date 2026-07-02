@@ -30,7 +30,7 @@ interface ConversationSummary {
   chatDisabledUntil?: string | null
   employer: Participant
   worker: Participant
-  service?: { id: string; title: string; category?: { id: string; name: string } } | null
+  service?: { id: string; category?: { id: string; name: string } } | null
   job?: { id: string; title: string; category?: { id: string; name: string } } | null
   address?: { city: string; district?: string | null; sector?: string | null } | null
   messages: { content: string; createdAt: string }[]
@@ -55,7 +55,7 @@ interface ConversationDetail {
   chatStatus?: string
   chatDisabledReason?: string | null
   chatDisabledUntil?: string | null
-  service?: { id: string; title: string; category?: { id: string; name: string } } | null
+  service?: { id: string; category?: { id: string; name: string } } | null
   job?: { id: string; title: string; category?: { id: string; name: string } } | null
   address?: { city: string; district?: string | null; sector?: string | null } | null
 }
@@ -73,7 +73,7 @@ function isAdmin(roles: string[]) {
 }
 
 function bookingTitle(c?: Pick<ConversationSummary, "service" | "job"> | Pick<ConversationDetail, "service" | "job"> | null) {
-  return c?.service?.title || c?.job?.title || "Direct booking"
+  return c?.service?.category?.name || c?.job?.title || "Direct booking"
 }
 
 function categoryName(c?: Pick<ConversationSummary, "service" | "job"> | Pick<ConversationDetail, "service" | "job"> | null) {

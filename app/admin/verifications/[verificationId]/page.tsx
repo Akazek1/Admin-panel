@@ -204,7 +204,7 @@ export default function VerificationDetailPage() {
                 {request.user.services?.length ? (
                   request.user.services.map((service: any) => (
                     <Badge key={service.id} variant="outline">
-                      {service.title}
+                      {service.category?.name}
                     </Badge>
                   ))
                 ) : (

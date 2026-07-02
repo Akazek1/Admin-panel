@@ -37,6 +37,9 @@ export interface Category {
   name: string
   nameKn: string | null
   nameFr: string | null
+  providerLabel: string | null
+  providerLabelKn: string | null
+  providerLabelFr: string | null
   icon: string | null
   description: string | null
   isActive: boolean
@@ -73,7 +76,7 @@ export default function CategoriesPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   const [formData, setFormData] = useState({
-    name: "", nameKn: "", nameFr: "", icon: "", description: "", isActive: true, sortOrder: 0,
+    name: "", nameKn: "", nameFr: "", providerLabel: "", providerLabelKn: "", providerLabelFr: "", icon: "", description: "", isActive: true, sortOrder: 0,
   })
 
   const { data: categories, isLoading } = useQuery<Category[]>({
@@ -126,13 +129,14 @@ export default function CategoriesPage() {
 
   const resetForm = () => {
     setSelectedCategory(null)
-    setFormData({ name: "", nameKn: "", nameFr: "", icon: "", description: "", isActive: true, sortOrder: 0 })
+    setFormData({ name: "", nameKn: "", nameFr: "", providerLabel: "", providerLabelKn: "", providerLabelFr: "", icon: "", description: "", isActive: true, sortOrder: 0 })
   }
 
   const handleEdit = (cat: Category) => {
     setSelectedCategory(cat)
     setFormData({
       name: cat.name, nameKn: cat.nameKn || "", nameFr: cat.nameFr || "",
+      providerLabel: cat.providerLabel || "", providerLabelKn: cat.providerLabelKn || "", providerLabelFr: cat.providerLabelFr || "",
       icon: cat.icon || "", description: cat.description || "", isActive: cat.isActive, sortOrder: cat.sortOrder,
     })
     setIsDialogOpen(true)
@@ -326,7 +330,14 @@ export default function CategoriesPage() {
                     </TableCell>
                     <TableCell className="text-xl">{cat.icon || "•"}</TableCell>
                     <TableCell>
-                      <p className="font-medium">{cat.name}</p>
+                      <p className="font-medium">
+                        {cat.name}
+                        {cat.providerLabel && (
+                          <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-xs font-normal text-muted-foreground">
+                            {cat.providerLabel}
+                          </span>
+                        )}
+                      </p>
                       <p className="line-clamp-1 max-w-[340px] text-xs text-muted-foreground">{cat.description || "No default description yet"}</p>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{cat.nameKn || "—"}</TableCell>
@@ -389,6 +400,20 @@ export default function CategoriesPage() {
               <div className="space-y-2">
                 <Label>French Name</Label>
                 <Input value={formData.nameFr} onChange={e => setFormData({ ...formData, nameFr: e.target.value })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Provider Role Label</Label>
+              <Input value={formData.providerLabel} onChange={e => setFormData({ ...formData, providerLabel: e.target.value })} placeholder='The role noun for this service, e.g. "Cleaner" for "Cleaning"' />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Provider Role (Kinyarwanda)</Label>
+                <Input value={formData.providerLabelKn} onChange={e => setFormData({ ...formData, providerLabelKn: e.target.value })} />
+              </div>
+              <div className="space-y-2">
+                <Label>Provider Role (French)</Label>
+                <Input value={formData.providerLabelFr} onChange={e => setFormData({ ...formData, providerLabelFr: e.target.value })} />
               </div>
             </div>
             <div className="space-y-2">

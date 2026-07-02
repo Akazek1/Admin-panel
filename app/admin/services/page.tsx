@@ -216,7 +216,7 @@ export default function ServicesPage() {
     return [...services]
       .filter((service) => {
         const status = statusFor(service)
-        const haystack = `${service.title} ${service.description} ${fullName(service.provider)} ${service.provider.phoneNumber || ""} ${service.category.name} ${service.id}`.toLowerCase()
+        const haystack = `${service.description} ${fullName(service.provider)} ${service.provider.phoneNumber || ""} ${service.category.name} ${service.id}`.toLowerCase()
         const matchesSearch = !normalizedSearch || haystack.includes(normalizedSearch)
         const matchesCategory = categoryFilter === "ALL" || service.category.name === categoryFilter
         const matchesStatus =
@@ -285,7 +285,7 @@ export default function ServicesPage() {
                 Back to Service Listings
               </button>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="line-clamp-2 text-3xl font-semibold tracking-tight">{selectedService.title}</h1>
+                <h1 className="line-clamp-2 text-3xl font-semibold tracking-tight">{selectedService.category.name}</h1>
                 <Badge className={statusClass(status)}>{status}</Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{providerName} · @{selectedService.provider.firstName?.toLowerCase() || "provider"}</p>
@@ -352,7 +352,7 @@ export default function ServicesPage() {
                         <p className="text-sm text-muted-foreground">@{selectedService.provider.firstName?.toLowerCase() || "provider"}</p>
                       </div>
                     </div>
-                    <h2 className="mt-4 text-xl font-semibold">{selectedService.title}</h2>
+                    <h2 className="mt-4 text-xl font-semibold">{selectedService.category.name}</h2>
                     <p className="mt-1 text-sm text-muted-foreground">{selectedService.category.name}</p>
                     <p className="mt-3 text-lg font-semibold text-emerald-300">{priceLabel(selectedService)}</p>
                     <div className="mt-4 grid grid-cols-4 overflow-hidden rounded-lg border border-white/5 bg-background/35 text-center text-sm">
@@ -439,7 +439,7 @@ export default function ServicesPage() {
                 <div className="rounded-lg border border-white/5 bg-card/70 p-4">
                   <p className="font-semibold">Services Offered</p>
                   <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
-                    {[selectedService.category.name, selectedService.title, "Customer coordination", "Task completion"].map((item) => (
+                    {[selectedService.category.name, "Customer coordination", "Task completion"].map((item) => (
                       <span key={item} className="flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-emerald-300" />
                         {item}
@@ -713,7 +713,7 @@ export default function ServicesPage() {
                       <div className="flex min-w-0 items-center gap-3">
                         <ServiceImage service={service} />
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">{service.title}</p>
+                          <p className="truncate text-sm font-semibold">{service.category.name}</p>
                           <p className="mt-0.5 truncate text-xs text-muted-foreground">{service.category.name}</p>
                         </div>
                       </div>
