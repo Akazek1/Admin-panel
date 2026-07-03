@@ -39,9 +39,8 @@ export interface User {
   ownedOrg?: { name: string } | null;
   agency?: { name: string } | null;
   addresses?: Array<{ id: string; city: string; district?: string | null; sector?: string | null; street?: string | null; isDefault?: boolean }>;
-  services?: Array<{ 
-    id: string; 
-    title: string; 
+  services?: Array<{
+    id: string;
     description?: string;
     serviceImage?: string | null;
     serviceImages?: string[];
@@ -55,8 +54,8 @@ export interface User {
   }>;
   reviewsReceived?: Array<{ id: string; rating: number; comment?: string; author?: { firstName: string; lastName: string }; createdAt: string; reply?: string; repliedAt?: string }>;
   reportsReceived?: Array<{ id: string; reason: string; description?: string; status: string; createdAt: string }>;
-  bookingsAsWorker?: Array<{ id: string; status: string; createdAt: string; service?: { title: string }; job?: { title: string }; employer?: { firstName: string; lastName: string } }>;
-  bookingsAsEmployer?: Array<{ id: string; status: string; createdAt: string; service?: { title: string }; job?: { title: string }; worker?: { firstName: string; lastName: string } }>;
+  bookingsAsWorker?: Array<{ id: string; status: string; createdAt: string; service?: { category?: { name: string } }; job?: { title: string }; employer?: { firstName: string; lastName: string } }>;
+  bookingsAsEmployer?: Array<{ id: string; status: string; createdAt: string; service?: { category?: { name: string } }; job?: { title: string }; worker?: { firstName: string; lastName: string } }>;
   documents?: Array<{ id: string; type: string; status: string; documentUrl: string; documentFileName: string }>;
   notifications?: Array<{ id: string; title: string; body: string; status: string; createdAt: string }>;
   auditHistory?: Array<{ id: string; action: string; actor?: { firstName: string; lastName: string }; createdAt: string; metadata?: any }>;
@@ -131,7 +130,7 @@ export async function resolveReport(id: string, status: string, note: string) {
 export interface Booking {
   id: string;
   serviceId: string | null;
-  service: { title: string; serviceImage: string | null; priceMin: number | null } | null;
+  service: { category?: { name: string }; serviceImage: string | null; priceMin: number | null } | null;
   job?: { title: string } | null;
   employer: User;
   worker: User & { profilePicture: string | null };
@@ -327,7 +326,6 @@ export async function getAuditLogs(page = 1, limit = 50): Promise<{ data: AuditL
 
 export interface Service {
   id: string;
-  title: string;
   description: string;
   serviceImage?: string | null;
   priceMin: number | null;
@@ -364,7 +362,6 @@ export type ServiceApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export interface CompanyService {
   id: string;
-  title: string;
   description: string | null;
   serviceImage?: string | null;
   serviceImages?: string[];

@@ -54,7 +54,7 @@ function initials(name: string) {
 }
 
 function bookingTitle(booking: Booking) {
-  return booking.service?.title || booking.job?.title || "Custom Service"
+  return booking.service?.category?.name || booking.job?.title || "Custom Service"
 }
 
 function bookingCode(booking: Booking, index = 0) {

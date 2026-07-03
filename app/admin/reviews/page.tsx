@@ -50,7 +50,7 @@ interface AdminReview {
   author: ReviewUser
   target: ReviewUser
   booking?: { id: string } | null
-  service?: { id: string; title: string; category?: { id: string; name: string } | null } | null
+  service?: { id: string; category?: { id: string; name: string } | null } | null
 }
 
 type VisibilityFilter = "ALL" | "VISIBLE" | "HIDDEN"
@@ -274,7 +274,7 @@ export default function ReviewModerationPage() {
     const normalizedSearch = searchTerm.trim().toLowerCase()
     return [...reviews]
       .filter((review) => {
-        const haystack = `${review.comment || ""} ${review.reply || ""} ${displayName(review.author)} ${displayName(review.target)} ${review.service?.title || ""} ${review.booking?.id || ""}`.toLowerCase()
+        const haystack = `${review.comment || ""} ${review.reply || ""} ${displayName(review.author)} ${displayName(review.target)} ${review.service?.category?.name || ""} ${review.booking?.id || ""}`.toLowerCase()
         const matchesSearch = !normalizedSearch || haystack.includes(normalizedSearch)
         const matchesVisibility =
           visibilityFilter === "ALL" ||
@@ -594,7 +594,7 @@ export default function ReviewModerationPage() {
                   </div>
                   <div className="rounded-lg border border-white/5 bg-background/35 p-4">
                     <p className="text-xs text-muted-foreground">Service</p>
-                    <p className="mt-1 text-sm font-semibold">{selectedReview.service?.title || "Not returned"}</p>
+                    <p className="mt-1 text-sm font-semibold">{selectedReview.service?.category?.name || "Not returned"}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{selectedReview.service?.category?.name || "No category"}</p>
                   </div>
                   <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" disabled>

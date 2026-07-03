@@ -13,6 +13,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { IconField } from "@/components/icon-field"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -67,12 +68,14 @@ const TAG_KINDS: { value: TagKind; label: string }[] = [
 export default function ServiceCategoriesPage() {
   const queryClient = useQueryClient()
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-service-categories"] })
+  const invalidateCategories = () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] })
 
   const [selected, setSelected] = useState<ServiceCategory | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [jobTypesFor, setJobTypesFor] = useState<ServiceCategory | null>(null)
   const [tagsFor, setTagsFor] = useState<ServiceCategory | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [jobTypeSearch, setJobTypeSearch] = useState("")
   const [newTag, setNewTag] = useState<{ tag: string; language: Lang; tagType: TagKind }>({
     tag: "", language: "EN", tagType: "ALIAS",
   })
@@ -275,7 +278,7 @@ export default function ServiceCategoriesPage() {
                       {g.isActive ? <Badge className="bg-green-600">Active</Badge> : <Badge variant="secondary">Disabled</Badge>}
                     </TableCell>
                     <TableCell className="text-right space-x-1">
-                      <Button variant="ghost" size="icon" title="Manage job types" onClick={() => setJobTypesFor(g)}>
+                      <Button variant="ghost" size="icon" title="Manage job types" onClick={() => { setJobTypeSearch(""); invalidateCategories(); setJobTypesFor(g); }}>
                         <Link2 className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="icon" title="Search tags" onClick={() => setTagsFor(g)}>
@@ -332,10 +335,7 @@ export default function ServiceCategoriesPage() {
                 <Input value={formData.nameFr} onChange={(e) => setFormData({ ...formData, nameFr: e.target.value })} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Icon (lucide name, e.g. home)</Label>
-              <Input value={formData.icon} onChange={(e) => setFormData({ ...formData, icon: e.target.value })} placeholder="home" />
-            </div>
+            <IconField value={formData.icon} onChange={(icon) => setFormData({ ...formData, icon })} />
             <div className="space-y-2">
               <Label>Description</Label>
               <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} />
@@ -364,8 +364,23 @@ export default function ServiceCategoriesPage() {
               Tick the service types that should appear in this browse grouping. Changes save instantly.
             </p>
           </DialogHeader>
+          <div className="relative pt-2">
+            <Search className="absolute left-2.5 top-4.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search service types..."
+              className="pl-8"
+              value={jobTypeSearch}
+              onChange={(e) => setJobTypeSearch(e.target.value)}
+            />
+          </div>
           <div className="space-y-1 pt-2">
-            {(jobTypes ?? []).map((jt) => {
+            {(jobTypes ?? [])
+              .filter((jt) =>
+                `${jt.name} ${jt.nameKn || ""}`
+                  .toLowerCase()
+                  .includes(jobTypeSearch.toLowerCase()),
+              )
+              .map((jt) => {
               const assigned = !!liveJobTypesFor?.assignments.some((a) => a.categoryId === jt.id)
               const busy = assignMutation.isPending || unassignMutation.isPending
               return (
@@ -380,6 +395,11 @@ export default function ServiceCategoriesPage() {
                 </label>
               )
             })}
+            {(jobTypes ?? []).filter((jt) =>
+              `${jt.name} ${jt.nameKn || ""}`.toLowerCase().includes(jobTypeSearch.toLowerCase()),
+            ).length === 0 && (
+              <p className="py-6 text-center text-sm text-muted-foreground">No service types match your search.</p>
+            )}
           </div>
           <DialogFooter className="pt-4">
             <Button variant="outline" onClick={() => setJobTypesFor(null)}>Done</Button>

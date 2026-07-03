@@ -573,8 +573,8 @@ export default function UserDetailPage() {
                     <div key={service.id} className="p-4 text-sm flex gap-4">
                       {service.serviceImage ? (
                         <img 
-                          src={service.serviceImage} 
-                          alt={service.title} 
+                          src={service.serviceImage}
+                          alt={service.category?.name}
                           className="w-20 h-20 rounded-lg object-cover border shrink-0"
                         />
                       ) : (
@@ -585,8 +585,8 @@ export default function UserDetailPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-medium">{service.title}</p>
-                            <p className="text-xs text-muted-foreground">{service.category?.name} · {formatDate(service.createdAt)}</p>
+                            <p className="font-medium">{service.category?.name}</p>
+                            <p className="text-xs text-muted-foreground">{formatDate(service.createdAt)}</p>
                           </div>
                           <Badge variant={service.isActive ? "default" : "secondary"}>{service.isActive ? "Active" : "Hidden"}</Badge>
                         </div>
@@ -617,7 +617,7 @@ export default function UserDetailPage() {
                   {allBookings.map((b: any) => (
                     <div key={b.id} className="flex items-center justify-between p-4 text-sm">
                       <div>
-                        <p className="font-medium">{b.service?.title || b.job?.title || "Direct booking"}</p>
+                        <p className="font-medium">{b.service?.category?.name || b.job?.title || "Direct booking"}</p>
                         <p className="text-xs text-muted-foreground">
                           {b.employer ? `Employer: ${b.employer.firstName} ${b.employer.lastName}` : ""}
                           {b.worker ? `Worker: ${b.worker.firstName} ${b.worker.lastName}` : ""}

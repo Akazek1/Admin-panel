@@ -72,7 +72,7 @@ const navigationGroups = [
     title: "Content",
     items: [
       { title: "Service Groupings", url: "/admin/service-categories", icon: FolderTree },
-      { title: "Categories", url: "/admin/categories", icon: Layers },
+      { title: "Service Types", url: "/admin/categories", icon: Layers },
       { title: "Hero Banners", url: "/admin/banners", icon: ImageIcon },
       { title: "Announcements", url: "/admin/announcements", icon: Bell },
       { title: "Languages", url: "/admin/languages", icon: Languages },
