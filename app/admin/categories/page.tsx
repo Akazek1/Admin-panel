@@ -14,6 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { IconField, IconGlyph } from "@/components/icon-field"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -328,7 +329,7 @@ export default function CategoriesPage() {
                         aria-label={`Select ${cat.name}`}
                       />
                     </TableCell>
-                    <TableCell className="text-xl">{cat.icon || "•"}</TableCell>
+                    <TableCell className="text-xl"><IconGlyph value={cat.icon} /></TableCell>
                     <TableCell>
                       <p className="font-medium">
                         {cat.name}
@@ -416,10 +417,7 @@ export default function CategoriesPage() {
                 <Input value={formData.providerLabelFr} onChange={e => setFormData({ ...formData, providerLabelFr: e.target.value })} />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Icon / emoji</Label>
-              <Input value={formData.icon} onChange={e => setFormData({ ...formData, icon: e.target.value })} placeholder="e.g. 🧹 or wrench" />
-            </div>
+            <IconField value={formData.icon} onChange={(icon) => setFormData({ ...formData, icon })} />
             <div className="space-y-2">
               <Label>Default Description</Label>
               <Textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} />
