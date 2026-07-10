@@ -124,7 +124,7 @@ function sortValue(user: User, sortKey: SortKey) {
   if (sortKey === "status") return Number(user.isBanned)
   if (sortKey === "reports") return reportCount(user)
   if (sortKey === "bookings") return bookingCount(user)
-  if (sortKey === "lastActive") return timeValue(user.lastActiveAt || user.updatedAt || user.createdAt)
+  if (sortKey === "lastActive") return timeValue(user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt)
   return timeValue(user.createdAt)
 }
 
@@ -460,7 +460,7 @@ export default function IndividualsPage() {
                 {visibleUsers.map((user) => {
                   const reports = reportCount(user)
                   const bookings = bookingCount(user)
-                  const lastActive = user.lastActiveAt || user.updatedAt || user.createdAt
+                  const lastActive = user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt
 
                   return (
                     <TableRow
