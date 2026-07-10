@@ -63,12 +63,27 @@ export interface User {
   createdAt: string;
   updatedAt?: string | null;
   lastActiveAt?: string | null;
+  lastLoginAt?: string | null;
   _count?: { bookingsAsWorker?: number; bookingsAsEmployer?: number; reportsReceived?: number; services?: number };
 }
 
 export async function getAllUsers(): Promise<User[]> {
-  const response = await axiosInstance.get("/admin/users");
-  return unwrapList<User>(response.data);
+  // The backend paginates (default 100/page); walk every page so the panel
+  // never silently drops users past the first page.
+  const users: User[] = [];
+  const limit = 200;
+  let page = 1;
+  let lastPage = 1;
+  do {
+    const response = await axiosInstance.get(`/admin/users?page=${page}&limit=${limit}`);
+    const batch = unwrapList<User>(response.data);
+    users.push(...batch);
+    const body = response.data?.data ?? response.data;
+    lastPage = Number(body?.meta?.lastPage) || 1;
+    if (batch.length === 0) break;
+    page += 1;
+  } while (page <= lastPage);
+  return users;
 }
 
 export async function banUser(id: string, reason: string) {
