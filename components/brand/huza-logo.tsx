@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-type AkazekLogoProps = {
+type HuzaLogoProps = {
   variant?: "mark" | "full";
   tone?: "brand" | "light";
   className?: string;
@@ -9,13 +9,13 @@ type AkazekLogoProps = {
   wordClassName?: string;
 };
 
-export function AkazekLogo({
+export function HuzaLogo({
   variant = "full",
   tone = "brand",
   className,
   markClassName,
   wordClassName,
-}: AkazekLogoProps) {
+}: HuzaLogoProps) {
   const colorClass = tone === "light" ? "text-white" : "text-[#145B10]";
   const markSrc = tone === "light" ? "/brand/akazek-mark-white.png" : "/brand/akazek-mark-dark.png";
 
@@ -31,7 +31,7 @@ export function AkazekLogo({
       />
       {variant === "full" ? (
         <span className={cn("min-w-0 truncate text-base font-black leading-none tracking-normal", wordClassName)}>
-          Akazek
+          Huza
         </span>
       ) : null}
     </span>
