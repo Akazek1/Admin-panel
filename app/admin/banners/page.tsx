@@ -134,7 +134,7 @@ function MobileBannerPreview({ form }: { form: BannerForm }) {
       <div className="relative flex min-h-[176px] overflow-hidden rounded-2xl">
         <div className="z-10 flex flex-1 flex-col justify-center gap-2 p-4">
           <div className="flex flex-wrap gap-1.5">
-            {["Ad", "Trusted", "Akazek"].map((badge) => (
+            {["Ad", "Trusted", "Huza"].map((badge) => (
               <span key={badge} className="rounded-full border border-emerald-700/25 bg-white/65 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
                 {badge}
               </span>

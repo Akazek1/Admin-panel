@@ -3,12 +3,12 @@
  * Centralized configuration for admin app-wide constants
  */
 
-const APP_NAME = "Akazek";
+const APP_NAME = "Huza";
 
 export const APP_CONFIG = {
   name: APP_NAME,
   tagline: "Admin Dashboard",
-  description: "Akazek Marketplace Administration",
+  description: "Huza Marketplace Administration",
 
   // Branding
   brand: {
@@ -18,9 +18,9 @@ export const APP_CONFIG = {
 
   // Contact & Support
   contact: {
-    email: "admin@akazek.rw",
+    email: "admin@huza.app",
     phone: "+250788000000",
-    website: "https://akazek.rw",
+    website: "https://www.huza.app",
   },
 
   // Admin Portal

@@ -35,7 +35,15 @@ const TYPE_LABEL: Record<LegalType, string> = {
   privacy: "Privacy Policy",
 }
 
-function LegalEditor({ type }: { type: LegalType }) {
+// Languages a legal document can be published in. English is the source/fallback;
+// other locales are optional translations that fall back to English in the app
+// until they are filled in. Keep in sync with the app's active languages.
+const LEGAL_LOCALES: { code: string; label: string }[] = [
+  { code: "en", label: "English" },
+  { code: "rw", label: "Kinyarwanda" },
+]
+
+function LegalEditor({ type, locale }: { type: LegalType; locale: string }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [title, setTitle] = useState("")
@@ -46,7 +54,7 @@ function LegalEditor({ type }: { type: LegalType }) {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await axiosInstance.get(`/admin/legal/${type}`)
+      const res = await axiosInstance.get(`/admin/legal/${type}`, { params: { locale } })
       const doc: LegalDoc | null = res.data?.data ?? res.data ?? null
       if (doc) {
         setTitle(doc.title || TYPE_LABEL[type])
@@ -64,7 +72,7 @@ function LegalEditor({ type }: { type: LegalType }) {
     } finally {
       setLoading(false)
     }
-  }, [type])
+  }, [type, locale])
 
   useEffect(() => {
     void load()
@@ -103,12 +111,16 @@ function LegalEditor({ type }: { type: LegalType }) {
     }
     setSaving(true)
     try {
-      await axiosInstance.patch(`/admin/legal/${type}`, {
-        title: title.trim(),
-        intro: intro.trim() || null,
-        // Re-number to keep the displayed ordinals consistent.
-        sections: sections.map((s, i) => ({ id: i + 1, title: s.title.trim(), content: s.content })),
-      })
+      await axiosInstance.patch(
+        `/admin/legal/${type}`,
+        {
+          title: title.trim(),
+          intro: intro.trim() || null,
+          // Re-number to keep the displayed ordinals consistent.
+          sections: sections.map((s, i) => ({ id: i + 1, title: s.title.trim(), content: s.content })),
+        },
+        { params: { locale } },
+      )
       toast({ title: `${TYPE_LABEL[type]} published` })
       await load()
     } catch {
@@ -207,6 +219,7 @@ function LegalEditor({ type }: { type: LegalType }) {
 
 export default function LegalDocumentsPage() {
   const [tab, setTab] = useState<LegalType>("terms")
+  const [locale, setLocale] = useState<string>("en")
 
   return (
     <div className="space-y-6 p-6">
@@ -220,16 +233,37 @@ export default function LegalDocumentsPage() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm font-medium text-muted-foreground">Language:</span>
+        <div className="inline-flex rounded-md border p-1">
+          {LEGAL_LOCALES.map((l) => (
+            <Button
+              key={l.code}
+              variant={locale === l.code ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setLocale(l.code)}
+            >
+              {l.label}
+            </Button>
+          ))}
+        </div>
+        {locale !== "en" && (
+          <span className="text-xs text-muted-foreground">
+            Optional translation — falls back to English in the app until published.
+          </span>
+        )}
+      </div>
+
       <Tabs value={tab} onValueChange={(v) => setTab(v as LegalType)}>
         <TabsList>
           <TabsTrigger value="terms">Terms &amp; Conditions</TabsTrigger>
           <TabsTrigger value="privacy">Privacy Policy</TabsTrigger>
         </TabsList>
         <TabsContent value="terms" className="mt-4">
-          <LegalEditor type="terms" />
+          <LegalEditor type="terms" locale={locale} />
         </TabsContent>
         <TabsContent value="privacy" className="mt-4">
-          <LegalEditor type="privacy" />
+          <LegalEditor type="privacy" locale={locale} />
         </TabsContent>
       </Tabs>
     </div>
