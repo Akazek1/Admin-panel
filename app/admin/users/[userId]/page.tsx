@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
-import { forceLogoutUser, unlockOtp } from "@/lib/api"
+import { forceLogoutUser, unlockOtp, deleteUser } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,7 +22,7 @@ import {
   AlertCircle, Briefcase, Star, Activity,
   GraduationCap, FileText, Bell, Layers, Building2,
   Clock, ShieldAlert, ClipboardCheck,
-  LogOut,
+  LogOut, Trash2,
 } from "lucide-react"
 
 async function fetchUserDetail(id: string) {
@@ -88,6 +88,8 @@ export default function UserDetailPage() {
   const [editData, setEditData] = useState<Record<string, string>>({})
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false)
   const [banReason, setBanReason] = useState("")
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deleteConfirmPhone, setDeleteConfirmPhone] = useState("")
 
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["admin-user-detail", userId],
@@ -150,6 +152,19 @@ export default function UserDetailPage() {
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.response?.data?.message || "Could not log out user.", variant: "destructive" })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteUser(userId, deleteConfirmPhone.trim()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      toast({ title: "Account deleted." })
+      setIsDeleteDialogOpen(false)
+      router.push("/admin/users")
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.response?.data?.message || "Delete failed.", variant: "destructive" })
     },
   })
 
@@ -302,6 +317,13 @@ export default function UserDetailPage() {
               <LogOut className="w-4 h-4 mr-2" />
             )}
             Log out
+          </Button>
+          <Button
+            variant="outline"
+            className="text-destructive border-destructive/50 hover:bg-destructive/10"
+            onClick={() => { setDeleteConfirmPhone(""); setIsDeleteDialogOpen(true) }}
+          >
+            <Trash2 className="w-4 h-4 mr-2" /> Delete
           </Button>
         </div>
       </div>
@@ -822,6 +844,49 @@ export default function UserDetailPage() {
             >
               {banMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Confirm Suspension
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete: guarded so it can't happen by mistake — the admin must type the
+          account's exact phone number, and the button stays disabled until it
+          matches. Accounts with shared activity are blocked server-side. */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Permanently delete {fullName}?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-destructive mt-0.5 shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                This cannot be undone. Accounts with bookings, reviews or messages
+                can’t be deleted (ban them instead) — deletion only works for
+                accounts with no shared activity.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>
+                Type the phone number <span className="font-mono font-semibold text-foreground">{user.phoneNumber}</span> to confirm
+              </Label>
+              <Input
+                placeholder={user.phoneNumber}
+                value={deleteConfirmPhone}
+                onChange={e => setDeleteConfirmPhone(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={deleteConfirmPhone.trim() !== user.phoneNumber || deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              {deleteMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Delete account
             </Button>
           </DialogFooter>
         </DialogContent>
