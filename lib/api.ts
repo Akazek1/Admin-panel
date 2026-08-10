@@ -96,6 +96,15 @@ export async function unbanUser(id: string) {
   return response.data?.data ?? response.data;
 }
 
+// Permanent deletion. The backend requires `confirmPhoneNumber` to exactly
+// match the account's phone number, and blocks accounts with shared activity.
+export async function deleteUser(id: string, confirmPhoneNumber: string) {
+  const response = await axiosInstance.delete(`/admin/users/${id}`, {
+    data: { confirmPhoneNumber },
+  });
+  return response.data?.data ?? response.data;
+}
+
 export async function forceLogoutUser(id: string) {
   const response = await axiosInstance.post(`/admin/users/${id}/force-logout`);
   return response.data?.data ?? response.data;
