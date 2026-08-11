@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
-import { forceLogoutUser, unlockOtp, deleteUser } from "@/lib/api"
+import { forceLogoutUser, unlockOtp, deleteUser, setUserPin, changeUserPhone } from "@/lib/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -90,6 +90,10 @@ export default function UserDetailPage() {
   const [banReason, setBanReason] = useState("")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleteConfirmPhone, setDeleteConfirmPhone] = useState("")
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false)
+  const [assignPin, setAssignPin] = useState("")
+  const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false)
+  const [newPhone, setNewPhone] = useState("")
 
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["admin-user-detail", userId],
@@ -152,6 +156,32 @@ export default function UserDetailPage() {
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.response?.data?.message || "Could not log out user.", variant: "destructive" })
+    },
+  })
+
+  const changePhoneMutation = useMutation({
+    mutationFn: () => changeUserPhone(userId, newPhone.trim()),
+    onSuccess: (res: any) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      toast({ title: "Phone updated", description: `Number is now ${res?.phoneNumber ?? newPhone.trim()}.` })
+      setIsPhoneDialogOpen(false)
+      setNewPhone("")
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.response?.data?.message || "Could not change phone.", variant: "destructive" })
+    },
+  })
+
+  const setPinMutation = useMutation({
+    mutationFn: () => setUserPin(userId, assignPin.trim()),
+    onSuccess: () => {
+      toast({ title: "PIN set", description: "The user can log in with this PIN and will be asked to keep or change it." })
+      setIsPinDialogOpen(false)
+      setAssignPin("")
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.response?.data?.message || "Could not set PIN.", variant: "destructive" })
     },
   })
 
@@ -317,6 +347,18 @@ export default function UserDetailPage() {
               <LogOut className="w-4 h-4 mr-2" />
             )}
             Log out
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => { setNewPhone(user.phoneNumber || ""); setIsPhoneDialogOpen(true) }}
+          >
+            Change phone
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => { setAssignPin(""); setIsPinDialogOpen(true) }}
+          >
+            Set PIN
           </Button>
           <Button
             variant="outline"
@@ -844,6 +886,78 @@ export default function UserDetailPage() {
             >
               {banMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Confirm Suspension
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change phone number (or set a placeholder like "seed-123" to free the old number). */}
+      <Dialog open={isPhoneDialogOpen} onOpenChange={setIsPhoneDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change phone number</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Set a new number (e.g. <span className="font-mono">0788123456</span>) — it’s normalized to
+              <span className="font-mono"> 250…</span>. Or set a placeholder like
+              <span className="font-mono"> seed-{userId.slice(0, 6)}</span> to free the old number without deleting the account.
+              A number already used by another account is rejected.
+            </p>
+            <div className="space-y-2">
+              <Label>New phone / placeholder</Label>
+              <Input
+                value={newPhone}
+                onChange={e => setNewPhone(e.target.value)}
+                placeholder="250788123456 or seed-abc123"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPhoneDialogOpen(false)}>Cancel</Button>
+            <Button
+              disabled={!newPhone.trim() || newPhone.trim() === user.phoneNumber || changePhoneMutation.isPending}
+              onClick={() => changePhoneMutation.mutate()}
+            >
+              {changePhoneMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign a temporary PIN (assistance). The user keeps or changes it on next login. */}
+      <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set a PIN for {fullName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Assign a 5-digit login PIN. It’s temporary — they’ll be asked to keep it
+              or set their own the next time they log in. Share it with them securely.
+            </p>
+            <div className="space-y-2">
+              <Label>PIN (5 digits)</Label>
+              <Input
+                inputMode="numeric"
+                maxLength={5}
+                placeholder="e.g. 48192"
+                value={assignPin}
+                onChange={e => setAssignPin(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPinDialogOpen(false)}>Cancel</Button>
+            <Button
+              disabled={assignPin.trim().length !== 5 || setPinMutation.isPending}
+              onClick={() => setPinMutation.mutate()}
+            >
+              {setPinMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Set PIN
             </Button>
           </DialogFooter>
         </DialogContent>
