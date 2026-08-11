@@ -112,6 +112,12 @@ export async function setUserPin(id: string, pin: string) {
   return response.data?.data ?? response.data;
 }
 
+// Change a user's phone number (or set a placeholder to free the old number).
+export async function changeUserPhone(id: string, phoneNumber: string) {
+  const response = await axiosInstance.post(`/admin/users/${id}/change-phone`, { phoneNumber });
+  return response.data?.data ?? response.data;
+}
+
 export async function forceLogoutUser(id: string) {
   const response = await axiosInstance.post(`/admin/users/${id}/force-logout`);
   return response.data?.data ?? response.data;
