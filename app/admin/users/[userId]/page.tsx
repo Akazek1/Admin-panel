@@ -5,16 +5,20 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
-import { forceLogoutUser, unlockOtp, deleteUser, setUserPin, changeUserPhone } from "@/lib/api"
+import { forceLogoutUser, unlockOtp, deleteUser, setUserPin, changeUserPhone, uploadImage, updateUserProfile, uploadUserDocument, getTaxonomyTree, createUserService } from "@/lib/api"
+import { Switch } from "@/components/ui/switch"
+import { ImageUploadButton } from "@/components/image-upload-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
+import { ImageLightbox } from "@/components/image-lightbox"
 import { formatDate } from "@/lib/utils"
 import {
   ArrowLeft, Ban, ShieldCheck, Edit, Save, X, Loader2,
@@ -22,12 +26,96 @@ import {
   AlertCircle, Briefcase, Star, Activity,
   GraduationCap, FileText, Bell, Layers, Building2,
   Clock, ShieldAlert, ClipboardCheck,
-  LogOut, Trash2,
+  LogOut, Trash2, ChevronRight,
 } from "lucide-react"
 
 async function fetchUserDetail(id: string) {
   const res = await axiosInstance.get(`/admin/users/${id}`)
   return res.data?.data ?? res.data
+}
+
+// These option lists mirror the real user app's "Edit profile" screen exactly,
+// so an admin editing on someone's behalf makes the same choices the user would.
+const GENDER_OPTIONS = [
+  { value: "MALE", label: "Male" },
+  { value: "FEMALE", label: "Female" },
+  { value: "OTHER", label: "Other" },
+]
+const LANGUAGE_OPTIONS = ["Kinyarwanda", "English", "French", "Swahili"]
+const EDUCATION_OPTIONS = [
+  "No formal education", "Primary school", "Lower secondary",
+  "Upper secondary / high school", "Vocational / TVET", "University", "Other",
+]
+const WORK_TIME_OPTIONS = ["Morning", "Afternoon", "Evening", "Full day", "Live-in", "Flexible"]
+const HEALTH_OPTIONS = ["Fit for work", "Can do light work", "Prefer not to say"]
+const QUALITY_OPTIONS: Array<{ key: string; label: string }> = [
+  { key: "RELIABLE", label: "Reliable & Trustworthy" },
+  { key: "ATTENTION_TO_DETAIL", label: "Attention to Detail" },
+  { key: "ON_TIME", label: "On Time" },
+  { key: "EXPERIENCED", label: "Experienced" },
+  { key: "INSURED", label: "Insured" },
+  { key: "MULTILINGUAL", label: "Multilingual" },
+  { key: "ECO_FRIENDLY", label: "Eco-Friendly" },
+  { key: "PET_FRIENDLY", label: "Pet-Friendly" },
+]
+const MAX_QUALITIES = 3
+const BIO_LIMIT = 500
+
+// Service creation on a user's behalf — mirrors the app's "Add a service" wizard.
+const SERVICE_CHARGED_PER = [
+  { value: "one_time", label: "One-time" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+]
+const MAX_NEW_SERVICE_PHOTOS = 5
+const SERVICE_DESCRIPTION_LIMIT = 150
+
+// ISO / date → the YYYY-MM-DD an <input type="date"> expects.
+function toDateInput(value?: string | null) {
+  if (!value) return ""
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ""
+  return d.toISOString().slice(0, 10)
+}
+
+const AUDIT_FIELD_LABELS: Record<string, string> = {
+  firstName: "First name", lastName: "Last name", username: "Username", email: "Email",
+  dateOfBirth: "Date of birth", gender: "Gender", languages: "Languages", bio: "Bio",
+  educationLevel: "Education", healthStatus: "Health status", preferredWorkTime: "Work time",
+  topQualities: "Top qualities", yearsOfExperience: "Experience",
+  profilePicture: "Profile picture", profileImages: "Gallery",
+}
+
+function formatAuditValue(v: any) {
+  if (v === null || v === undefined || v === "") return "—"
+  if (Array.isArray(v)) return v.length ? v.join(", ") : "—"
+  const s = String(v)
+  return s.length > 48 ? `${s.slice(0, 48)}…` : s
+}
+
+// Render audit metadata readably: a field-level "before → after" diff when the
+// action recorded one, otherwise the raw JSON as a fallback.
+function AuditMeta({ metadata }: { metadata: any }) {
+  const changes = metadata?.changes
+  if (changes && typeof changes === "object" && Object.keys(changes).length > 0) {
+    return (
+      <ul className="mt-1.5 space-y-1">
+        {Object.entries(changes as Record<string, { from: any; to: any }>).map(([field, ch]) => (
+          <li key={field} className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground/80">{AUDIT_FIELD_LABELS[field] ?? field}: </span>
+            <span className="text-red-400/80 line-through">{formatAuditValue(ch.from)}</span>
+            <span className="mx-1">→</span>
+            <span className="text-emerald-400/90">{formatAuditValue(ch.to)}</span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+  if (metadata && Object.keys(metadata).length > 0) {
+    return <p className="mt-1 truncate font-mono text-xs text-muted-foreground">{JSON.stringify(metadata)}</p>
+  }
+  return null
 }
 
 function statusBadge(isBanned: boolean, isVerified: boolean) {
@@ -85,7 +173,23 @@ export default function UserDetailPage() {
   const queryClient = useQueryClient()
 
   const [isEditing, setIsEditing] = useState(false)
-  const [editData, setEditData] = useState<Record<string, string>>({})
+  const [editData, setEditData] = useState<{
+    firstName: string
+    lastName: string
+    username: string
+    email: string
+    dateOfBirth: string
+    gender: string
+    languages: string[]
+    bio: string
+    educationLevel: string
+    healthStatus: string
+    preferredWorkTime: string
+    topQualities: string[]
+  }>({
+    firstName: "", lastName: "", username: "", email: "", dateOfBirth: "", gender: "",
+    languages: [], bio: "", educationLevel: "", healthStatus: "", preferredWorkTime: "", topQualities: [],
+  })
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false)
   const [banReason, setBanReason] = useState("")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -102,7 +206,7 @@ export default function UserDetailPage() {
   })
 
   const updateMutation = useMutation({
-    mutationFn: (data: Record<string, string>) =>
+    mutationFn: (data: Record<string, unknown>) =>
       axiosInstance.patch(`/admin/users/${userId}/profile`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
@@ -202,10 +306,126 @@ export default function UserDetailPage() {
     setEditData({
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
+      username: user?.username || "",
       email: user?.email || "",
+      dateOfBirth: toDateInput(user?.dateOfBirth),
+      gender: user?.gender || "",
+      languages: Array.isArray(user?.languages) ? user.languages : [],
       bio: user?.bio || "",
+      educationLevel: user?.educationLevel || "",
+      healthStatus: user?.healthStatus || "",
+      preferredWorkTime: user?.preferredWorkTime || "",
+      topQualities: Array.isArray(user?.topQualities) ? user.topQualities : [],
     })
     setIsEditing(true)
+  }
+
+  const toggleEditArray = (field: "languages" | "topQualities", value: string, max?: number) => {
+    setEditData((prev) => {
+      const current = prev[field]
+      if (current.includes(value)) return { ...prev, [field]: current.filter((v) => v !== value) }
+      if (max && current.length >= max) return prev
+      return { ...prev, [field]: [...current, value] }
+    })
+  }
+
+  const saveEdit = () => {
+    updateMutation.mutate({
+      firstName: editData.firstName.trim(),
+      lastName: editData.lastName.trim(),
+      username: editData.username.trim() || undefined,
+      email: editData.email.trim() || undefined,
+      gender: editData.gender || undefined,
+      dateOfBirth: editData.dateOfBirth ? new Date(editData.dateOfBirth).toISOString() : undefined,
+      languages: editData.languages,
+      bio: editData.bio.trim(),
+      educationLevel: editData.educationLevel || undefined,
+      healthStatus: editData.healthStatus || undefined,
+      preferredWorkTime: editData.preferredWorkTime || undefined,
+      topQualities: editData.topQualities,
+    })
+  }
+
+  // ── Add a service on the user's behalf ────────────────────────────────
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false)
+  const [svcForm, setSvcForm] = useState<{
+    groupingId: string
+    categoryId: string
+    priceMode: "fixed" | "range"
+    priceMin: string
+    priceMax: string
+    chargedPer: string
+    negotiable: boolean
+    description: string
+    photos: string[]
+  }>({ groupingId: "", categoryId: "", priceMode: "range", priceMin: "", priceMax: "", chargedPer: "daily", negotiable: false, description: "", photos: [] })
+  const [svcPhotoBusy, setSvcPhotoBusy] = useState(false)
+  const [svcSearch, setSvcSearch] = useState("")
+
+  const { data: taxonomy = [] } = useQuery({
+    queryKey: ["taxonomy-tree"],
+    queryFn: getTaxonomyTree,
+    enabled: isAddServiceOpen,
+  })
+
+  // Flat list of every job type with the grouping it lives under — powers search.
+  const allJobTypes = taxonomy.flatMap((g: any) =>
+    (g.jobTypes ?? []).map((jt: any) => ({ id: jt.id, name: jt.name, groupingId: g.id, groupingName: g.name })),
+  )
+  const searchResults = svcSearch.trim()
+    ? allJobTypes.filter((jt: any) => jt.name.toLowerCase().includes(svcSearch.trim().toLowerCase())).slice(0, 30)
+    : []
+  const jobTypesInGrouping = svcForm.groupingId
+    ? (taxonomy.find((g: any) => g.id === svcForm.groupingId)?.jobTypes ?? [])
+    : []
+  const selectedCategoryName = allJobTypes.find((jt: any) => jt.id === svcForm.categoryId)?.name
+
+  const openAddService = () => {
+    setSvcForm({ groupingId: "", categoryId: "", priceMode: "range", priceMin: "", priceMax: "", chargedPer: "daily", negotiable: false, description: "", photos: [] })
+    setSvcSearch("")
+    setIsAddServiceOpen(true)
+  }
+
+  const addServiceMutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => createUserService(userId, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+      queryClient.invalidateQueries({ queryKey: ["admin-services"] })
+      toast({ title: "Service added", description: "Listing created on the user's behalf." })
+      setIsAddServiceOpen(false)
+    },
+    onError: (err: any) => {
+      toast({ title: "Could not add service", description: err.response?.data?.message || "Creation failed.", variant: "destructive" })
+    },
+  })
+
+  const submitAddService = () => {
+    if (!svcForm.categoryId) {
+      toast({ title: "Choose a service category", variant: "destructive" })
+      return
+    }
+    const min = Number(svcForm.priceMin)
+    if (!svcForm.priceMin.trim() || Number.isNaN(min) || min < 0) {
+      toast({ title: "Enter a valid price", variant: "destructive" })
+      return
+    }
+    let max = min
+    if (svcForm.priceMode === "range") {
+      max = Number(svcForm.priceMax)
+      if (!svcForm.priceMax.trim() || Number.isNaN(max) || max < min) {
+        toast({ title: "Maximum price must be greater than or equal to the minimum", variant: "destructive" })
+        return
+      }
+    }
+    addServiceMutation.mutate({
+      categoryId: svcForm.categoryId,
+      priceMin: min,
+      priceMax: max,
+      priceType: svcForm.chargedPer,
+      negotiable: svcForm.negotiable,
+      description: svcForm.description.trim().slice(0, SERVICE_DESCRIPTION_LIMIT) || undefined,
+      serviceImages: svcForm.photos,
+    })
   }
 
   if (isLoading) {
@@ -228,6 +448,19 @@ export default function UserDetailPage() {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unnamed User"
   const roles = Array.isArray(user.roles) ? user.roles : []
   const isWorker = roles.includes("WORKER")
+
+  // Same gate the app enforces: a non-provider must have a profile picture and a
+  // government ID (not rejected) before any service can be listed. We surface
+  // this up front so an admin isn't surprised by the backend's rejection.
+  const svcEligibilityIssues: string[] = (() => {
+    if (user.isProvider || roles.includes("COMPANY")) return []
+    const issues: string[] = []
+    if (!user.profilePicture) issues.push("a profile picture")
+    const gid = user.governmentIdStatus
+    if (!gid || gid === "NONE") issues.push("a government ID")
+    else if (gid === "REJECTED") issues.push("a valid government ID (the current one was rejected)")
+    return issues
+  })()
   const isEmployer = roles.some((role: string) => ["EMPLOYER", "COMPANY", "STAFFING_AGENCY"].includes(role))
   const allBookings = [
     ...(user.bookingsAsWorker ?? []),
@@ -282,10 +515,10 @@ export default function UserDetailPage() {
         </Button>
         
         {user.profilePicture ? (
-          <img 
-            src={user.profilePicture} 
-            alt={fullName} 
-            className="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md"
+          <ImageLightbox
+            src={user.profilePicture}
+            alt={fullName}
+            thumbClassName="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md"
           />
         ) : (
           <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center border-2 border-white shadow-md">
@@ -313,7 +546,7 @@ export default function UserDetailPage() {
               <Button variant="outline" onClick={() => setIsEditing(false)}>
                 <X className="w-4 h-4 mr-2" /> Cancel
               </Button>
-              <Button onClick={() => updateMutation.mutate(editData)} disabled={updateMutation.isPending}>
+              <Button onClick={saveEdit} disabled={updateMutation.isPending}>
                 {updateMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 <Save className="w-4 h-4 mr-2" /> Save
               </Button>
@@ -360,6 +593,24 @@ export default function UserDetailPage() {
           >
             Set PIN
           </Button>
+          <ImageUploadButton
+            label={user.profilePicture ? "Change photo" : "Add photo"}
+            onFile={async (file) => {
+              const url = await uploadImage(file)
+              await updateUserProfile(userId, { profilePicture: url })
+              queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+              queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+              toast({ title: "Photo updated", description: "Profile picture saved on the user's behalf." })
+            }}
+          />
+          <ImageUploadButton
+            label="Upload ID"
+            onFile={async (file) => {
+              await uploadUserDocument(userId, file)
+              queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+              toast({ title: "ID uploaded", description: "Submitted for verification on the user's behalf." })
+            }}
+          />
           <Button
             variant="outline"
             className="text-destructive border-destructive/50 hover:bg-destructive/10"
@@ -470,13 +721,13 @@ export default function UserDetailPage() {
                     <Label className="text-xs text-muted-foreground uppercase">Profile Gallery</Label>
                     <div className="flex flex-wrap gap-2">
                       {user.profileImages.map((img: string, i: number) => (
-                        <a key={i} href={img} target="_blank" rel="noreferrer" className="block shrink-0">
-                          <img 
-                            src={img} 
-                            alt={`Profile ${i+1}`} 
-                            className="w-20 h-20 rounded-lg object-cover border hover:opacity-80 transition-opacity" 
+                        <div key={i} className="block shrink-0">
+                          <ImageLightbox
+                            src={img}
+                            alt={`Profile ${i+1}`}
+                            thumbClassName="w-20 h-20 rounded-lg object-cover border hover:opacity-80 transition-opacity"
                           />
-                        </a>
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -564,7 +815,8 @@ export default function UserDetailPage() {
               <CardHeader>
                 <CardTitle className="text-sm">Edit Profile</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-6">
+                {/* Identity */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>First Name</Label>
@@ -574,14 +826,107 @@ export default function UserDetailPage() {
                     <Label>Last Name</Label>
                     <Input value={editData.lastName} onChange={e => setEditData({ ...editData, lastName: e.target.value })} />
                   </div>
-                  <div className="col-span-2 space-y-2">
+                  <div className="space-y-2">
+                    <Label>Username</Label>
+                    <Input value={editData.username} onChange={e => setEditData({ ...editData, username: e.target.value })} placeholder="username" />
+                  </div>
+                  <div className="space-y-2">
                     <Label>Email</Label>
                     <Input type="email" value={editData.email} onChange={e => setEditData({ ...editData, email: e.target.value })} />
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <Label>Bio</Label>
-                    <Textarea value={editData.bio} onChange={e => setEditData({ ...editData, bio: e.target.value })} rows={3} />
+                  <div className="space-y-2">
+                    <Label>Date of Birth</Label>
+                    <Input type="date" value={editData.dateOfBirth} onChange={e => setEditData({ ...editData, dateOfBirth: e.target.value })} />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select value={editData.gender} onValueChange={v => setEditData({ ...editData, gender: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                      <SelectContent>
+                        {GENDER_OPTIONS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Languages */}
+                <div className="space-y-2">
+                  <Label>Languages</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {LANGUAGE_OPTIONS.map(lang => {
+                      const active = editData.languages.includes(lang)
+                      return (
+                        <button
+                          key={lang}
+                          type="button"
+                          onClick={() => toggleEditArray("languages", lang)}
+                          className={`rounded-full border px-3 py-1 text-sm transition-colors ${active ? "border-green-600 bg-green-600/15 text-green-500" : "border-input bg-background hover:bg-muted"}`}
+                        >
+                          {lang}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Work & background */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Education</Label>
+                    <Select value={editData.educationLevel} onValueChange={v => setEditData({ ...editData, educationLevel: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select education" /></SelectTrigger>
+                      <SelectContent>
+                        {EDUCATION_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preferred Work Time</Label>
+                    <Select value={editData.preferredWorkTime} onValueChange={v => setEditData({ ...editData, preferredWorkTime: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select work time" /></SelectTrigger>
+                      <SelectContent>
+                        {WORK_TIME_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Health Status</Label>
+                    <Select value={editData.healthStatus} onValueChange={v => setEditData({ ...editData, healthStatus: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select health status" /></SelectTrigger>
+                      <SelectContent>
+                        {HEALTH_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Top qualities (max 3) */}
+                <div className="space-y-2">
+                  <Label>Top Qualities <span className="text-xs text-muted-foreground">(choose up to {MAX_QUALITIES})</span></Label>
+                  <div className="flex flex-wrap gap-2">
+                    {QUALITY_OPTIONS.map(q => {
+                      const active = editData.topQualities.includes(q.key)
+                      const atLimit = !active && editData.topQualities.length >= MAX_QUALITIES
+                      return (
+                        <button
+                          key={q.key}
+                          type="button"
+                          disabled={atLimit}
+                          onClick={() => toggleEditArray("topQualities", q.key, MAX_QUALITIES)}
+                          className={`rounded-full border px-3 py-1 text-sm transition-colors ${active ? "border-green-600 bg-green-600/15 text-green-500" : atLimit ? "border-input bg-background opacity-40" : "border-input bg-background hover:bg-muted"}`}
+                        >
+                          {q.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Bio */}
+                <div className="space-y-2">
+                  <Label>Bio</Label>
+                  <Textarea value={editData.bio} maxLength={BIO_LIMIT} onChange={e => setEditData({ ...editData, bio: e.target.value })} rows={3} />
+                  <p className="text-right text-xs text-muted-foreground">{editData.bio.length}/{BIO_LIMIT}</p>
                 </div>
               </CardContent>
             </Card>
@@ -628,6 +973,12 @@ export default function UserDetailPage() {
         {/* Services */}
         <TabsContent value="services" className="pt-4">
           <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+              <CardTitle className="text-sm">Service Listings</CardTitle>
+              <Button size="sm" onClick={openAddService}>
+                <Layers className="w-4 h-4 mr-2" /> Add service
+              </Button>
+            </CardHeader>
             <CardContent className="p-0">
               {!user.services?.length ? (
                 <p className="text-center text-muted-foreground py-10">No service listings.</p>
@@ -636,23 +987,30 @@ export default function UserDetailPage() {
                   {user.services.map((service: any) => (
                     <div key={service.id} className="p-4 text-sm flex gap-4">
                       {service.serviceImage ? (
-                        <img 
+                        <ImageLightbox
                           src={service.serviceImage}
                           alt={service.category?.name}
-                          className="w-20 h-20 rounded-lg object-cover border shrink-0"
+                          thumbClassName="w-20 h-20 rounded-lg object-cover border shrink-0"
                         />
                       ) : (
                         <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center border shrink-0">
                           <Layers className="w-6 h-6 text-muted-foreground/30" />
                         </div>
                       )}
-                      <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/admin/services?service=${service.id}`}
+                        className="group flex-1 min-w-0 rounded-md -m-1 p-1 transition-colors hover:bg-muted/40"
+                        title="Open to edit or delete"
+                      >
                         <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium">{service.category?.name}</p>
+                          <div className="min-w-0">
+                            <p className="font-medium group-hover:underline">{service.category?.name}</p>
                             <p className="text-xs text-muted-foreground">{formatDate(service.createdAt)}</p>
                           </div>
-                          <Badge variant={service.isActive ? "default" : "secondary"}>{service.isActive ? "Active" : "Hidden"}</Badge>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge variant={service.isActive ? "default" : "secondary"}>{service.isActive ? "Active" : "Hidden"}</Badge>
+                            <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                          </div>
                         </div>
                         <p className="mt-2 text-muted-foreground line-clamp-2">{service.description}</p>
                         <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
@@ -661,7 +1019,7 @@ export default function UserDetailPage() {
                           <span>{service._count?.bookmarks ?? 0} saved</span>
                           <span className="font-bold text-primary">{service.priceMin ?? "—"} - {service.priceMax ?? "—"} RWF {service.priceType ? `(${service.priceType})` : ""}</span>
                         </div>
-                      </div>
+                      </Link>
                     </div>
                   ))}
                 </div>
@@ -843,11 +1201,7 @@ export default function UserDetailPage() {
                         <p className="text-muted-foreground text-xs">
                           by {log.actor?.firstName} {log.actor?.lastName} · {formatDate(log.createdAt)}
                         </p>
-                        {log.metadata && Object.keys(log.metadata).length > 0 && (
-                          <p className="text-xs text-muted-foreground mt-1 font-mono truncate">
-                            {JSON.stringify(log.metadata)}
-                          </p>
-                        )}
+                        <AuditMeta metadata={log.metadata} />
                       </div>
                     </div>
                   ))}
@@ -859,6 +1213,184 @@ export default function UserDetailPage() {
       </Tabs>
 
       {/* Ban dialog */}
+      {/* Add a service on the user's behalf — same fields as the app's wizard */}
+      <Dialog open={isAddServiceOpen} onOpenChange={setIsAddServiceOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add a service for {fullName}</DialogTitle>
+          </DialogHeader>
+          {svcEligibilityIssues.length > 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-200">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium">This user can’t list a service yet.</p>
+                <p className="text-amber-200/80">
+                  Like in the app, they first need {svcEligibilityIssues.join(" and ")}. Add {svcEligibilityIssues.length > 1 ? "them" : "it"} with the <span className="font-medium">Change photo</span>/<span className="font-medium">Upload ID</span> buttons above, then try again.
+                </p>
+              </div>
+            </div>
+          )}
+          <div className="space-y-5 py-2">
+            {/* Service picker: search by name, or browse grouping → service */}
+            <div className="space-y-2">
+              <Label>Service</Label>
+              {svcForm.categoryId ? (
+                <div className="flex items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm">
+                  <span><span className="text-muted-foreground">Selected: </span><span className="font-medium">{selectedCategoryName}</span></span>
+                  <button type="button" className="text-xs text-green-500 hover:underline" onClick={() => setSvcForm({ ...svcForm, categoryId: "" })}>Change</button>
+                </div>
+              ) : (
+                <>
+                  <Input placeholder="Search a service by name…" value={svcSearch} onChange={e => setSvcSearch(e.target.value)} />
+                  {svcSearch.trim() ? (
+                    <div className="max-h-48 divide-y overflow-y-auto rounded-lg border border-input">
+                      {searchResults.length === 0 ? (
+                        <p className="px-3 py-3 text-sm text-muted-foreground">No matching services.</p>
+                      ) : searchResults.map((jt: any) => (
+                        <button
+                          key={jt.id}
+                          type="button"
+                          onClick={() => { setSvcForm(f => ({ ...f, categoryId: jt.id, groupingId: jt.groupingId })); setSvcSearch("") }}
+                          className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-muted"
+                        >
+                          <span>{jt.name}</span>
+                          <span className="text-xs text-muted-foreground">{jt.groupingName}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Select value={svcForm.groupingId} onValueChange={v => setSvcForm({ ...svcForm, groupingId: v, categoryId: "" })}>
+                        <SelectTrigger><SelectValue placeholder="Grouping" /></SelectTrigger>
+                        <SelectContent>
+                          {taxonomy.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Select value={svcForm.categoryId} onValueChange={v => setSvcForm({ ...svcForm, categoryId: v })} disabled={!svcForm.groupingId}>
+                        <SelectTrigger><SelectValue placeholder={svcForm.groupingId ? "Service" : "Pick grouping first"} /></SelectTrigger>
+                        <SelectContent>
+                          {jobTypesInGrouping.map((jt: any) => <SelectItem key={jt.id} value={jt.id}>{jt.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-muted-foreground">Search by name, or pick a grouping then the service under it.</p>
+                </>
+              )}
+            </div>
+
+            {/* Price mode + inputs */}
+            <div className="space-y-2">
+              <Label>Price</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(["fixed", "range"] as const).map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setSvcForm({ ...svcForm, priceMode: mode })}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${svcForm.priceMode === mode ? "border-green-600 bg-green-600/15 text-green-500" : "border-input bg-background hover:bg-muted"}`}
+                  >
+                    {mode === "fixed" ? "Fixed price" : "Price range"}
+                  </button>
+                ))}
+              </div>
+              <div className={`grid gap-2 ${svcForm.priceMode === "range" ? "grid-cols-2" : ""}`}>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">{svcForm.priceMode === "fixed" ? "Price (RWF)" : "Minimum (RWF)"}</Label>
+                  <Input inputMode="numeric" className="mt-1" value={svcForm.priceMin} placeholder="20000" onChange={e => setSvcForm({ ...svcForm, priceMin: e.target.value.replace(/[^\d]/g, "") })} />
+                </div>
+                {svcForm.priceMode === "range" && (
+                  <div>
+                    <Label className="text-[11px] text-muted-foreground">Maximum (RWF)</Label>
+                    <Input inputMode="numeric" className="mt-1" value={svcForm.priceMax} placeholder="40000" onChange={e => setSvcForm({ ...svcForm, priceMax: e.target.value.replace(/[^\d]/g, "") })} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Billing period */}
+            <div className="space-y-2">
+              <Label>Billing period</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {SERVICE_CHARGED_PER.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setSvcForm({ ...svcForm, chargedPer: opt.value })}
+                    className={`rounded-lg border px-2 py-2 text-xs font-semibold transition-colors ${svcForm.chargedPer === opt.value ? "border-green-600 bg-green-600/15 text-green-500" : "border-input bg-background hover:bg-muted"}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Negotiable */}
+            <div className="flex items-center justify-between rounded-lg border border-input bg-background px-3 py-2.5 text-sm">
+              <span>Open to negotiation</span>
+              <Switch checked={svcForm.negotiable} onCheckedChange={v => setSvcForm({ ...svcForm, negotiable: v })} />
+            </div>
+
+            {/* Photos (optional) */}
+            <div className="space-y-2">
+              <Label>Photos <span className="text-xs text-muted-foreground">({svcForm.photos.length}/{MAX_NEW_SERVICE_PHOTOS}, optional)</span></Label>
+              <div className="flex flex-wrap gap-2">
+                {svcForm.photos.map((url, i) => (
+                  <div key={url} className="relative">
+                    <img src={url} alt="" className="h-16 w-16 rounded-lg border object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setSvcForm(f => ({ ...f, photos: f.photos.filter((_, idx) => idx !== i) }))}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
+                      aria-label="Remove photo"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                {svcForm.photos.length < MAX_NEW_SERVICE_PHOTOS && (
+                  <ImageUploadButton
+                    label="Add photo"
+                    variant="outline"
+                    className="h-16"
+                    disabled={svcPhotoBusy}
+                    onFile={async (file) => {
+                      setSvcPhotoBusy(true)
+                      try {
+                        const url = await uploadImage(file)
+                        setSvcForm(f => ({ ...f, photos: [...f.photos, url].slice(0, MAX_NEW_SERVICE_PHOTOS) }))
+                      } finally {
+                        setSvcPhotoBusy(false)
+                      }
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label>Description <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Textarea value={svcForm.description} maxLength={SERVICE_DESCRIPTION_LIMIT} rows={3} placeholder="Tell clients about this service…" onChange={e => setSvcForm({ ...svcForm, description: e.target.value })} />
+              <p className="text-right text-[11px] text-muted-foreground">{svcForm.description.length}/{SERVICE_DESCRIPTION_LIMIT}</p>
+            </div>
+          </div>
+          {addServiceMutation.isError && (
+            <p className="flex items-start gap-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              {(addServiceMutation.error as any)?.response?.data?.message || "Could not create the service."}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddServiceOpen(false)}>Cancel</Button>
+            <Button onClick={submitAddService} disabled={addServiceMutation.isPending || svcPhotoBusy}>
+              {addServiceMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Create service
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isBanDialogOpen} onOpenChange={setIsBanDialogOpen}>
         <DialogContent>
           <DialogHeader>

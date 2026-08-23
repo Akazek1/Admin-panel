@@ -156,12 +156,13 @@ export default function AuditLogsPage() {
                   <TableHead>Action</TableHead>
                   <TableHead>Target</TableHead>
                   <TableHead>Target ID</TableHead>
+                  <TableHead>Changes</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                       No logs found.
                     </TableCell>
                   </TableRow>
@@ -182,6 +183,15 @@ export default function AuditLogsPage() {
                       </TableCell>
                       <TableCell className="text-[10px] font-mono text-muted-foreground max-w-[120px] truncate">
                         {log.targetId}
+                      </TableCell>
+                      <TableCell className="align-top">
+                        {log.metadata && Object.keys(log.metadata).length > 0 ? (
+                          <pre className="max-h-40 max-w-[420px] overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/40 p-2 text-[10px] leading-relaxed font-mono text-muted-foreground">
+                            {JSON.stringify(log.metadata, null, 2)}
+                          </pre>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
