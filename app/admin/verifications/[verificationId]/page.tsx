@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
+import { ImageLightbox } from "@/components/image-lightbox"
 import {
   ArrowLeft,
   Briefcase,
@@ -230,8 +231,7 @@ export default function VerificationDetailPage() {
             </div>
             <div className="flex min-h-[620px] items-center justify-center overflow-hidden rounded-md border bg-muted">
               {request.document?.documentUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={request.document.documentUrl} alt="Submitted ID document" className="max-h-[78vh] max-w-full object-contain" />
+                <ImageLightbox src={request.document.documentUrl} alt="Submitted ID document" thumbClassName="max-h-[78vh] max-w-full object-contain" />
               ) : (
                 <p className="text-muted-foreground">No document image available.</p>
               )}

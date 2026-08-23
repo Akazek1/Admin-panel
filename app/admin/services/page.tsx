@@ -1,13 +1,15 @@
 "use client"
 
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
   Bookmark,
   BriefcaseBusiness,
   Calendar,
+  Check,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -18,21 +20,25 @@ import {
   Layers,
   Loader2,
   MapPin,
+  Pencil,
   Search,
   ShieldCheck,
-  Star,
   Trash2,
   UserRound,
   Wallet,
 } from "lucide-react"
 import type { Service } from "@/lib/api"
-import { deleteService, getAllServices, updateService } from "@/lib/api"
+import { deleteService, getAllServices, updateService, uploadImage } from "@/lib/api"
+import { ImageUploadButton } from "@/components/image-upload-button"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
+import { ImageLightbox } from "@/components/image-lightbox"
 import { cn, formatDate } from "@/lib/utils"
 
 type StatusFilter = "ALL" | "ACTIVE" | "HIDDEN" | "FLAGGED" | "NEEDS_REVIEW"
@@ -160,9 +166,48 @@ function StatCard({
   )
 }
 
-function ServiceImage({ service, size = "small" }: { service: Service; size?: "small" | "large" }) {
+// A service can hold up to this many work photos.
+const MAX_SERVICE_PHOTOS = 5
+
+// The description cap and billing-period choices mirror the user-facing
+// "Add a service" wizard exactly, so admin edits stay consistent with creation.
+const MAX_SERVICE_DESCRIPTION = 150
+const CHARGED_PER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "one_time", label: "One-time" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+]
+
+// Same normalization the wizard uses when rehydrating an existing service.
+function chargedPerFromType(priceType: string | null | undefined): string {
+  const raw = (priceType || "daily").toLowerCase()
+  if (raw === "one_time" || raw === "fixed") return "one_time"
+  if (raw === "weekly") return "weekly"
+  if (raw === "monthly") return "monthly"
+  return "daily"
+}
+
+// The photo gallery is the `serviceImages` array plus the legacy single
+// `serviceImage` cover, de-duplicated — so services that only ever set the
+// cover still show one photo.
+function servicePhotos(service: Service): string[] {
+  const all = [...(service.serviceImages ?? []), ...(service.serviceImage ? [service.serviceImage] : [])]
+  return Array.from(new Set(all.filter(Boolean)))
+}
+
+function ServiceImage({ service, size = "small", zoomable = false }: { service: Service; size?: "small" | "large"; zoomable?: boolean }) {
   const dimensions = size === "large" ? "h-56 w-full" : "h-10 w-12"
   if (service.serviceImage) {
+    if (zoomable) {
+      return (
+        <ImageLightbox
+          src={service.serviceImage}
+          alt=""
+          thumbClassName={cn(dimensions, "rounded-md border border-white/10 object-cover")}
+        />
+      )
+    }
     return <img src={service.serviceImage} alt="" className={cn(dimensions, "rounded-md border border-white/10 object-cover")} />
   }
   return (
@@ -182,6 +227,17 @@ export default function ServicesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showDetail, setShowDetail] = useState(false)
   const [adminNote, setAdminNote] = useState("")
+  const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editForm, setEditForm] = useState<{
+    priceMode: "fixed" | "range"
+    priceMin: string
+    priceMax: string
+    chargedPer: string
+    negotiable: boolean
+    description: string
+  }>({ priceMode: "range", priceMin: "", priceMax: "", chargedPer: "daily", negotiable: false, description: "" })
 
   const { data: services = [], isLoading, isError, isFetching, refetch } = useQuery<Service[]>({
     queryKey: ["admin-services"],
@@ -241,7 +297,98 @@ export default function ServicesPage() {
       })
   }, [categoryFilter, qualityFilter, searchTerm, services, sortMode, statusFilter])
 
-  const selectedService = filteredServices.find((service) => service.id === selectedId) ?? filteredServices[0] ?? null
+  // Resolve from the full list so a service opened by id (e.g. deep-linked from a
+  // user's page) shows even when the current filters would hide it from the list.
+  const selectedService =
+    services.find((service) => service.id === selectedId) ?? filteredServices[0] ?? null
+  const photos = selectedService ? servicePhotos(selectedService) : []
+
+  // Reset the photo selection whenever a different service is opened.
+  useEffect(() => { setSelectedPhotos([]) }, [selectedService?.id])
+
+  // Deep link: /admin/services?service=<id> opens that service's detail directly
+  // (used by the "Open" action on a user's Services tab).
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const svc = searchParams.get("service")
+    if (svc) {
+      setSelectedId(svc)
+      setShowDetail(true)
+    }
+  }, [searchParams])
+
+  const togglePhoto = (url: string) =>
+    setSelectedPhotos((prev) => (prev.includes(url) ? prev.filter((p) => p !== url) : [...prev, url]))
+
+  // Open the edit form pre-filled from the current service, using the same
+  // fixed-vs-range and billing-period logic the creation wizard uses.
+  const openEdit = () => {
+    if (!selectedService) return
+    const min = selectedService.priceMin ?? selectedService.priceMax ?? null
+    const max = selectedService.priceMax ?? selectedService.priceMin ?? null
+    const isFixed = min != null && max != null && min === max
+    setEditForm({
+      priceMode: isFixed ? "fixed" : "range",
+      priceMin: min != null ? String(min) : "",
+      priceMax: max != null ? String(max) : "",
+      chargedPer: chargedPerFromType(selectedService.priceType),
+      negotiable: !!selectedService.negotiable,
+      description: selectedService.description || "",
+    })
+    setIsEditOpen(true)
+  }
+
+  const editMutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) => updateService(selectedService!.id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-services"] })
+      toast({ title: "Service updated" })
+      setIsEditOpen(false)
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.response?.data?.message || "Could not update service.", variant: "destructive" })
+    },
+  })
+
+  const saveEdit = () => {
+    const min = Number(editForm.priceMin)
+    if (!editForm.priceMin.trim() || Number.isNaN(min) || min < 0) {
+      toast({ title: "Enter a valid price", variant: "destructive" })
+      return
+    }
+    let max = min
+    if (editForm.priceMode === "range") {
+      max = Number(editForm.priceMax)
+      if (!editForm.priceMax.trim() || Number.isNaN(max) || max < min) {
+        toast({ title: "Maximum price must be greater than or equal to the minimum", variant: "destructive" })
+        return
+      }
+    }
+    editMutation.mutate({
+      priceMin: min,
+      priceMax: max,
+      priceType: editForm.chargedPer,
+      negotiable: editForm.negotiable,
+      description: editForm.description.trim().slice(0, MAX_SERVICE_DESCRIPTION),
+    })
+  }
+
+  // Persist a new photo set: the array becomes `serviceImages`, and its first
+  // entry stays the `serviceImage` cover so the rest of the app is unchanged.
+  async function savePhotos(id: string, next: string[], successMsg: string) {
+    setPhotoBusy(true)
+    try {
+      await updateService(id, { serviceImages: next, serviceImage: next[0] ?? null })
+      await queryClient.invalidateQueries({ queryKey: ["admin-services"] })
+      setSelectedPhotos([])
+      toast({ title: successMsg })
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.response?.data?.message || "Could not update photos.", variant: "destructive" })
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
   const activeCount = services.filter((service) => statusFor(service) === "Active").length
   const hiddenCount = services.filter((service) => statusFor(service) === "Hidden").length
   const flaggedCount = services.filter((service) => statusFor(service) === "Flagged").length
@@ -290,20 +437,6 @@ export default function ServicesPage() {
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{providerName} · @{selectedService.provider.firstName?.toLowerCase() || "provider"}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button className="border-white/10 bg-card/70" variant="outline" onClick={() => toggleServiceVisibility(selectedService)} disabled={saveMutation.isPending}>
-                {selectedService.isActive ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
-                {selectedService.isActive ? "Hide Service" : "Activate Service"}
-              </Button>
-              <Button className="border-white/10 bg-card/70" variant="outline" disabled>
-                <Star className="mr-2 h-4 w-4" />
-                Feature Service
-              </Button>
-              <Button className="border-white/10 bg-card/70" variant="outline" disabled>
-                <Eye className="mr-2 h-4 w-4" />
-                View Public Preview
-              </Button>
-            </div>
           </header>
 
           <div className="grid gap-3 rounded-lg border border-white/5 bg-card/70 p-4 shadow-sm shadow-black/10 md:grid-cols-3 xl:grid-cols-6">
@@ -341,7 +474,7 @@ export default function ServicesPage() {
                     <Eye className="h-4 w-4 text-muted-foreground" />
                     Public Preview
                   </p>
-                  <ServiceImage service={selectedService} size="large" />
+                  <ServiceImage service={selectedService} size="large" zoomable />
                   <div className="mt-4">
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-sm font-semibold text-emerald-200">
@@ -431,39 +564,86 @@ export default function ServicesPage() {
                 </section>
               </div>
 
-              <section className="grid gap-4 lg:grid-cols-2">
-                <div className="rounded-lg border border-white/5 bg-card/70 p-4">
-                  <p className="font-semibold">About</p>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{selectedService.description || "No service description provided."}</p>
-                </div>
-                <div className="rounded-lg border border-white/5 bg-card/70 p-4">
-                  <p className="font-semibold">Services Offered</p>
-                  <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
-                    {[selectedService.category.name, "Customer coordination", "Task completion"].map((item) => (
-                      <span key={item} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+              <section className="rounded-lg border border-white/5 bg-card/70 p-4">
+                <p className="font-semibold">About</p>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">{selectedService.description || "No service description provided."}</p>
               </section>
 
               <section className="rounded-lg border border-white/5 bg-card/70 p-4">
-                <p className="font-semibold">Work Photos</p>
-                <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <div key={index} className="aspect-[4/3] overflow-hidden rounded-lg border border-white/5 bg-background/35">
-                      {index === 0 ? (
-                        <ServiceImage service={selectedService} size="large" />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-muted-foreground">
-                          <ImageIcon className="h-6 w-6" />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="font-semibold">
+                    Work Photos <span className="text-xs font-normal text-muted-foreground">({photos.length}/{MAX_SERVICE_PHOTOS})</span>
+                  </p>
+                  <div className="flex items-center gap-2">
+                    {selectedPhotos.length > 0 && (
+                      <Button
+                        variant="outline"
+                        className="h-8 border-red-500/60 bg-transparent text-red-300 hover:bg-red-500/10"
+                        disabled={photoBusy}
+                        onClick={() => {
+                          if (confirm(`Delete ${selectedPhotos.length} selected photo${selectedPhotos.length > 1 ? "s" : ""}?`)) {
+                            savePhotos(selectedService.id, photos.filter((p) => !selectedPhotos.includes(p)), "Photos deleted")
+                          }
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete selected ({selectedPhotos.length})
+                      </Button>
+                    )}
+                    {photos.length < MAX_SERVICE_PHOTOS && (
+                      <ImageUploadButton
+                        label="Add a photo"
+                        className="h-8 border-white/10 bg-background/60"
+                        disabled={photoBusy}
+                        onFile={async (file) => {
+                          const url = await uploadImage(file)
+                          const next = Array.from(new Set([...photos, url])).slice(0, MAX_SERVICE_PHOTOS)
+                          await savePhotos(selectedService.id, next, "Photo added")
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
+
+                {photos.length === 0 ? (
+                  <div className="mt-4 flex h-32 items-center justify-center rounded-lg border border-dashed border-white/10 text-sm text-muted-foreground">
+                    No photos yet — use “Add a photo”.
+                  </div>
+                ) : (
+                  <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+                    {photos.map((url) => {
+                      const selected = selectedPhotos.includes(url)
+                      return (
+                        <div
+                          key={url}
+                          className={cn(
+                            "relative aspect-[4/3] overflow-hidden rounded-lg border bg-background/35",
+                            selected ? "border-emerald-400 ring-2 ring-emerald-400/50" : "border-white/5",
+                          )}
+                        >
+                          <ImageLightbox src={url} alt="" thumbClassName="h-full w-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => togglePhoto(url)}
+                            aria-pressed={selected}
+                            aria-label={selected ? "Deselect photo" : "Select photo"}
+                            className={cn(
+                              "absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-md border backdrop-blur transition",
+                              selected
+                                ? "border-emerald-400 bg-emerald-500 text-white"
+                                : "border-white/40 bg-background/70 text-transparent hover:text-white/50",
+                            )}
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Tap a photo to view it larger. Use the checkbox to select one or more, then “Delete selected”.
+                </p>
               </section>
 
               <section className="rounded-lg border border-white/5 bg-card/70 p-4">
@@ -505,22 +685,22 @@ export default function ServicesPage() {
               <div className="rounded-lg border border-white/5 bg-card/70 p-4">
                 <p className="font-semibold">Admin Actions</p>
                 <div className="mt-4 grid gap-2">
+                  <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" onClick={openEdit}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit details
+                  </Button>
                   <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" onClick={() => toggleServiceVisibility(selectedService)} disabled={saveMutation.isPending}>
                     {selectedService.isActive ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
                     {selectedService.isActive ? "Hide Service" : "Activate Service"}
                   </Button>
-                  <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" disabled>
-                    <Flag className="mr-2 h-4 w-4" />
-                    Mark Needs Review
-                  </Button>
-                  <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" disabled>
-                    <Star className="mr-2 h-4 w-4" />
-                    Feature Service
-                  </Button>
-                  <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" disabled>
-                    <UserRound className="mr-2 h-4 w-4" />
-                    View Provider
-                  </Button>
+                  {selectedService.provider?.id && (
+                    <Button asChild className="h-9 justify-start border-white/10 bg-background/60" variant="outline">
+                      <Link href={`/admin/users/${selectedService.provider.id}`}>
+                        <UserRound className="mr-2 h-4 w-4" />
+                        View Provider
+                      </Link>
+                    </Button>
+                  )}
                   <Button
                     className="h-9 justify-start border-red-500/60 bg-transparent text-red-300 hover:bg-red-500/10"
                     variant="outline"
@@ -554,6 +734,130 @@ export default function ServicesPage() {
               </div>
             </aside>
           </div>
+
+          {/* Edit service details — same fields a provider sets when creating a service */}
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Edit service details</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-5">
+                {/* Price mode */}
+                <div>
+                  <Label className="text-xs uppercase text-muted-foreground">Price</Label>
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    {(["fixed", "range"] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setEditForm((f) => ({ ...f, priceMode: mode }))}
+                        className={cn(
+                          "rounded-lg border px-3 py-2 text-sm font-medium capitalize transition-colors",
+                          editForm.priceMode === mode
+                            ? "border-emerald-400 bg-emerald-500/15 text-emerald-200"
+                            : "border-white/10 bg-background/60 hover:bg-background/80",
+                        )}
+                      >
+                        {mode === "fixed" ? "Fixed price" : "Price range"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className={cn("mt-3 grid gap-2", editForm.priceMode === "range" && "grid-cols-2")}>
+                    <div>
+                      <Label className="text-[11px] text-muted-foreground">
+                        {editForm.priceMode === "fixed" ? "Price (RWF)" : "Minimum (RWF)"}
+                      </Label>
+                      <Input
+                        inputMode="numeric"
+                        className="mt-1 border-white/10 bg-background/60"
+                        value={editForm.priceMin}
+                        placeholder="20000"
+                        onChange={(e) => setEditForm((f) => ({ ...f, priceMin: e.target.value.replace(/[^\d]/g, "") }))}
+                      />
+                    </div>
+                    {editForm.priceMode === "range" && (
+                      <div>
+                        <Label className="text-[11px] text-muted-foreground">Maximum (RWF)</Label>
+                        <Input
+                          inputMode="numeric"
+                          className="mt-1 border-white/10 bg-background/60"
+                          value={editForm.priceMax}
+                          placeholder="40000"
+                          onChange={(e) => setEditForm((f) => ({ ...f, priceMax: e.target.value.replace(/[^\d]/g, "") }))}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Billing period (charged per) */}
+                <div>
+                  <Label className="text-xs uppercase text-muted-foreground">Billing period</Label>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {CHARGED_PER_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setEditForm((f) => ({ ...f, chargedPer: opt.value }))}
+                        className={cn(
+                          "rounded-lg border px-2 py-2 text-xs font-semibold transition-colors",
+                          editForm.chargedPer === opt.value
+                            ? "border-emerald-400 bg-emerald-500/15 text-emerald-200"
+                            : "border-white/10 bg-background/60 hover:bg-background/80",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Negotiable */}
+                <button
+                  type="button"
+                  onClick={() => setEditForm((f) => ({ ...f, negotiable: !f.negotiable }))}
+                  className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-background/60 px-3 py-2.5 text-sm"
+                >
+                  <span>Open to negotiation</span>
+                  <span
+                    className={cn(
+                      "relative h-6 w-11 rounded-full transition-colors",
+                      editForm.negotiable ? "bg-emerald-500" : "bg-white/15",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform",
+                        editForm.negotiable ? "translate-x-[22px]" : "translate-x-0.5",
+                      )}
+                    />
+                  </span>
+                </button>
+
+                {/* Description */}
+                <div>
+                  <Label className="text-xs uppercase text-muted-foreground">Description</Label>
+                  <Textarea
+                    className="mt-2 min-h-[90px] border-white/10 bg-background/60"
+                    maxLength={MAX_SERVICE_DESCRIPTION}
+                    value={editForm.description}
+                    placeholder="Tell clients about this service…"
+                    onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                  />
+                  <p className="mt-1 text-right text-[11px] text-muted-foreground">
+                    {editForm.description.length}/{MAX_SERVICE_DESCRIPTION}
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+                <Button onClick={saveEdit} disabled={editMutation.isPending}>
+                  {editMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     )

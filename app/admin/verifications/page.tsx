@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "@/components/ui/use-toast"
+import { ImageLightbox } from "@/components/image-lightbox"
 import { cn, formatDate } from "@/lib/utils"
 
 type SortMode = "NEWEST" | "OLDEST"
@@ -382,7 +383,7 @@ export default function VerificationsPage() {
                   </div>
                   <div className="overflow-hidden rounded-lg border border-white/10 bg-background/50">
                     {selectedRequest.document?.documentUrl ? (
-                      <img src={selectedRequest.document.documentUrl} alt="Submitted ID document" className="max-h-[460px] w-full object-contain" />
+                      <ImageLightbox src={selectedRequest.document.documentUrl} alt="Submitted ID document" thumbClassName="max-h-[460px] w-full object-contain" />
                     ) : (
                       <div className="flex h-80 items-center justify-center text-muted-foreground">
                         <ImageIcon className="mr-2 h-5 w-5" />

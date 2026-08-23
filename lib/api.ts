@@ -128,6 +128,16 @@ export async function updateUserProfile(id: string, data: any) {
   return response.data?.data ?? response.data;
 }
 
+/** Upload a single image file to Cloudinary via the shared /upload endpoint. Returns the hosted URL. */
+export async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await axiosInstance.post(`/upload`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data?.url ?? response.data?.data?.url;
+}
+
 export async function uploadUserDocument(id: string, file: File) {
   const formData = new FormData();
   formData.append("file", file);
@@ -263,6 +273,33 @@ export interface Category {
   sortOrder: number;
 }
 
+export async function getCategories(): Promise<Category[]> {
+  const response = await axiosInstance.get("/admin/categories", { params: { limit: 500 } });
+  const payload = response.data?.data ?? response.data;
+  const list = payload?.data ?? payload;
+  return Array.isArray(list) ? list : [];
+}
+
+// The service taxonomy: broad groupings, each with the job types (categories)
+// assigned to it. Mirrors what the user app's "Add a service" wizard browses.
+export interface TaxonomyGrouping {
+  id: string
+  name: string
+  icon?: string | null
+  jobTypes: Array<{ id: string; name: string }>
+}
+export async function getTaxonomyTree(): Promise<TaxonomyGrouping[]> {
+  const response = await axiosInstance.get("/taxonomy/tree");
+  const list = response.data?.data ?? response.data;
+  return Array.isArray(list) ? list : [];
+}
+
+/** Create a service listing on a user's behalf (admin support flow). */
+export async function createUserService(userId: string, payload: any): Promise<Service> {
+  const response = await axiosInstance.post(`/admin/users/${userId}/services`, payload);
+  return response.data?.data ?? response.data;
+}
+
 export async function createCategory(data: any): Promise<Category> {
   const response = await axiosInstance.post("/admin/categories", data);
   return response.data?.data ?? response.data;
@@ -365,9 +402,11 @@ export interface Service {
   id: string;
   description: string;
   serviceImage?: string | null;
+  serviceImages?: string[];
   priceMin: number | null;
   priceMax: number | null;
   priceType: string | null;
+  negotiable?: boolean;
   serviceAreas?: string[];
   provider: User;
   category: { id?: string; name: string };
