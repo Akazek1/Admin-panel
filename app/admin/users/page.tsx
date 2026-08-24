@@ -34,7 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { getAllUsers, User } from "@/lib/api"
+import { getAllUsers, getOnlineUserIds, User } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50]
@@ -177,6 +177,7 @@ export default function IndividualsPage() {
   const [verificationFilter, setVerificationFilter] = useState("ALL")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [providerFilter, setProviderFilter] = useState("ALL")
+  const [onlineOnly, setOnlineOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -190,12 +191,21 @@ export default function IndividualsPage() {
     staleTime: 5 * 60 * 1000,
   })
 
+  // Who's online right now (live sockets). Polls so the badge stays fresh.
+  const { data: onlineIdsArr = [] } = useQuery({
+    queryKey: ["online-users"],
+    queryFn: getOnlineUserIds,
+    refetchInterval: 30_000,
+  })
+  const onlineIds = useMemo(() => new Set(onlineIdsArr), [onlineIdsArr])
+
   const individuals = useMemo(() => (users ?? []).filter(isIndividual), [users])
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = deferredSearchTerm.trim().toLowerCase()
 
     return individuals.filter((user) => {
+      const matchesOnline = !onlineOnly || onlineIds.has(user.id)
       const haystack = `${userName(user)} ${user.phoneNumber || ""} ${user.email || ""} ${user.username || ""} ${user.id}`.toLowerCase()
       const matchesSearch = !normalizedSearch || haystack.includes(normalizedSearch)
       const matchesVerification =
@@ -211,9 +221,9 @@ export default function IndividualsPage() {
         (providerFilter === "YES" && isProvider(user)) ||
         (providerFilter === "NO" && !isProvider(user))
 
-      return matchesSearch && matchesVerification && matchesStatus && matchesProvider
+      return matchesSearch && matchesVerification && matchesStatus && matchesProvider && matchesOnline
     })
-  }, [individuals, deferredSearchTerm, verificationFilter, statusFilter, providerFilter])
+  }, [individuals, deferredSearchTerm, verificationFilter, statusFilter, providerFilter, onlineOnly, onlineIds])
 
   const sortedUsers = useMemo(() => {
     return [...filteredUsers].sort((a, b) => compareUsers(a, b, sortKey, sortDirection))
@@ -270,6 +280,7 @@ export default function IndividualsPage() {
     setVerificationFilter("ALL")
     setStatusFilter("ALL")
     setProviderFilter("ALL")
+    setOnlineOnly(false)
     setSelectedIds([])
   }
 
@@ -353,6 +364,15 @@ export default function IndividualsPage() {
               </SelectContent>
             </Select>
             <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className={cn("h-10 border-white/10 bg-background/70", onlineOnly && "border-emerald-500/60 text-emerald-400")}
+                onClick={() => setOnlineOnly((v) => !v)}
+                title="Show only users currently online"
+              >
+                <span className={cn("mr-2 h-2 w-2 rounded-full", onlineOnly ? "bg-emerald-400" : "bg-muted-foreground/40")} />
+                Online{onlineIds.size ? ` (${onlineIds.size})` : ""}
+              </Button>
               <Button variant="outline" className="h-10 border-white/10 bg-background/70">
                 <Filter className="mr-2 h-4 w-4" />
                 Filters
@@ -477,13 +497,21 @@ export default function IndividualsPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex min-w-[240px] items-center gap-3">
-                          {user.profilePicture ? (
-                            <img src={user.profilePicture} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-1 ring-white/10">
-                              {initials(user)}
-                            </div>
-                          )}
+                          <div className="relative shrink-0">
+                            {user.profilePicture ? (
+                              <img src={user.profilePicture} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
+                            ) : (
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-1 ring-white/10">
+                                {initials(user)}
+                              </div>
+                            )}
+                            {onlineIds.has(user.id) && (
+                              <span
+                                className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500"
+                                title="Online now"
+                              />
+                            )}
+                          </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-foreground">{userName(user)}</p>
                             <p className="truncate text-xs text-muted-foreground">{user.phoneNumber || user.email || user.id}</p>
