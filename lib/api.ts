@@ -91,6 +91,33 @@ export async function banUser(id: string, reason: string) {
   return response.data?.data ?? response.data;
 }
 
+// A signup/login code request, classified by outcome.
+export interface SignupAttempt {
+  phoneNumber: string;
+  name: string | null;          // only known once the phone becomes an account
+  userId: string | null;        // set if this phone is now a registered user
+  registeredAt: string | null;
+  status: "registered" | "locked" | "pending" | "failed";
+  firstTriedAt: string | null;
+  lastTriedAt: string | null;
+  codesSent: number;
+  wrongAttempts: number;
+  lastSmsStatus: string | null;
+  lastSmsError: string | null;
+}
+export async function getSignupAttempts(): Promise<SignupAttempt[]> {
+  const response = await axiosInstance.get("/admin/signup-attempts");
+  const list = response.data?.data ?? response.data;
+  return Array.isArray(list) ? list : [];
+}
+
+/** Ids of users currently online (holding a live socket). */
+export async function getOnlineUserIds(): Promise<string[]> {
+  const response = await axiosInstance.get("/admin/online-users");
+  const body = response.data?.data ?? response.data;
+  return Array.isArray(body?.userIds) ? body.userIds : [];
+}
+
 export async function unbanUser(id: string) {
   const response = await axiosInstance.post(`/admin/users/${id}/unban`);
   return response.data?.data ?? response.data;

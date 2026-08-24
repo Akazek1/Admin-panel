@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Star,
   UserCog,
+  UserPlus,
   Users,
   Workflow,
   BriefcaseBusiness,
@@ -44,6 +45,7 @@ const navigationGroups = [
     title: "Users",
     items: [
       { title: "Individuals", url: "/admin/users", icon: Users },
+      { title: "Signup Drop-offs", url: "/admin/signup-attempts", icon: UserPlus },
       { title: "Agencies", url: "/admin/agencies", icon: BriefcaseBusiness },
       { title: "Companies", url: "/admin/companies", icon: Building2 },
     ],
