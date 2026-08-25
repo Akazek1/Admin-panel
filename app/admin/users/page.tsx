@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   Columns3,
   Eye,
-  Filter,
   Flag,
   Loader2,
   MoreHorizontal,
@@ -253,7 +252,7 @@ export default function IndividualsPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [deferredSearchTerm, verificationFilter, statusFilter, providerFilter, pageSize])
+  }, [deferredSearchTerm, verificationFilter, statusFilter, providerFilter, onlineOnly, pageSize])
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, pageCount))
@@ -366,16 +365,12 @@ export default function IndividualsPage() {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                className={cn("h-10 border-white/10 bg-background/70", onlineOnly && "border-emerald-500/60 text-emerald-400")}
+                className={cn("h-10 border-white/10 bg-background/70", onlineOnly && "border-emerald-500/60 bg-emerald-500/10 text-emerald-400")}
                 onClick={() => setOnlineOnly((v) => !v)}
-                title="Show only users currently online"
+                title={onlineOnly ? "Showing online users only — click to show all" : "Show only users currently online"}
               >
                 <span className={cn("mr-2 h-2 w-2 rounded-full", onlineOnly ? "bg-emerald-400" : "bg-muted-foreground/40")} />
-                Online{onlineIds.size ? ` (${onlineIds.size})` : ""}
-              </Button>
-              <Button variant="outline" className="h-10 border-white/10 bg-background/70">
-                <Filter className="mr-2 h-4 w-4" />
-                Filters
+                {onlineOnly ? `Online only (${onlineIds.size})` : `Online${onlineIds.size ? ` · ${onlineIds.size}` : ""}`}
               </Button>
               <Button variant="ghost" className="h-10 text-red-400 hover:text-red-300" onClick={clearSelectionAndFilters}>
                 Clear
@@ -536,10 +531,20 @@ export default function IndividualsPage() {
                       <TableCell className={reports > 0 ? "font-medium text-red-400" : "text-emerald-400"}>{reports}</TableCell>
                       <TableCell className="font-medium text-emerald-400">{bookings}</TableCell>
                       <TableCell>
-                        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                          {relativeTime(lastActive)}
-                        </span>
+                        {onlineIds.has(user.id) ? (
+                          <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-400">
+                            <span className="relative flex h-2 w-2">
+                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                            </span>
+                            Online now
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                            {relativeTime(lastActive)}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatShortDate(user.createdAt)}</TableCell>
                       <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
