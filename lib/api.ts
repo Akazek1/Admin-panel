@@ -408,6 +408,44 @@ export async function optOutAgencyWorker(workerId: string, reason: string) {
   return response.data?.data ?? response.data;
 }
 
+// Agency Enrollments (service-level affiliation)
+export type EnrollmentStatus = "INVITED" | "ACTIVE" | "DECLINED" | "OPTED_OUT" | "REVOKED";
+
+export interface AgencyEnrollment {
+  id: string;
+  agencyId: string;
+  agency: { id: string; name: string; logoUrl: string | null; ownerId: string | null };
+  workerId: string;
+  worker: { id: string; firstName: string | null; lastName: string | null; profilePicture: string | null };
+  serviceId: string;
+  service: { id: string; title: string | null };
+  status: EnrollmentStatus;
+  endedBy: "WORKER" | "AGENCY" | "ADMIN" | null;
+  invitedAt: string;
+  acceptedAt: string | null;
+  endedAt: string | null;
+}
+
+export async function getEnrollments(params?: { agencyId?: string; workerId?: string; status?: string }): Promise<AgencyEnrollment[]> {
+  const response = await axiosInstance.get("/admin/enrollments", { params });
+  return unwrapList<AgencyEnrollment>(response.data);
+}
+
+export async function endEnrollment(id: string, reason?: string) {
+  const response = await axiosInstance.post(`/admin/enrollments/${id}/end`, { reason });
+  return response.data?.data ?? response.data;
+}
+
+export async function optOutAgencyEnrollments(agencyId: string, reason?: string) {
+  const response = await axiosInstance.post(`/admin/enrollments/agencies/${agencyId}/opt-out`, { reason });
+  return response.data?.data ?? response.data;
+}
+
+export async function optOutWorkerEnrollments(workerId: string, reason?: string) {
+  const response = await axiosInstance.post(`/admin/enrollments/workers/${workerId}/opt-out`, { reason });
+  return response.data?.data ?? response.data;
+}
+
 // Audit Logs
 export interface AuditLog {
   id: string;
