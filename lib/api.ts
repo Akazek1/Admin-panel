@@ -38,6 +38,9 @@ export interface User {
   registeredById?: string | null;
   ownedOrg?: { name: string } | null;
   agency?: { name: string } | null;
+  // Set only when accountType is COMPANY — the business registry record this
+  // provider account operates as (verification, logo).
+  company?: { id: string; name: string; verified: boolean; logoUrl: string | null } | null;
   addresses?: Array<{ id: string; city: string; district?: string | null; sector?: string | null; street?: string | null; isDefault?: boolean }>;
   services?: Array<{
     id: string;
@@ -88,6 +91,30 @@ export async function getAllUsers(): Promise<User[]> {
 
 export async function banUser(id: string, reason: string) {
   const response = await axiosInstance.post(`/admin/users/${id}/ban`, { reason });
+  return response.data?.data ?? response.data;
+}
+
+export interface CreateAccountPayload {
+  persona: "INDIVIDUAL" | "COMPANY" | "STAFFING_AGENCY";
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  phone: string;
+  email?: string;
+  agencyModel?: "PLACEMENT" | "DISPATCH";
+}
+
+export interface CreateAccountResult {
+  persona: "INDIVIDUAL" | "COMPANY" | "STAFFING_AGENCY";
+  user?: { id: string; firstName: string | null; phoneNumber: string };
+  organization?: { id: string; name: string; loginEmail: string };
+  tempPassword?: string;
+}
+
+// Admin-created account, on behalf of a person who isn't self-registering
+// right now — one endpoint for all three personas.
+export async function createAccount(payload: CreateAccountPayload): Promise<CreateAccountResult> {
+  const response = await axiosInstance.post("/admin/accounts", payload);
   return response.data?.data ?? response.data;
 }
 
