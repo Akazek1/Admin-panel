@@ -90,11 +90,6 @@ function isIndividual(user: User) {
   return !isStaff && !isOrganizationAccount
 }
 
-/** A business operating as a provider — same screens, different presentation. */
-function isCompanyAccount(user: User) {
-  return user.accountType === "COMPANY"
-}
-
 function isProvider(user: User) {
   return user.isProvider ?? hasRole(user, "WORKER")
 }
@@ -181,10 +176,6 @@ export default function IndividualsPage() {
   const [verificationFilter, setVerificationFilter] = useState("ALL")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [providerFilter, setProviderFilter] = useState("ALL")
-  // Company accounts are providers managed from these same screens (verify,
-  // ban, view services/bookings). Default stays "Individuals" so the page
-  // opens exactly as it always has.
-  const [accountScope, setAccountScope] = useState<"INDIVIDUAL" | "COMPANY" | "ALL">("INDIVIDUAL")
   const [onlineOnly, setOnlineOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -207,12 +198,7 @@ export default function IndividualsPage() {
   })
   const onlineIds = useMemo(() => new Set(onlineIdsArr), [onlineIdsArr])
 
-  const individuals = useMemo(() => {
-    const all = users ?? []
-    if (accountScope === "COMPANY") return all.filter(isCompanyAccount)
-    if (accountScope === "ALL") return all.filter((user) => isIndividual(user) || isCompanyAccount(user))
-    return all.filter(isIndividual)
-  }, [users, accountScope])
+  const individuals = useMemo(() => (users ?? []).filter(isIndividual), [users])
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = deferredSearchTerm.trim().toLowerCase()
@@ -266,7 +252,7 @@ export default function IndividualsPage() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [deferredSearchTerm, verificationFilter, statusFilter, providerFilter, onlineOnly, pageSize, accountScope])
+  }, [deferredSearchTerm, verificationFilter, statusFilter, providerFilter, onlineOnly, pageSize])
 
   useEffect(() => {
     setCurrentPage((page) => Math.min(page, pageCount))
@@ -293,7 +279,6 @@ export default function IndividualsPage() {
     setVerificationFilter("ALL")
     setStatusFilter("ALL")
     setProviderFilter("ALL")
-    setAccountScope("INDIVIDUAL")
     setOnlineOnly(false)
     setSelectedIds([])
   }
@@ -365,16 +350,6 @@ export default function IndividualsPage() {
                 <SelectItem value="ALL">All status</SelectItem>
                 <SelectItem value="ACTIVE">Active</SelectItem>
                 <SelectItem value="BANNED">Banned</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={accountScope} onValueChange={(v) => setAccountScope(v as typeof accountScope)}>
-              <SelectTrigger className="h-10 border-white/10 bg-background/70">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="INDIVIDUAL">Individuals</SelectItem>
-                <SelectItem value="COMPANY">Companies</SelectItem>
-                <SelectItem value="ALL">Individuals + companies</SelectItem>
               </SelectContent>
             </Select>
             <Select value={providerFilter} onValueChange={setProviderFilter}>
