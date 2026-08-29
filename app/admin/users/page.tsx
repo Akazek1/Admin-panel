@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  UserPlus,
   Users,
 } from "lucide-react"
 import { AdminPageHeader, AdminStatCard, EmptyState } from "@/components/admin/admin-primitives"
@@ -34,6 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { getAllUsers, getOnlineUserIds, User } from "@/lib/api"
+import { CopyableText } from "@/components/admin/copyable-text"
+import { CreateAccountDialog } from "@/components/admin/create-account-dialog"
 import { cn } from "@/lib/utils"
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50]
@@ -178,6 +181,7 @@ export default function IndividualsPage() {
   const [providerFilter, setProviderFilter] = useState("ALL")
   const [onlineOnly, setOnlineOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [createOpen, setCreateOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [sortKey, setSortKey] = useState<SortKey>("joined")
@@ -311,7 +315,12 @@ export default function IndividualsPage() {
         <AdminPageHeader
           title="Individuals"
           description="Manage and monitor individual marketplace users."
-        />
+        >
+          <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => setCreateOpen(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add individual
+          </Button>
+        </AdminPageHeader>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <AdminStatCard title="Total Individuals" value={stats.total.toLocaleString()} description="Marketplace users" icon={Users} tone="green" />
@@ -509,7 +518,15 @@ export default function IndividualsPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium text-foreground">{userName(user)}</p>
-                            <p className="truncate text-xs text-muted-foreground">{user.phoneNumber || user.email || user.id}</p>
+                            {user.phoneNumber || user.email ? (
+                              <CopyableText
+                                value={(user.phoneNumber || user.email) as string}
+                                label={user.phoneNumber ? "Phone number" : "Email"}
+                                className="text-xs text-muted-foreground"
+                              />
+                            ) : (
+                              <p className="truncate text-xs text-muted-foreground">{user.id}</p>
+                            )}
                           </div>
                         </div>
                       </TableCell>
@@ -595,6 +612,8 @@ export default function IndividualsPage() {
           </div>
         </div>
       </div>
+
+      <CreateAccountDialog open={createOpen} onOpenChange={setCreateOpen} defaultPersona="INDIVIDUAL" />
     </div>
   )
 }

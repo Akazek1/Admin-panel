@@ -20,9 +20,11 @@ import {
   Star,
   TriangleAlert,
   UserCheck,
+  UserPlus,
   Users,
 } from "lucide-react"
 import { AgencyPlacement, getOrganizations, Organization, updateOrganization, verifyOrganization } from "@/lib/api"
+import { CreateAccountDialog } from "@/components/admin/create-account-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -176,6 +178,7 @@ export default function AgenciesPage() {
   const [sortMode, setSortMode] = useState<SortMode>("RECENT")
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showDetail, setShowDetail] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
 
   const { data: agencies, isLoading, isError, error, refetch, isFetching } = useQuery<Organization[]>({
     queryKey: ["admin-agencies", verifiedFilter],
@@ -445,6 +448,10 @@ export default function AgenciesPage() {
             <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => setVerifiedFilter("false")}>
               <ShieldCheck className="mr-2 h-4 w-4" />
               Review Pending Agencies
+            </Button>
+            <Button variant="outline" className="border-white/10 bg-card/70" onClick={() => setCreateOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add agency
             </Button>
           </div>
         </header>
@@ -768,6 +775,8 @@ export default function AgenciesPage() {
           </aside>
         </div>
       </div>
+
+      <CreateAccountDialog open={createOpen} onOpenChange={setCreateOpen} defaultPersona="STAFFING_AGENCY" />
     </div>
   )
 }

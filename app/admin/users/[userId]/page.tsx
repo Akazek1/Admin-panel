@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/use-toast"
 import { ImageLightbox } from "@/components/image-lightbox"
+import { CopyableText } from "@/components/admin/copyable-text"
 import { formatDate } from "@/lib/utils"
 import {
   ArrowLeft, Ban, ShieldCheck, Edit, Save, X, Loader2,
@@ -758,12 +759,16 @@ export default function UserDetailPage() {
               <CardContent className="space-y-3 text-sm">
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-mono">{user.phoneNumber}</span>
+                  <CopyableText value={user.phoneNumber} label="Phone number" className="font-mono" />
                   {user.isMobileVerified && <CheckCircle2 className="w-3 h-3 text-green-500" />}
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span className="font-mono">{user.email || "—"}</span>
+                  {user.email ? (
+                    <CopyableText value={user.email} label="Email" className="font-mono" />
+                  ) : (
+                    <span className="font-mono">—</span>
+                  )}
                   {user.isEmailVerified && <CheckCircle2 className="w-3 h-3 text-green-500" />}
                 </div>
                 <div className="flex items-center gap-2">
