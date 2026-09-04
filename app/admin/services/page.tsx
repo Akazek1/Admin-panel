@@ -15,6 +15,7 @@ import {
   EyeOff,
   Filter,
   Flag,
+  GripVertical,
   Image as ImageIcon,
   Info,
   Layers,
@@ -229,6 +230,7 @@ export default function ServicesPage() {
   const [adminNote, setAdminNote] = useState("")
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
   const [photoBusy, setPhotoBusy] = useState(false)
+  const [draggedPhoto, setDraggedPhoto] = useState<string | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editForm, setEditForm] = useState<{
     priceMode: "fixed" | "range"
@@ -611,14 +613,32 @@ export default function ServicesPage() {
                   </div>
                 ) : (
                   <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
-                    {photos.map((url) => {
+                    {photos.map((url, index) => {
                       const selected = selectedPhotos.includes(url)
+                      const isDragging = draggedPhoto === url
                       return (
                         <div
                           key={url}
+                          draggable={!photoBusy}
+                          onDragStart={() => setDraggedPhoto(url)}
+                          onDragEnd={() => setDraggedPhoto(null)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            if (!draggedPhoto || draggedPhoto === url) return
+                            const from = photos.indexOf(draggedPhoto)
+                            const to = index
+                            if (from === -1) return
+                            const next = [...photos]
+                            next.splice(from, 1)
+                            next.splice(to, 0, draggedPhoto)
+                            setDraggedPhoto(null)
+                            savePhotos(selectedService.id, next, "Photos reordered")
+                          }}
                           className={cn(
-                            "relative aspect-[4/3] overflow-hidden rounded-lg border bg-background/35",
+                            "group relative aspect-[4/3] cursor-grab overflow-hidden rounded-lg border bg-background/35 active:cursor-grabbing",
                             selected ? "border-emerald-400 ring-2 ring-emerald-400/50" : "border-white/5",
+                            isDragging && "opacity-40",
                           )}
                         >
                           <ImageLightbox src={url} alt="" thumbClassName="h-full w-full object-cover" />
@@ -636,13 +656,21 @@ export default function ServicesPage() {
                           >
                             <Check className="h-4 w-4" />
                           </button>
+                          <div className="pointer-events-none absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md border border-white/40 bg-background/70 text-white/70 opacity-0 transition group-hover:opacity-100">
+                            <GripVertical className="h-4 w-4" />
+                          </div>
+                          {index === 0 && (
+                            <span className="absolute bottom-2 left-2 rounded-md bg-emerald-500/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                              Cover
+                            </span>
+                          )}
                         </div>
                       )
                     })}
                   </div>
                 )}
                 <p className="mt-3 text-xs text-muted-foreground">
-                  Tap a photo to view it larger. Use the checkbox to select one or more, then “Delete selected”.
+                  Tap a photo to view it larger. Drag to reorder — the first photo is the cover. Use the checkbox to select one or more, then “Delete selected”.
                 </p>
               </section>
 
