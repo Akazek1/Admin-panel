@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { getSignupAttempts, type SignupAttempt } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { Loader2, Search, AlertTriangle, Lock, Clock, CheckCircle2, ExternalLink } from "lucide-react"
+import { Loader2, Search, AlertTriangle, Lock, Clock, CheckCircle2, ExternalLink, ArrowUp, ArrowDown } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 
 function statusBadge(a: SignupAttempt) {
@@ -29,9 +29,55 @@ function statusBadge(a: SignupAttempt) {
   }
 }
 
+type SortKey = "phoneNumber" | "name" | "status" | "codesSent" | "wrongAttempts" | "lastTriedAt"
+
+// Rank statuses by how much they need attention, so a status sort is useful.
+const STATUS_RANK: Record<SignupAttempt["status"], number> = {
+  locked: 3, pending: 2, failed: 1, registered: 0,
+}
+
+function SortableHead({
+  label, sortKey, sort, onSort, className,
+}: {
+  label: string
+  sortKey: SortKey
+  sort: { key: SortKey; dir: "asc" | "desc" }
+  onSort: (k: SortKey) => void
+  className?: string
+}) {
+  const active = sort.key === sortKey
+  return (
+    <TableHead className={className}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={cn(
+          "inline-flex items-center gap-1 -ml-1 rounded px-1 py-0.5 hover:text-foreground",
+          active ? "text-foreground font-medium" : "text-muted-foreground",
+        )}
+      >
+        {label}
+        {active && (sort.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+      </button>
+    </TableHead>
+  )
+}
+
 export default function SignupAttemptsPage() {
   const [search, setSearch] = useState("")
   const [showRegistered, setShowRegistered] = useState(false)
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({
+    key: "lastTriedAt",
+    dir: "desc",
+  })
+
+  const toggleSort = (key: SortKey) =>
+    setSort((s) =>
+      s.key === key
+        ? { key, dir: s.dir === "asc" ? "desc" : "asc" }
+        // Text columns default to A→Z; numeric/date columns to biggest/newest first.
+        : { key, dir: key === "phoneNumber" || key === "name" ? "asc" : "desc" },
+    )
 
   const { data: attempts = [], isLoading, isError, refetch, isFetching } = useQuery<SignupAttempt[]>({
     queryKey: ["signup-attempts"],
@@ -50,17 +96,35 @@ export default function SignupAttemptsPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
+    const dir = sort.dir === "asc" ? 1 : -1
+    const cmp = (a: SignupAttempt, b: SignupAttempt) => {
+      switch (sort.key) {
+        case "phoneNumber":
+          return dir * a.phoneNumber.localeCompare(b.phoneNumber)
+        case "name":
+          return dir * (a.name ?? "").localeCompare(b.name ?? "")
+        case "status":
+          return dir * (STATUS_RANK[a.status] - STATUS_RANK[b.status])
+        case "codesSent":
+          return dir * (a.codesSent - b.codesSent)
+        case "wrongAttempts":
+          return dir * (a.wrongAttempts - b.wrongAttempts)
+        case "lastTriedAt":
+        default:
+          return dir * (new Date(a.lastTriedAt ?? 0).getTime() - new Date(b.lastTriedAt ?? 0).getTime())
+      }
+    }
     return attempts
       .filter((a) => showRegistered || a.status !== "registered")
       .filter((a) => !q || a.phoneNumber.toLowerCase().includes(q) || (a.name ?? "").toLowerCase().includes(q))
+      .slice()
       .sort((a, b) => {
-        // Most in need of help first: locked, then wrong attempts, then recency.
-        const score = (x: SignupAttempt) => (x.status === "locked" ? 2 : 0) + (x.wrongAttempts > 0 ? 1 : 0)
-        const s = score(b) - score(a)
-        if (s !== 0) return s
+        const primary = cmp(a, b)
+        if (primary !== 0) return primary
+        // Stable tie-breaker: newest attempt first.
         return new Date(b.lastTriedAt ?? 0).getTime() - new Date(a.lastTriedAt ?? 0).getTime()
       })
-  }, [attempts, search, showRegistered])
+  }, [attempts, search, showRegistered, sort])
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -126,12 +190,13 @@ export default function SignupAttemptsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Codes sent</TableHead>
+                  <SortableHead label="Phone" sortKey="phoneNumber" sort={sort} onSort={toggleSort} />
+                  <SortableHead label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
+                  <SortableHead label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
+                  <SortableHead label="Codes sent" sortKey="codesSent" sort={sort} onSort={toggleSort} />
+                  <TableHead>Last code</TableHead>
                   <TableHead>Last SMS</TableHead>
-                  <TableHead>Last tried</TableHead>
+                  <SortableHead label="Last tried" sortKey="lastTriedAt" sort={sort} onSort={toggleSort} />
                   <TableHead className="text-right"> </TableHead>
                 </TableRow>
               </TableHeader>
@@ -149,11 +214,29 @@ export default function SignupAttemptsPage() {
                     </TableCell>
                     <TableCell>{statusBadge(a)}</TableCell>
                     <TableCell className="text-sm">{a.codesSent}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {a.lastCode
+                        ? <span className="tracking-widest">{a.lastCode}</span>
+                        : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell className="text-xs">
                       {a.lastSmsStatus ? (
-                        <span className={a.lastSmsStatus === "failed" ? "text-destructive" : "text-muted-foreground"}>
-                          {a.lastSmsStatus}{a.lastSmsError ? ` · ${a.lastSmsError}` : ""}
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <span className={a.lastSmsStatus === "failed" ? "text-destructive" : "text-muted-foreground"}>
+                            gateway: {a.lastSmsStatus}{a.lastSmsError ? ` · ${a.lastSmsError}` : ""}
+                          </span>
+                          <span
+                            className={cn(
+                              a.lastDeliveryStatus === "delivered" && "text-green-500",
+                              (a.lastDeliveryStatus === "failed" ||
+                                a.lastDeliveryStatus === "expired" ||
+                                a.lastDeliveryStatus === "rejected") && "text-destructive",
+                              !a.lastDeliveryStatus && "text-muted-foreground/60",
+                            )}
+                          >
+                            handset: {a.lastDeliveryStatus ?? "no receipt"}
+                          </span>
+                        </div>
                       ) : "—"}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">

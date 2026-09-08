@@ -121,7 +121,7 @@ export async function createAccount(payload: CreateAccountPayload): Promise<Crea
 // A signup/login code request, classified by outcome.
 export interface SignupAttempt {
   phoneNumber: string;
-  name: string | null;          // only known once the phone becomes an account
+  name: string | null;          // account name, or the name typed on the signup form
   userId: string | null;        // set if this phone is now a registered user
   registeredAt: string | null;
   status: "registered" | "locked" | "pending" | "failed";
@@ -129,8 +129,10 @@ export interface SignupAttempt {
   lastTriedAt: string | null;
   codesSent: number;
   wrongAttempts: number;
-  lastSmsStatus: string | null;
+  lastCode: string | null;      // plaintext of the last code, while the attempt is still live
+  lastSmsStatus: string | null;         // gateway acceptance: 'sent' | 'failed'
   lastSmsError: string | null;
+  lastDeliveryStatus: string | null;    // handset outcome from DLR: 'delivered' | 'failed' | 'expired' | ... | null
 }
 export async function getSignupAttempts(): Promise<SignupAttempt[]> {
   const response = await axiosInstance.get("/admin/signup-attempts");
