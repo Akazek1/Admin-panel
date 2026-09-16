@@ -422,6 +422,16 @@ export async function updateOrganization(id: string, data: any) {
   return response.data?.data ?? response.data;
 }
 
+// Permanent deletion. `confirmName` must exactly match the org name. Frees the
+// org's phone + email so the person can re-register (e.g. signed up as an
+// agency/company by mistake). 409 if the org has activity tied to other users.
+export async function deleteOrganization(id: string, confirmName: string) {
+  const response = await axiosInstance.delete(`/admin/organizations/${id}`, {
+    data: { confirmName },
+  });
+  return response.data?.data ?? response.data;
+}
+
 export async function getPlacements(params?: { status?: string; agencyId?: string; commissionPaid?: string }): Promise<AgencyPlacement[]> {
   const response = await axiosInstance.get("/admin/placements", { params });
   return unwrapList<AgencyPlacement>(response.data);

@@ -3,15 +3,24 @@
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Building2, CheckCircle2, ExternalLink, Loader2, Search, ShieldCheck, Users } from "lucide-react"
+import { Building2, CheckCircle2, ExternalLink, Loader2, Search, ShieldCheck, Trash2, Users } from "lucide-react"
 import { AdminPageHeader, AdminStatCard, EmptyState } from "@/components/admin/admin-primitives"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
-import { getOrganizations, Organization, updateOrganization, verifyOrganization } from "@/lib/api"
+import { deleteOrganization, getOrganizations, Organization, updateOrganization, verifyOrganization } from "@/lib/api"
 import { formatDate } from "@/lib/utils"
 
 type OrganizationDirectoryProps = {
@@ -29,6 +38,8 @@ export function OrganizationDirectory({ title, singularTitle, description, type 
   const queryClient = useQueryClient()
   const [searchTerm, setSearchTerm] = useState("")
   const [verifiedFilter, setVerifiedFilter] = useState("ALL")
+  const [deleteTarget, setDeleteTarget] = useState<Organization | null>(null)
+  const [confirmName, setConfirmName] = useState("")
 
   const params = {
     type,
@@ -53,6 +64,28 @@ export function OrganizationDirectory({ title, singularTitle, description, type 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-organizations"] })
       toast({ title: `${singularTitle} updated` })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => deleteOrganization(id, name),
+    onSuccess: (res: { freedPhone?: string | null; freedEmail?: string | null }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-organizations"] })
+      setDeleteTarget(null)
+      setConfirmName("")
+      toast({
+        title: `${singularTitle} deleted`,
+        description: res?.freedPhone
+          ? `${res.freedPhone} is now free to register as an individual.`
+          : undefined,
+      })
+    },
+    onError: (err: any) => {
+      toast({
+        variant: "destructive",
+        title: "Could not delete",
+        description: err?.response?.data?.message || err?.message || "Please try again.",
+      })
     },
   })
 
@@ -157,6 +190,18 @@ export function OrganizationDirectory({ title, singularTitle, description, type 
                           </Link>
                         </Button>
                       ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        onClick={() => {
+                          setDeleteTarget(org)
+                          setConfirmName("")
+                        }}
+                      >
+                        <Trash2 className="mr-1.5 h-4 w-4" />
+                        Delete
+                      </Button>
                     </div>
                   </div>
 
@@ -183,6 +228,46 @@ export function OrganizationDirectory({ title, singularTitle, description, type 
           </div>
         )}
       </div>
+
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) { setDeleteTarget(null); setConfirmName("") } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete {deleteTarget?.name}?</DialogTitle>
+            <DialogDescription>
+              Permanently removes this {singularTitle.toLowerCase()}
+              {deleteTarget?.type === "SERVICE_COMPANY" ? " and its provider account" : ""}, and frees{" "}
+              <span className="font-medium text-foreground">{deleteTarget?.phone || "its phone"}</span>
+              {deleteTarget?.email ? ` / ${deleteTarget.email}` : ""} to register again. This cannot be undone.
+              It is refused if the {singularTitle.toLowerCase()} has enrolled workers, placements, or sent messages.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-org-name">
+              Type <span className="font-mono font-semibold text-foreground">{deleteTarget?.name}</span> to confirm
+            </Label>
+            <Input
+              id="confirm-org-name"
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              placeholder={deleteTarget?.name}
+              autoComplete="off"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteTarget(null); setConfirmName("") }}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!deleteTarget || confirmName.trim() !== deleteTarget.name || deleteMutation.isPending}
+              onClick={() => deleteTarget && deleteMutation.mutate({ id: deleteTarget.id, name: confirmName.trim() })}
+            >
+              {deleteMutation.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}
+              Delete permanently
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
