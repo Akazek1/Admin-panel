@@ -140,6 +140,10 @@ export async function getSignupAttempts(): Promise<SignupAttempt[]> {
   return Array.isArray(list) ? list : [];
 }
 
+export async function clearOtp(phoneNumber: string): Promise<void> {
+  await axiosInstance.delete(`/admin/otp/${encodeURIComponent(phoneNumber)}`);
+}
+
 /** Ids of users currently online (holding a live socket). */
 export async function getOnlineUserIds(): Promise<string[]> {
   const response = await axiosInstance.get("/admin/online-users");
