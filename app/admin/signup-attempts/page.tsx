@@ -14,7 +14,7 @@ import { getSignupAttempts, clearOtp, type SignupAttempt, type OtpSend } from "@
 import { cn } from "@/lib/utils"
 import { Loader2, Search, AlertTriangle, Lock, Clock, CheckCircle2, ExternalLink, ArrowUp, ArrowDown, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 import { formatDate } from "@/lib/utils"
-import toast from "react-hot-toast"
+import { toast } from "@/components/ui/use-toast"
 
 function purposeBadge(purpose: SignupAttempt["otpPurpose"]) {
   if (purpose === "signup") return <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-400">Signup</Badge>
@@ -124,12 +124,12 @@ export default function SignupAttemptsPage() {
   const clearMutation = useMutation({
     mutationFn: clearOtp,
     onSuccess: (_, phone) => {
-      toast.success(`OTP cleared for ${phone}`)
+      toast({ title: "OTP cleared", description: `Cleared for ${phone}` })
       queryClient.invalidateQueries({ queryKey: ["signup-attempts"] })
       setClearing(null)
     },
     onError: () => {
-      toast.error("Failed to clear OTP")
+      toast({ title: "Failed to clear OTP", variant: "destructive" })
       setClearing(null)
     },
   })
