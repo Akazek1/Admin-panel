@@ -32,12 +32,19 @@ import {
 import Link from "next/link"
 import React from "react"
 import { usePathname } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
 import { LogoutButton } from "./logout-button"
 import { APP_CONFIG } from "@/constant/app.config"
 import { HuzaLogo } from "@/components/brand/huza-logo"
+import { getStats, type AdminStats } from "@/lib/api"
 
-const navigationGroups = [
+type BadgeKey = keyof AdminStats | "pendingAgenciesOrCompanies" | "pendingDropoffs"
+
+const navigationGroups: {
+  title: string
+  items: { title: string; url: string; icon: React.ElementType; badgeKey?: BadgeKey }[]
+}[] = [
   {
     title: "Overview",
     items: [{ title: "Dashboard", url: "/admin", icon: Home }],
@@ -47,16 +54,16 @@ const navigationGroups = [
     items: [
       { title: "Individuals", url: "/admin/users", icon: Users },
       { title: "Signup Drop-offs", url: "/admin/signup-attempts", icon: UserPlus },
-      { title: "Agencies", url: "/admin/agencies", icon: BriefcaseBusiness },
+      { title: "Agencies", url: "/admin/agencies", icon: BriefcaseBusiness, badgeKey: "pendingAgencies" },
       { title: "Enrollments", url: "/admin/enrollments", icon: UserCheck },
-      { title: "Companies", url: "/admin/companies", icon: Building2 },
+      { title: "Companies", url: "/admin/companies", icon: Building2, badgeKey: "pendingCompanies" },
     ],
   },
   {
     title: "Marketplace",
     items: [
-      { title: "Pending Bookings", url: "/admin/pending-bookings", icon: Clock },
-      { title: "Active Bookings", url: "/admin/active-bookings", icon: Dot },
+      { title: "Pending Bookings", url: "/admin/pending-bookings", icon: Clock, badgeKey: "pendingBookings" },
+      { title: "Active Bookings", url: "/admin/active-bookings", icon: Dot, badgeKey: "activeBookings" },
       { title: "Completed Bookings", url: "/admin/completed-bookings", icon: CheckCircle },
       { title: "Services", url: "/admin/services", icon: Workflow },
       { title: "Conversations", url: "/admin/conversations", icon: MessageSquare },
@@ -65,7 +72,7 @@ const navigationGroups = [
   {
     title: "Trust & Safety",
     items: [
-      { title: "Verifications", url: "/admin/verifications", icon: ShieldCheck },
+      { title: "Verifications", url: "/admin/verifications", icon: ShieldCheck, badgeKey: "pendingVerifications" },
       { title: "Company Services", url: "/admin/company-services", icon: ClipboardCheck },
       { title: "Reports", url: "/admin/reports", icon: Flag },
       { title: "Disputes", url: "/admin/disputes", icon: ShieldAlert },
@@ -94,6 +101,22 @@ const navigationGroups = [
   },
 ]
 
+function getBadgeCount(stats: AdminStats | undefined, key: BadgeKey | undefined): number {
+  if (!stats || !key) return 0
+  if (key === "pendingAgenciesOrCompanies") return (stats.pendingAgencies ?? 0) + (stats.pendingCompanies ?? 0)
+  const val = stats[key as keyof AdminStats]
+  return typeof val === "number" ? val : 0
+}
+
+function NavBadge({ count }: { count: number }) {
+  if (!count) return null
+  return (
+    <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold leading-none text-black">
+      {count > 99 ? "99+" : count}
+    </span>
+  )
+}
+
 const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
   Overview: true,
   Users: true,
@@ -107,6 +130,13 @@ const STORAGE_KEY = "huza-admin-sidebar-open-groups-v2"
 
 export function PortfolioSidebar() {
   const pathname = usePathname()
+  const { data: stats } = useQuery({
+    queryKey: ["sidebar-stats"],
+    queryFn: getStats,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  })
+
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() =>
     Object.fromEntries(navigationGroups.map((group) => [group.title, DEFAULT_OPEN_GROUPS[group.title] ?? true]))
   )
@@ -179,19 +209,23 @@ export function PortfolioSidebar() {
 
               {isOpen && (
                 <div className="space-y-1">
-                  {group.items.map((item) => (
-                    <Link
-                      key={item.title}
-                      href={item.url}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors hover:bg-white/5 hover:text-foreground",
-                        isActive(item.url) ? "bg-[#145B10] text-darkText shadow-sm shadow-emerald-950/20" : "text-muted-foreground",
-                      )}
-                    >
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span className="truncate">{item.title}</span>
-                    </Link>
-                  ))}
+                  {group.items.map((item) => {
+                    const badgeCount = getBadgeCount(stats, item.badgeKey)
+                    return (
+                      <Link
+                        key={item.title}
+                        href={item.url}
+                        className={cn(
+                          "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors hover:bg-white/5 hover:text-foreground",
+                          isActive(item.url) ? "bg-[#145B10] text-darkText shadow-sm shadow-emerald-950/20" : "text-muted-foreground",
+                        )}
+                      >
+                        <item.icon className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{item.title}</span>
+                        <NavBadge count={badgeCount} />
+                      </Link>
+                    )
+                  })}
                 </div>
               )}
             </div>
