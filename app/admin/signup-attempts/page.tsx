@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -10,10 +10,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getSignupAttempts, type SignupAttempt } from "@/lib/api"
+import { getSignupAttempts, clearOtp, type SignupAttempt, type OtpSend } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { Loader2, Search, AlertTriangle, Lock, Clock, CheckCircle2, ExternalLink, ArrowUp, ArrowDown } from "lucide-react"
+import { Loader2, Search, AlertTriangle, Lock, Clock, CheckCircle2, ExternalLink, ArrowUp, ArrowDown, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 import { formatDate } from "@/lib/utils"
+import { toast } from "@/components/ui/use-toast"
+
+function purposeBadge(purpose: SignupAttempt["otpPurpose"]) {
+  if (purpose === "signup") return <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-400">Signup</Badge>
+  if (purpose === "login") return <Badge variant="outline" className="text-[10px] border-purple-400 text-purple-400">Login</Badge>
+  return null
+}
+
+function HistoryRow({ history }: { history: OtpSend[] }) {
+  if (!history.length) return <p className="text-xs text-muted-foreground">No send history available.</p>
+  return (
+    <table className="w-full text-xs">
+      <thead>
+        <tr className="text-muted-foreground border-b">
+          <th className="text-left pb-1 font-medium">Sent at</th>
+          <th className="text-left pb-1 font-medium">Gateway</th>
+          <th className="text-left pb-1 font-medium">Handset</th>
+        </tr>
+      </thead>
+      <tbody>
+        {history.map((h, i) => (
+          <tr key={i} className="border-b last:border-0">
+            <td className="py-1 pr-4 whitespace-nowrap text-muted-foreground">{formatDate(h.sentAt)}</td>
+            <td className={cn("py-1 pr-4", h.status === "failed" ? "text-destructive" : "text-green-500")}>{h.status}</td>
+            <td className={cn("py-1", h.deliveryStatus === "delivered" ? "text-green-500" : h.deliveryStatus ? "text-destructive" : "text-muted-foreground/60")}>
+              {h.deliveryStatus ?? "no receipt"}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
 
 function statusBadge(a: SignupAttempt) {
   switch (a.status) {
@@ -70,6 +103,10 @@ export default function SignupAttemptsPage() {
     key: "lastTriedAt",
     dir: "desc",
   })
+  const [clearing, setClearing] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  const queryClient = useQueryClient()
 
   const toggleSort = (key: SortKey) =>
     setSort((s) =>
@@ -83,6 +120,30 @@ export default function SignupAttemptsPage() {
     queryKey: ["signup-attempts"],
     queryFn: getSignupAttempts,
   })
+
+  const clearMutation = useMutation({
+    mutationFn: clearOtp,
+    onSuccess: (_, phone) => {
+      toast({ title: "OTP cleared", description: `Cleared for ${phone}` })
+      queryClient.invalidateQueries({ queryKey: ["signup-attempts"] })
+      setClearing(null)
+    },
+    onError: () => {
+      toast({ title: "Failed to clear OTP", variant: "destructive" })
+      setClearing(null)
+    },
+  })
+
+  function handleClear(phone: string) {
+    if (clearing === phone) {
+      // Second click = confirmed
+      clearMutation.mutate(phone)
+    } else {
+      setClearing(phone)
+      // Auto-cancel confirmation after 4s
+      setTimeout(() => setClearing((c) => (c === phone ? null : c)), 4000)
+    }
+  }
 
   const counts = useMemo(() => {
     const c = { total: attempts.length, dropoffs: 0, struggling: 0, registered: 0 }
@@ -192,6 +253,7 @@ export default function SignupAttemptsPage() {
                 <TableRow>
                   <SortableHead label="Phone" sortKey="phoneNumber" sort={sort} onSort={toggleSort} />
                   <SortableHead label="Name" sortKey="name" sort={sort} onSort={toggleSort} />
+                  <TableHead>Purpose</TableHead>
                   <SortableHead label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
                   <SortableHead label="Codes sent" sortKey="codesSent" sort={sort} onSort={toggleSort} />
                   <TableHead>Last code</TableHead>
@@ -202,8 +264,17 @@ export default function SignupAttemptsPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((a) => (
-                  <TableRow key={a.phoneNumber}>
-                    <TableCell className="font-mono text-sm font-medium whitespace-nowrap">{a.phoneNumber}</TableCell>
+                  <React.Fragment key={a.phoneNumber}>
+                  <TableRow
+                    className="cursor-pointer hover:bg-muted/40"
+                    onClick={() => setExpanded(e => e === a.phoneNumber ? null : a.phoneNumber)}
+                  >
+                    <TableCell className="font-mono text-sm font-medium whitespace-nowrap">
+                      <span className="flex items-center gap-1.5">
+                        {expanded === a.phoneNumber ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
+                        {a.phoneNumber}
+                      </span>
+                    </TableCell>
                     <TableCell className="text-sm">
                       {a.name || <span className="text-muted-foreground">—</span>}
                       {a.wrongAttempts > 0 && a.status !== "registered" && (
@@ -212,6 +283,7 @@ export default function SignupAttemptsPage() {
                         </span>
                       )}
                     </TableCell>
+                    <TableCell>{purposeBadge(a.otpPurpose)}</TableCell>
                     <TableCell>{statusBadge(a)}</TableCell>
                     <TableCell className="text-sm">{a.codesSent}</TableCell>
                     <TableCell className="font-mono text-sm">
@@ -243,15 +315,41 @@ export default function SignupAttemptsPage() {
                       {a.lastTriedAt ? formatDate(a.lastTriedAt) : "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      {a.userId && (
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/admin/users/${a.userId}`}>
-                            <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Profile
-                          </Link>
-                        </Button>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {a.userId && (
+                          <Button asChild variant="outline" size="sm">
+                            <Link href={`/admin/users/${a.userId}`}>
+                              <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Profile
+                            </Link>
+                          </Button>
+                        )}
+                        {a.status !== "registered" && (
+                          <Button
+                            variant={clearing === a.phoneNumber ? "destructive" : "outline"}
+                            size="sm"
+                            disabled={clearMutation.isPending}
+                            onClick={() => handleClear(a.phoneNumber)}
+                            title="Clear OTP lockout so user can request a fresh code"
+                          >
+                            {clearMutation.isPending && clearing === a.phoneNumber
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                            }
+                            {clearing === a.phoneNumber ? "Confirm clear" : "Clear OTP"}
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
+                  {expanded === a.phoneNumber && (
+                    <TableRow className="bg-muted/20 hover:bg-muted/20">
+                      <TableCell colSpan={9} className="px-8 py-3">
+                        <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Send history</p>
+                        <HistoryRow history={a.history} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>

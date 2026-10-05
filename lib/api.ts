@@ -119,25 +119,37 @@ export async function createAccount(payload: CreateAccountPayload): Promise<Crea
 }
 
 // A signup/login code request, classified by outcome.
+export interface OtpSend {
+  sentAt: string;
+  status: string;
+  deliveryStatus: string | null;
+}
+
 export interface SignupAttempt {
   phoneNumber: string;
-  name: string | null;          // account name, or the name typed on the signup form
-  userId: string | null;        // set if this phone is now a registered user
+  name: string | null;
+  userId: string | null;
   registeredAt: string | null;
   status: "registered" | "locked" | "pending" | "failed";
   firstTriedAt: string | null;
   lastTriedAt: string | null;
   codesSent: number;
   wrongAttempts: number;
-  lastCode: string | null;      // plaintext of the last code, while the attempt is still live
-  lastSmsStatus: string | null;         // gateway acceptance: 'sent' | 'failed'
+  lastCode: string | null;
+  lastSmsStatus: string | null;
   lastSmsError: string | null;
-  lastDeliveryStatus: string | null;    // handset outcome from DLR: 'delivered' | 'failed' | 'expired' | ... | null
+  lastDeliveryStatus: string | null;
+  otpPurpose: "signup" | "login" | "unknown" | null;
+  history: OtpSend[];
 }
 export async function getSignupAttempts(): Promise<SignupAttempt[]> {
   const response = await axiosInstance.get("/admin/signup-attempts");
   const list = response.data?.data ?? response.data;
   return Array.isArray(list) ? list : [];
+}
+
+export async function clearOtp(phoneNumber: string): Promise<void> {
+  await axiosInstance.delete(`/admin/otp/${encodeURIComponent(phoneNumber)}`);
 }
 
 /** Ids of users currently online (holding a live socket). */
