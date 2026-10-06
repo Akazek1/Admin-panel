@@ -430,7 +430,7 @@ export default function CompaniesPage() {
                   const togglePending = verifyMutation.isPending || unverifyMutation.isPending
 
                   return (
-                    <TableRow key={user.id} className="cursor-pointer border-white/5 hover:bg-white/[0.03]" onClick={() => router.push(`/admin/users/${user.id}`)}>
+                    <TableRow key={user.id} className="cursor-pointer border-white/5 hover:bg-white/[0.03]" onClick={() => router.push(`/admin/companies/${user.company?.id ?? user.id}`)}>
                       <TableCell onClick={(event) => event.stopPropagation()}>
                         <Checkbox checked={selectedIds.includes(user.id)} onCheckedChange={(value) => toggleUser(user.id, !!value)} aria-label={`Select ${companyName(user)}`} />
                       </TableCell>
@@ -496,7 +496,7 @@ export default function CompaniesPage() {
                       <TableCell className="text-sm text-muted-foreground">{formatShortDate(user.createdAt)}</TableCell>
                       <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
                         <div className="flex justify-end gap-1">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => router.push(`/admin/users/${user.id}`)}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => router.push(`/admin/companies/${user.company?.id ?? user.id}`)}>
                             <Eye className="h-4 w-4" />
                           </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8">

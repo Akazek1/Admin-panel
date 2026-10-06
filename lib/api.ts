@@ -419,6 +419,11 @@ export async function getOrganizations(params?: { verified?: string; type?: "SER
   return unwrapList<Organization>(response.data);
 }
 
+export async function getOrganizationDetail(id: string) {
+  const response = await axiosInstance.get(`/admin/organizations/${id}`);
+  return response.data?.data ?? response.data;
+}
+
 export async function getPendingOrganizations(): Promise<Organization[]> {
   const response = await axiosInstance.get("/admin/organizations/pending");
   return unwrapList<Organization>(response.data);
