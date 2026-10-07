@@ -101,6 +101,8 @@ export interface CreateAccountPayload {
   name?: string;
   phone: string;
   email?: string;
+  dateOfBirth?: string;
+  address?: { city: string; district?: string; sector?: string; street?: string; lat?: number; lng?: number };
   agencyModel?: "PLACEMENT" | "DISPATCH";
 }
 
@@ -188,6 +190,12 @@ export async function changeUserPhone(id: string, phoneNumber: string) {
 
 export async function forceLogoutUser(id: string) {
   const response = await axiosInstance.post(`/admin/users/${id}/force-logout`);
+  return response.data?.data ?? response.data;
+}
+
+// Undo a mistaken approval: removes the badge and returns the ID to review.
+export async function revokeUserVerification(id: string, reason: string) {
+  const response = await axiosInstance.post(`/admin/users/${id}/revoke-verification`, { reason });
   return response.data?.data ?? response.data;
 }
 
@@ -661,4 +669,8 @@ export async function getPendingApprovals(): Promise<any[]> {
     console.error("Failed to fetch pending approvals:", error);
     return [];
   }
+}
+
+export async function adminAcceptTerms(userId: string): Promise<void> {
+  await axiosInstance.post(`/admin/users/${userId}/accept-terms`);
 }
