@@ -9,6 +9,8 @@
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Loader2 } from "lucide-react"
+import { SectorPicker } from "@/components/ui/sector-picker"
+import type { ViewerLocation } from "@/constants/rwanda-sectors"
 import {
   Dialog,
   DialogContent,
@@ -47,8 +49,11 @@ export function CreateAccountDialog({ open, onOpenChange, defaultPersona }: Crea
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
+  const [dateOfBirth, setDateOfBirth] = useState("")
+  const [location, setLocation] = useState<ViewerLocation | null>(null)
   const [agencyModel, setAgencyModel] = useState<"PLACEMENT" | "DISPATCH">("PLACEMENT")
   const [result, setResult] = useState<CreateAccountResult | null>(null)
+  const [phoneError, setPhoneError] = useState<string | null>(null)
 
   const isBusiness = defaultPersona !== "INDIVIDUAL"
 
@@ -58,8 +63,11 @@ export function CreateAccountDialog({ open, onOpenChange, defaultPersona }: Crea
     setName("")
     setPhone("")
     setEmail("")
+    setDateOfBirth("")
+    setLocation(null)
     setAgencyModel("PLACEMENT")
     setResult(null)
+    setPhoneError(null)
   }
 
   const mutation = useMutation({
@@ -73,18 +81,27 @@ export function CreateAccountDialog({ open, onOpenChange, defaultPersona }: Crea
       toast({ title: `${PERSONA_LABEL[defaultPersona]} account created` })
     },
     onError: (error: any) => {
-      toast({
-        title: "Could not create the account",
-        description: error?.response?.data?.message || error?.message || "Please check the details and try again.",
-        variant: "destructive",
-      })
+      const message: string = error?.response?.data?.message || error?.message || ""
+      if (message.toLowerCase().includes("phone") || message.toLowerCase().includes("already used")) {
+        setPhoneError(message)
+      } else {
+        toast({
+          title: "Could not create the account",
+          description: message || "Please check the details and try again.",
+          variant: "destructive",
+        })
+      }
     },
   })
 
   const handleSubmit = () => {
-    if (!phone.trim()) return toast({ title: "Phone number is required", variant: "destructive" })
+    setPhoneError(null)
+    if (!phone.trim()) { setPhoneError("Phone number is required"); return }
     if (defaultPersona === "INDIVIDUAL" && !firstName.trim()) {
       return toast({ title: "First name is required", variant: "destructive" })
+    }
+    if (defaultPersona === "INDIVIDUAL" && !dateOfBirth) {
+      return toast({ title: "Date of birth is required", variant: "destructive" })
     }
     if (isBusiness && (!name.trim() || !email.trim())) {
       return toast({ title: "Business name and email are required", variant: "destructive" })
@@ -94,7 +111,20 @@ export function CreateAccountDialog({ open, onOpenChange, defaultPersona }: Crea
       persona: defaultPersona,
       phone: phone.trim(),
       ...(defaultPersona === "INDIVIDUAL"
-        ? { firstName: firstName.trim(), lastName: lastName.trim() || undefined, email: email.trim() || undefined }
+        ? {
+            firstName: firstName.trim(),
+            lastName: lastName.trim() || undefined,
+            email: email.trim() || undefined,
+            dateOfBirth,
+            address: location ? {
+              city: location.province || location.district,
+              district: location.district,
+              sector: location.sector,
+              street: [location.village, location.cell].filter(Boolean).join(", ") || undefined,
+              lat: location.lat,
+              lng: location.lng,
+            } : undefined,
+          }
         : { name: name.trim(), email: email.trim(), ...(defaultPersona === "STAFFING_AGENCY" ? { agencyModel } : {}) }),
     })
   }
@@ -160,16 +190,26 @@ export function CreateAccountDialog({ open, onOpenChange, defaultPersona }: Crea
             </DialogHeader>
             <div className="space-y-3 py-2">
               {defaultPersona === "INDIVIDUAL" ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>First name</Label>
-                    <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jean" />
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>First name <span className="text-destructive">*</span></Label>
+                      <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Jean" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Last name</Label>
+                      <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Uwimana" />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Last name</Label>
-                    <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Uwimana" />
+                    <Label>Date of birth <span className="text-destructive">*</span></Label>
+                    <Input type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} max={new Date(Date.now() - 18 * 365.25 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]} />
                   </div>
-                </div>
+                  <div className="space-y-1.5">
+                    <Label>Location</Label>
+                    <SectorPicker value={location} onChange={setLocation} placeholder="Select neighborhood (optional)" />
+                  </div>
+                </>
               ) : (
                 <div className="space-y-1.5">
                   <Label>Business name</Label>
@@ -178,8 +218,15 @@ export function CreateAccountDialog({ open, onOpenChange, defaultPersona }: Crea
               )}
 
               <div className="space-y-1.5">
-                <Label>Phone number</Label>
-                <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0788…" type="tel" />
+                <Label>Phone number <span className="text-destructive">*</span></Label>
+                <Input
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value); setPhoneError(null) }}
+                  placeholder="0788…"
+                  type="tel"
+                  className={phoneError ? "border-destructive focus-visible:ring-destructive" : ""}
+                />
+                {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
               </div>
 
               <div className="space-y-1.5">

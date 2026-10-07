@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
-import { forceLogoutUser, unlockOtp, deleteUser, setUserPin, changeUserPhone, uploadImage, updateUserProfile, uploadUserDocument, getTaxonomyTree, createUserService } from "@/lib/api"
+import { forceLogoutUser, unlockOtp, deleteUser, setUserPin, changeUserPhone, uploadImage, updateUserProfile, uploadUserDocument, getTaxonomyTree, createUserService, adminAcceptTerms, revokeUserVerification } from "@/lib/api"
 import { Switch } from "@/components/ui/switch"
 import { ImageUploadButton } from "@/components/image-upload-button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -194,6 +194,8 @@ export default function UserDetailPage() {
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false)
   const [banReason, setBanReason] = useState("")
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false)
+  const [revokeReason, setRevokeReason] = useState("")
   const [deleteConfirmPhone, setDeleteConfirmPhone] = useState("")
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false)
   const [assignPin, setAssignPin] = useState("")
@@ -261,6 +263,32 @@ export default function UserDetailPage() {
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.response?.data?.message || "Could not log out user.", variant: "destructive" })
+    },
+  })
+
+  const removePhotoMutation = useMutation({
+    mutationFn: () => updateUserProfile(userId, { profilePicture: null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      toast({ title: "Photo removed", description: "The user no longer has a profile picture." })
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.response?.data?.message || "Could not remove photo.", variant: "destructive" })
+    },
+  })
+
+  const revokeVerificationMutation = useMutation({
+    mutationFn: () => revokeUserVerification(userId, revokeReason.trim()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+      toast({ title: "Verification revoked", description: "The badge is removed and the ID is back in the review queue." })
+      setIsRevokeDialogOpen(false)
+      setRevokeReason("")
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.response?.data?.message || "Could not revoke verification.", variant: "destructive" })
     },
   })
 
@@ -449,6 +477,9 @@ export default function UserDetailPage() {
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "Unnamed User"
   const roles = Array.isArray(user.roles) ? user.roles : []
   const isWorker = roles.includes("WORKER")
+  // A COMPANY account is a business operating as a provider — it has no
+  // gender/DOB/education/health/qualities, only a name + registry (Organization).
+  const isCompany = user.accountType === "COMPANY"
 
   // Same gate the app enforces: a non-provider must have a profile picture and a
   // government ID (not rejected) before any service can be listed. We surface
@@ -537,7 +568,7 @@ export default function UserDetailPage() {
             <Badge key={r} variant="outline" className="text-xs">{r}</Badge>
           ))}
         </div>
-        <div className="flex gap-2 ml-auto">
+        <div className="flex flex-wrap gap-2 ml-auto">
           {!isEditing ? (
             <Button variant="outline" onClick={startEdit}>
               <Edit className="w-4 h-4 mr-2" /> Edit
@@ -604,6 +635,20 @@ export default function UserDetailPage() {
               toast({ title: "Photo updated", description: "Profile picture saved on the user's behalf." })
             }}
           />
+          {user.profilePicture && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (confirm(`Remove ${fullName}'s profile picture?`)) {
+                  removePhotoMutation.mutate()
+                }
+              }}
+              disabled={removePhotoMutation.isPending}
+            >
+              {removePhotoMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Remove photo
+            </Button>
+          )}
           <ImageUploadButton
             label="Upload ID"
             onFile={async (file) => {
@@ -612,6 +657,14 @@ export default function UserDetailPage() {
               toast({ title: "ID uploaded", description: "Submitted for verification on the user's behalf." })
             }}
           />
+          {(user.isVerified || user.governmentIdStatus === "APPROVED") && (
+            <Button
+              variant="outline"
+              onClick={() => { setRevokeReason(""); setIsRevokeDialogOpen(true) }}
+            >
+              Revoke verification
+            </Button>
+          )}
           <Button
             variant="outline"
             className="text-destructive border-destructive/50 hover:bg-destructive/10"
@@ -703,14 +756,20 @@ export default function UserDetailPage() {
                   {user.bio || "No bio provided."}
                 </p>
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  {[
-                    ["Gender", user.gender],
-                    ["Date of Birth", user.dateOfBirth ? compactDate(user.dateOfBirth) : null],
-                    ["Languages", user.languages?.join(", ")],
-                    ["Experience", user.yearsOfExperience ? `${user.yearsOfExperience} yrs` : null],
-                    ["Education", user.educationLevel],
-                    ["Preferred Work Time", user.preferredWorkTime],
-                  ].map(([label, val]) => (
+                  {(isCompany
+                    ? [
+                        ["Company name", user.company?.name],
+                        ["Languages", user.languages?.join(", ")],
+                      ]
+                    : [
+                        ["Gender", user.gender],
+                        ["Date of Birth", user.dateOfBirth ? compactDate(user.dateOfBirth) : null],
+                        ["Languages", user.languages?.join(", ")],
+                        ["Experience", user.yearsOfExperience ? `${user.yearsOfExperience} yrs` : null],
+                        ["Education", user.educationLevel],
+                        ["Preferred Work Time", user.preferredWorkTime],
+                      ]
+                  ).map(([label, val]) => (
                     <div key={label as string}>
                       <p className="text-xs text-muted-foreground">{label}</p>
                       <p>{val || "—"}</p>
@@ -778,15 +837,17 @@ export default function UserDetailPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><GraduationCap className="w-4 h-4" />Education & Work</CardTitle></CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Education</span><span>{user.educationLevel || "—"}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Work time</span><span>{user.preferredWorkTime || "—"}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Health</span><span>{user.healthStatus || "—"}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Qualities</span><span className="text-right">{user.topQualities?.join(", ") || "—"}</span></div>
-              </CardContent>
-            </Card>
+            {!isCompany && (
+              <Card>
+                <CardHeader><CardTitle className="text-sm flex items-center gap-2"><GraduationCap className="w-4 h-4" />Education & Work</CardTitle></CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Education</span><span>{user.educationLevel || "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Work time</span><span>{user.preferredWorkTime || "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Health</span><span>{user.healthStatus || "—"}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Qualities</span><span className="text-right">{user.topQualities?.join(", ") || "—"}</span></div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader><CardTitle className="text-sm flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Verification</CardTitle></CardHeader>
@@ -815,6 +876,42 @@ export default function UserDetailPage() {
             </Card>
           </div>
 
+          <Card>
+            <CardHeader><CardTitle className="text-sm flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Legal &amp; Consent</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Terms accepted</span>
+                {user.termsAcceptedAt ? (
+                  <span className="text-green-600 font-medium">{formatDate(user.termsAcceptedAt)}</span>
+                ) : (
+                  <span className="text-amber-500 font-medium">Not accepted</span>
+                )}
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Accepted by</span>
+                <span>{user.termsAcceptedBy || "—"}</span>
+              </div>
+              {!user.termsAcceptedAt && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={async () => {
+                    try {
+                      await adminAcceptTerms(user.id)
+                      queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+                      toast({ title: "Terms accepted on behalf of user" })
+                    } catch {
+                      toast({ title: "Failed to accept terms", variant: "destructive" })
+                    }
+                  }}
+                >
+                  Accept on behalf of user
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
           {isEditing && (
             <Card>
               <CardHeader>
@@ -833,25 +930,30 @@ export default function UserDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Username</Label>
-                    <Input value={editData.username} onChange={e => setEditData({ ...editData, username: e.target.value })} placeholder="username" />
+                    <Input value={editData.username} onChange={e => setEditData({ ...editData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, "") })} placeholder="username" />
+                    <p className="text-xs text-muted-foreground">3–30 chars, lowercase letters, numbers, _ or -. Must be unique.</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Email</Label>
                     <Input type="email" value={editData.email} onChange={e => setEditData({ ...editData, email: e.target.value })} />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Date of Birth</Label>
-                    <Input type="date" value={editData.dateOfBirth} onChange={e => setEditData({ ...editData, dateOfBirth: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Gender</Label>
-                    <Select value={editData.gender} onValueChange={v => setEditData({ ...editData, gender: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
-                      <SelectContent>
-                        {GENDER_OPTIONS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {!isCompany && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Date of Birth</Label>
+                        <Input type="date" value={editData.dateOfBirth} onChange={e => setEditData({ ...editData, dateOfBirth: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Gender</Label>
+                        <Select value={editData.gender} onValueChange={v => setEditData({ ...editData, gender: v })}>
+                          <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                          <SelectContent>
+                            {GENDER_OPTIONS.map(g => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Languages */}
@@ -874,58 +976,62 @@ export default function UserDetailPage() {
                   </div>
                 </div>
 
-                {/* Work & background */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Education</Label>
-                    <Select value={editData.educationLevel} onValueChange={v => setEditData({ ...editData, educationLevel: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select education" /></SelectTrigger>
-                      <SelectContent>
-                        {EDUCATION_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Preferred Work Time</Label>
-                    <Select value={editData.preferredWorkTime} onValueChange={v => setEditData({ ...editData, preferredWorkTime: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select work time" /></SelectTrigger>
-                      <SelectContent>
-                        {WORK_TIME_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Health Status</Label>
-                    <Select value={editData.healthStatus} onValueChange={v => setEditData({ ...editData, healthStatus: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select health status" /></SelectTrigger>
-                      <SelectContent>
-                        {HEALTH_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                {/* Work & background — provider-specific, not applicable to companies */}
+                {!isCompany && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Education</Label>
+                        <Select value={editData.educationLevel} onValueChange={v => setEditData({ ...editData, educationLevel: v })}>
+                          <SelectTrigger><SelectValue placeholder="Select education" /></SelectTrigger>
+                          <SelectContent>
+                            {EDUCATION_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Preferred Work Time</Label>
+                        <Select value={editData.preferredWorkTime} onValueChange={v => setEditData({ ...editData, preferredWorkTime: v })}>
+                          <SelectTrigger><SelectValue placeholder="Select work time" /></SelectTrigger>
+                          <SelectContent>
+                            {WORK_TIME_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Health Status</Label>
+                        <Select value={editData.healthStatus} onValueChange={v => setEditData({ ...editData, healthStatus: v })}>
+                          <SelectTrigger><SelectValue placeholder="Select health status" /></SelectTrigger>
+                          <SelectContent>
+                            {HEALTH_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
 
-                {/* Top qualities (max 3) */}
-                <div className="space-y-2">
-                  <Label>Top Qualities <span className="text-xs text-muted-foreground">(choose up to {MAX_QUALITIES})</span></Label>
-                  <div className="flex flex-wrap gap-2">
-                    {QUALITY_OPTIONS.map(q => {
-                      const active = editData.topQualities.includes(q.key)
-                      const atLimit = !active && editData.topQualities.length >= MAX_QUALITIES
-                      return (
-                        <button
-                          key={q.key}
-                          type="button"
-                          disabled={atLimit}
-                          onClick={() => toggleEditArray("topQualities", q.key, MAX_QUALITIES)}
-                          className={`rounded-full border px-3 py-1 text-sm transition-colors ${active ? "border-green-600 bg-green-600/15 text-green-500" : atLimit ? "border-input bg-background opacity-40" : "border-input bg-background hover:bg-muted"}`}
-                        >
-                          {q.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
+                    {/* Top qualities (max 3) */}
+                    <div className="space-y-2">
+                      <Label>Top Qualities <span className="text-xs text-muted-foreground">(choose up to {MAX_QUALITIES})</span></Label>
+                      <div className="flex flex-wrap gap-2">
+                        {QUALITY_OPTIONS.map(q => {
+                          const active = editData.topQualities.includes(q.key)
+                          const atLimit = !active && editData.topQualities.length >= MAX_QUALITIES
+                          return (
+                            <button
+                              key={q.key}
+                              type="button"
+                              disabled={atLimit}
+                              onClick={() => toggleEditArray("topQualities", q.key, MAX_QUALITIES)}
+                              className={`rounded-full border px-3 py-1 text-sm transition-colors ${active ? "border-green-600 bg-green-600/15 text-green-500" : atLimit ? "border-input bg-background opacity-40" : "border-input bg-background hover:bg-muted"}`}
+                            >
+                              {q.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Bio */}
                 <div className="space-y-2">
@@ -1391,6 +1497,39 @@ export default function UserDetailPage() {
             <Button onClick={submitAddService} disabled={addServiceMutation.isPending || svcPhotoBusy}>
               {addServiceMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Create service
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isRevokeDialogOpen} onOpenChange={setIsRevokeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Revoke verification for {fullName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              This removes the verified badge now and sends their ID back to the review queue,
+              where it can be approved or rejected again. Their account stays active.
+            </p>
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Textarea
+                placeholder="e.g. Approved by mistake, ID photo does not match…"
+                value={revokeReason}
+                onChange={e => setRevokeReason(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRevokeDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={!revokeReason.trim() || revokeVerificationMutation.isPending}
+              onClick={() => revokeVerificationMutation.mutate()}
+            >
+              {revokeVerificationMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Revoke verification
             </Button>
           </DialogFooter>
         </DialogContent>
