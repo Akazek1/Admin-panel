@@ -25,8 +25,20 @@ function decodeJwt(token: string): { exp?: number } | null {
 async function refreshToken() {
   if (refreshPromise) return refreshPromise;
 
+  // The admin panel has its own refresh route + cookie, separate from the
+  // user app's, and must store the token it gets back.
   refreshPromise = api
-    .post("/auth/refresh")
+    .post("/auth/admin/refresh")
+    .then((res) => {
+      const token = res.data?.data?.token || res.data?.token;
+      if (token) {
+        Cookies.set("access_token", token, {
+          expires: 7,
+          secure: true,
+          sameSite: "Lax",
+        });
+      }
+    })
     .finally(() => {
       refreshPromise = null;
     });
@@ -69,8 +81,13 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // A 401 from the auth routes themselves (wrong password, expired refresh
+    // cookie, sign-out) is the answer, not a stale access token — refreshing
+    // there would turn a failed login into a silent sign-in.
+    const isAuthRoute = String(originalRequest?.url ?? "").includes("/auth/");
+
     // Handle 401 errors (unauthorized) - try refresh once
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
 
       try {

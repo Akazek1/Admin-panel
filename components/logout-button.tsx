@@ -3,12 +3,18 @@
 import { useRouter } from "next/navigation"
 import Cookies from "js-cookie"
 import { LogOut } from "lucide-react"
+import api from "@/lib/axios-instance"
 
 export function LogoutButton() {
     const router = useRouter()
 
     const handleLogout = async () => {
         try {
+            // End the session on the server first: this revokes the refresh
+            // cookie (HttpOnly, so it can't be removed from here). Best effort —
+            // being offline must not trap the admin in a signed-in panel.
+            await api.post("/auth/admin/logout").catch(() => undefined)
+
             // Clear the access token cookie
             Cookies.remove("access_token", { path: "/" })
 
