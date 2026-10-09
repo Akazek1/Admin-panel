@@ -155,7 +155,7 @@ function statusBadgeClass(status: SupportStatus) {
 }
 
 const STATUS_LABEL: Record<SupportStatus, string> = {
-  IDLE: "No messages yet",
+  IDLE: "Welcome sent · no reply yet",
   NEEDS_REPLY: "Needs reply",
   ANSWERED: "Answered",
   RESOLVED: "Resolved",
@@ -251,6 +251,11 @@ function SupportSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   const [contactPhone, setContactPhone] = useState("")
   const [saving, setSaving] = useState(false)
   const [sendingWelcome, setSendingWelcome] = useState(false)
+  const { data: me } = useQuery<{ id: string }>({
+    queryKey: ["support-me"],
+    queryFn: async () => unwrap(await axiosInstance.get("/admin/support/me")),
+    enabled: open,
+  })
 
   const { data: staff } = useQuery<StaffMember[]>({
     queryKey: ["support-staff"],
@@ -386,9 +391,15 @@ function SupportSettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               staff.map((s) => (
                 <div key={s.id} className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{fullName(s)}</p>
+                    <p className="truncate text-sm font-medium">
+                      {fullName(s)}
+                      {s.id === me?.id && <span className="ml-1.5 text-xs font-semibold text-emerald-300">(you)</span>}
+                    </p>
+                    {/* Email or phone, so it is clear which real account each row is. */}
                     <p className="truncate text-xs text-muted-foreground">
                       {s.isFullAdmin ? "Admin" : s.canHandleSupport ? "Sub-admin" : "Sub-admin · no support permission"}
+                      {" · "}
+                      {s.email || s.phoneNumber}
                     </p>
                   </div>
                   <Input
@@ -505,6 +516,7 @@ function SupportInbox() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [messageText, setMessageText] = useState("")
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [listLimit, setListLimit] = useState(50)
   const [replyTarget, setReplyTarget] = useState<ThreadMessage | null>(null)
   const [editTarget, setEditTarget] = useState<ThreadMessage | null>(null)
   const [reactingTo, setReactingTo] = useState<string | null>(null)
@@ -528,7 +540,7 @@ function SupportInbox() {
     return () => clearTimeout(t)
   }, [search])
 
-  const { data: me } = useQuery<{ supportDisplayName: string | null; isFullAdmin: boolean }>({
+  const { data: me } = useQuery<{ id: string; supportDisplayName: string | null; isFullAdmin: boolean }>({
     queryKey: ["support-me"],
     queryFn: async () => unwrap(await axiosInstance.get("/admin/support/me")),
   })
@@ -540,15 +552,22 @@ function SupportInbox() {
   })
 
   const { data: list, isLoading: loadingList } = useQuery<{ items: ThreadSummary[]; total: number }>({
-    queryKey: ["support-threads", filter, debouncedSearch],
+    queryKey: ["support-threads", filter, debouncedSearch, listLimit],
     queryFn: async () =>
       unwrap(
         await axiosInstance.get("/admin/support/threads", {
-          params: { status: filter, limit: 50, ...(debouncedSearch ? { search: debouncedSearch } : {}) },
+          params: { status: filter, limit: listLimit, ...(debouncedSearch ? { search: debouncedSearch } : {}) },
         }),
       ),
     refetchInterval: 10_000,
+    // Keep the rows on screen while a longer page loads.
+    placeholderData: (previous) => previous,
   })
+
+  // A different tab or search starts again from the first page.
+  useEffect(() => {
+    setListLimit(50)
+  }, [filter, debouncedSearch])
 
   const { data: detail, isLoading: loadingDetail } = useQuery<ThreadDetail>({
     queryKey: ["support-thread", selectedId],
@@ -784,6 +803,15 @@ function SupportInbox() {
                 </div>
               ))
             )}
+            {!loadingList && (list?.total ?? 0) > threads.length && (
+              <button
+                type="button"
+                onClick={() => setListLimit((n) => n + 50)}
+                className="w-full px-3 py-3 text-center text-xs font-medium text-emerald-300 hover:bg-white/[0.04]"
+              >
+                Show more ({(list?.total ?? 0) - threads.length} more)
+              </button>
+            )}
           </div>
         </aside>
 
@@ -973,9 +1001,16 @@ function SupportInbox() {
                 {me && !canReply ? (
                   <div className="flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                     <ShieldAlert className="h-4 w-4 shrink-0" />
-                    {me.isFullAdmin
-                      ? "Set your display name in Support settings before replying."
-                      : "You can't reply yet: ask a full admin to set your support display name."}
+                    <span className="flex-1">
+                      {me.isFullAdmin
+                        ? "You need a display name before you can reply. It is the name users see on your messages."
+                        : "You can't reply yet: ask a full admin to set your support display name."}
+                    </span>
+                    {me.isFullAdmin && (
+                      <Button size="sm" variant="outline" className="h-7 shrink-0 text-xs" onClick={() => setSettingsOpen(true)}>
+                        Set display name
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <>
