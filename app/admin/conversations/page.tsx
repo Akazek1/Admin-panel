@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
 import { formatDate } from "@/lib/utils"
-import { cn } from "@/lib/utils"
+import { cn, isSelectingTextIn } from "@/lib/utils"
 import { Archive, BriefcaseBusiness, Clock3, Loader2, Lock, MapPin, MessageSquare, RotateCcw, Search, Send, ShieldAlert, UserRound } from "lucide-react"
 
 interface Participant {
@@ -289,11 +289,23 @@ export default function ConversationsPage() {
               <p className="text-sm text-muted-foreground text-center py-10">No conversations found.</p>
             ) : (
               conversations.map((c) => (
-                <button
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      setSelectedId(c.id)
+                    }
+                  }}
                   key={c.id}
-                  onClick={() => setSelectedId(c.id)}
+                  onClick={(e) => {
+                    if (isSelectingTextIn(e.currentTarget)) return
+                    setSelectedId(c.id)
+                  }}
                   className={cn(
-                    "w-full border-b border-white/5 px-3 py-3 text-left transition-colors hover:bg-white/[0.04]",
+                    // A div, not a <button>, so the names in a row can be selected and copied.
+                    "w-full cursor-pointer select-text border-b border-white/5 px-3 py-3 text-left transition-colors hover:bg-white/[0.04]",
                     selectedId === c.id && "bg-emerald-500/10 ring-1 ring-inset ring-emerald-500/25"
                   )}
                 >
@@ -325,7 +337,7 @@ export default function ConversationsPage() {
                       )}
                     </div>
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>
