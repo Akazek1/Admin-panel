@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
 import { cn, formatDate, isSelectingTextIn } from "@/lib/utils"
-import { CheckCircle2, ExternalLink, Headset, Loader2, Pencil, Reply, RotateCcw, Search, Send, Settings, ShieldAlert, SmilePlus, StickyNote, Trash2, X } from "lucide-react"
+import { Check, CheckCheck, CheckCircle2, ExternalLink, Headset, Loader2, Pencil, Reply, RotateCcw, Search, Send, Settings, ShieldAlert, SmilePlus, StickyNote, Trash2, X } from "lucide-react"
 
 type SupportStatus = "IDLE" | "NEEDS_REPLY" | "ANSWERED" | "RESOLVED"
 type StatusFilter = "NEEDS_REPLY" | "ANSWERED" | "RESOLVED" | "ALL"
@@ -47,6 +47,7 @@ interface ThreadMessage {
   deletedAt: string | null
   editedAt: string | null
   isRead: boolean
+  isDelivered: boolean
   replyTo: {
     id: string
     content: string
@@ -986,6 +987,22 @@ function SupportInbox() {
                               {fromUser ? fullName(detail.user) : msg.staffDisplayName ?? "Welcome message"} ·{" "}
                               {formatDate(msg.createdAt)}
                               {msg.editedAt && !deleted ? " · edited" : ""}
+                              {/* Has the user's phone got it / have they opened it — same ticks as the app. */}
+                              {!fromUser && !deleted && (
+                                <span
+                                  className={cn(
+                                    "ml-1.5 inline-flex items-center gap-1 align-middle",
+                                    msg.isRead ? "text-sky-400" : "text-muted-foreground",
+                                  )}
+                                >
+                                  {msg.isRead || msg.isDelivered ? (
+                                    <CheckCheck className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <Check className="h-3.5 w-3.5" />
+                                  )}
+                                  {msg.isRead ? "Read" : msg.isDelivered ? "Delivered" : "Sent"}
+                                </span>
+                              )}
                             </p>
                           </div>
                           {fromUser && actions}
