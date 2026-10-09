@@ -27,7 +27,7 @@ import {
   AlertCircle, Briefcase, Star, Activity,
   GraduationCap, FileText, Bell, Layers, Building2,
   Clock, ShieldAlert, ClipboardCheck,
-  LogOut, Trash2, ChevronRight,
+  LogOut, Trash2, ChevronRight, Headset,
 } from "lucide-react"
 
 async function fetchUserDetail(id: string) {
@@ -569,6 +569,11 @@ export default function UserDetailPage() {
           ))}
         </div>
         <div className="flex flex-wrap gap-2 ml-auto">
+          <Button variant="outline" asChild>
+            <Link href={`/admin/support?user=${userId}`}>
+              <Headset className="w-4 h-4 mr-2" /> Message
+            </Link>
+          </Button>
           {!isEditing ? (
             <Button variant="outline" onClick={startEdit}>
               <Edit className="w-4 h-4 mr-2" /> Edit

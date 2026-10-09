@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { cn } from "@/lib/utils"
+import { cn, isSelectingTextIn } from "@/lib/utils"
 
 const Table = React.forwardRef<
   HTMLTableElement,
@@ -54,13 +54,23 @@ TableFooter.displayName = "TableFooter"
 const TableRow = React.forwardRef<
   HTMLTableRowElement,
   React.HTMLAttributes<HTMLTableRowElement>
->(({ className, ...props }, ref) => (
+>(({ className, onClick, ...props }, ref) => (
   <tr
     ref={ref}
     className={cn(
       "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
       className
     )}
+    // Selecting text in a row (to copy a name or number) ends with a mouse-up,
+    // which the browser reports as a click. That must not open the record.
+    onClick={
+      onClick
+        ? (event) => {
+            if (isSelectingTextIn(event.currentTarget)) return
+            onClick(event)
+          }
+        : undefined
+    }
     {...props}
   />
 ))

@@ -28,6 +28,7 @@ import {
   ShieldAlert,
   ChevronDown,
   ChevronRight,
+  Headset,
 } from "lucide-react"
 import Link from "next/link"
 import React from "react"
@@ -38,8 +39,9 @@ import { LogoutButton } from "./logout-button"
 import { APP_CONFIG } from "@/constant/app.config"
 import { HuzaLogo } from "@/components/brand/huza-logo"
 import { getStats, type AdminStats } from "@/lib/api"
+import axiosInstance from "@/lib/axios-instance"
 
-type BadgeKey = keyof AdminStats | "pendingAgenciesOrCompanies" | "pendingDropoffs"
+type BadgeKey = keyof AdminStats | "pendingAgenciesOrCompanies" | "pendingDropoffs" | "supportUnread"
 
 const navigationGroups: {
   title: string
@@ -47,7 +49,10 @@ const navigationGroups: {
 }[] = [
   {
     title: "Overview",
-    items: [{ title: "Dashboard", url: "/admin", icon: Home }],
+    items: [
+      { title: "Dashboard", url: "/admin", icon: Home },
+      { title: "Support", url: "/admin/support", icon: Headset, badgeKey: "supportUnread" },
+    ],
   },
   {
     title: "Users",
@@ -101,7 +106,8 @@ const navigationGroups: {
   },
 ]
 
-function getBadgeCount(stats: AdminStats | undefined, key: BadgeKey | undefined): number {
+function getBadgeCount(stats: AdminStats | undefined, key: BadgeKey | undefined, supportUnread = 0): number {
+  if (key === "supportUnread") return supportUnread
   if (!stats || !key) return 0
   if (key === "pendingAgenciesOrCompanies") return (stats.pendingAgencies ?? 0) + (stats.pendingCompanies ?? 0)
   const val = stats[key as keyof AdminStats]
@@ -135,6 +141,18 @@ export function PortfolioSidebar() {
     queryFn: getStats,
     refetchInterval: 60_000,
     staleTime: 30_000,
+  })
+  // Users with unread messages for the support team. Shares the Support page's
+  // query, and simply shows no badge for a sub-admin without the permission.
+  const { data: supportCounts } = useQuery<{ unreadUsers: number }>({
+    queryKey: ["support-counts"],
+    queryFn: async () => {
+      const res = await axiosInstance.get("/admin/support/counts")
+      return res.data?.data ?? res.data
+    },
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+    retry: false,
   })
 
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() =>
@@ -210,7 +228,7 @@ export function PortfolioSidebar() {
               {isOpen && (
                 <div className="space-y-1">
                   {group.items.map((item) => {
-                    const badgeCount = getBadgeCount(stats, item.badgeKey)
+                    const badgeCount = getBadgeCount(stats, item.badgeKey, supportCounts?.unreadUsers ?? 0)
                     return (
                       <Link
                         key={item.title}

@@ -33,6 +33,7 @@ const ALL_PERMISSIONS: { key: string; label: string; description: string }[] = [
   { key: "canManageCategories", label: "Manage Content & Ads", description: "Create, edit, delete categories, banners, and content settings" },
   { key: "canViewAuditLogs",    label: "View Audit Logs",    description: "Read admin action history" },
   { key: "canModerateReviews",  label: "Moderate Reviews",   description: "Delete inappropriate reviews" },
+  { key: "canHandleSupport",    label: "Handle Support",     description: "Read and reply to users in the Support inbox" },
 ]
 
 type AdminPermissions = Record<string, boolean>

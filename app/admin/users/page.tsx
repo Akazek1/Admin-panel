@@ -517,7 +517,11 @@ export default function IndividualsPage() {
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">{userName(user)}</p>
+                            <CopyableText
+                              value={userName(user)}
+                              label="Name"
+                              className="flex text-sm font-medium text-foreground"
+                            />
                             {user.phoneNumber || user.email ? (
                               <CopyableText
                                 value={(user.phoneNumber || user.email) as string}
