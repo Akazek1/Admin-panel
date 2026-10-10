@@ -522,11 +522,19 @@ function SupportInbox() {
   const [editTarget, setEditTarget] = useState<ThreadMessage | null>(null)
   const [reactingTo, setReactingTo] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   // The sidebar may already have the counts cached, which the server render
   // never does — show them only after mount so both renders match.
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
+
+  // Grow the reply box with its text (up to max-h, then it scrolls).
+  useEffect(() => {
+    const box = inputRef.current
+    if (!box) return
+    box.style.height = "auto"
+    box.style.height = `${box.scrollHeight}px`
+  }, [messageText, selectedId])
 
   // Reply / edit drafts belong to one thread.
   useEffect(() => {
@@ -1049,16 +1057,22 @@ function SupportInbox() {
                         </button>
                       </div>
                     )}
-                    <div className="flex gap-2">
-                      <Input
+                    <div className="flex items-end gap-2">
+                      {/* Enter sends; Shift+Enter starts a new line. Grows with the text. */}
+                      <Textarea
                         ref={inputRef}
+                        rows={1}
                         placeholder={me?.supportDisplayName ? `Reply as ${me.supportDisplayName}` : "Type a reply"}
-                        className="border-white/10 bg-background/70"
+                        className="max-h-40 min-h-[40px] resize-none border-white/10 bg-background/70 py-2"
                         value={messageText}
                         maxLength={2000}
                         onChange={(e) => setMessageText(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) handleSend()
+                          // isComposing: Enter that confirms an IME suggestion is not "send".
+                          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                            e.preventDefault()
+                            handleSend()
+                          }
                           if (e.key === "Escape") cancelDraftMode()
                         }}
                       />
@@ -1068,7 +1082,8 @@ function SupportInbox() {
                     </div>
                     {me?.supportDisplayName && (
                       <p className="mt-2 text-xs text-muted-foreground">
-                        The user sees this as "{me.supportDisplayName} · Huza Support".
+                        The user sees this as "{me.supportDisplayName} · Huza Support". Enter to send, Shift+Enter for a
+                        new line.
                       </p>
                     )}
                   </>
