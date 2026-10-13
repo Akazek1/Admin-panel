@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
+import { LinkifiedText } from "@/components/admin/linkified-text"
 import { formatDate } from "@/lib/utils"
 import { cn, isSelectingTextIn } from "@/lib/utils"
-import { Archive, BriefcaseBusiness, Clock3, Loader2, Lock, MapPin, MessageSquare, RotateCcw, Search, Send, ShieldAlert, UserRound } from "lucide-react"
+import { Archive, BriefcaseBusiness, Clock3, Link2, Loader2, Lock, MapPin, MessageSquare, RotateCcw, Search, Send, ShieldAlert, UserRound } from "lucide-react"
 
 interface Participant {
   id: string
@@ -35,6 +36,8 @@ interface ConversationSummary {
   address?: { city: string; district?: string | null; sector?: string | null } | null
   messages: { content: string; createdAt: string }[]
   _count: { messages: number }
+  /** Messages in this chat that contain a link (absent on older backends). */
+  linkMessageCount?: number
   updatedAt: string
 }
 
@@ -43,6 +46,8 @@ interface Message {
   content: string
   senderId: string
   createdAt: string
+  /** Set by the backend when the message contains a link. */
+  hasLink?: boolean
   sender: Participant & { roles: string[] }
 }
 
@@ -330,6 +335,12 @@ export default function ConversationsPage() {
                         {(c.service?.category || c.job?.category) && (
                           <Badge variant="outline" className="border-white/10 bg-background/40 text-[10px]">{categoryName(c)}</Badge>
                         )}
+                        {!!c.linkMessageCount && (
+                          <Badge variant="outline" className="gap-1 border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-200">
+                            <Link2 className="h-3 w-3" />
+                            {c.linkMessageCount} {c.linkMessageCount === 1 ? "link" : "links"}
+                          </Badge>
+                        )}
                       </div>
                       <p className="mt-2 truncate text-xs font-medium text-foreground/80">{bookingTitle(c)}</p>
                       {c.messages[0] && (
@@ -462,15 +473,16 @@ export default function ConversationsPage() {
                           {isAdminMsg ? (
                             <div className="flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-sm">
                               <ShieldAlert className="h-4 w-4 shrink-0 text-amber-300" />
-                              <span className="font-medium text-amber-100">[Support] {msg.content}</span>
+                              <span className="font-medium text-amber-100">[Support] <LinkifiedText text={msg.content} /></span>
                             </div>
                           ) : (
                             <div className={cn("rounded-xl px-3 py-2 text-sm", isEmployer ? "bg-emerald-600 text-white" : "bg-background/70 text-foreground")}>
-                              <p>{msg.content}</p>
+                              <p><LinkifiedText text={msg.content} onColor={isEmployer} /></p>
                             </div>
                           )}
                           <p className={cn("mt-1 text-xs text-muted-foreground", isEmployer && "text-right")}>
                             {senderName} · {formatDate(msg.createdAt)}
+                            {msg.hasLink && " · contains a link"}
                           </p>
                         </div>
                         {isEmployer && (

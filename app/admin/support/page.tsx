@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { LinkifiedText } from "@/components/admin/linkified-text"
 import { toast } from "@/components/ui/use-toast"
 import { cn, formatDate, isSelectingTextIn } from "@/lib/utils"
 import { Check, CheckCheck, CheckCircle2, ExternalLink, Headset, Loader2, Pencil, Reply, RotateCcw, Search, Send, Settings, ShieldAlert, SmilePlus, StickyNote, Trash2, X } from "lucide-react"
@@ -976,7 +977,7 @@ function SupportInbox() {
                                   </p>
                                 </div>
                               )}
-                              {deleted ? "Message deleted" : msg.content}
+                              {deleted ? "Message deleted" : <LinkifiedText text={msg.content} onColor={!fromUser} />}
                             </div>
                             {Object.keys(reactionCounts).length > 0 && (
                               <div className={cn("mt-1 flex flex-wrap gap-1", !fromUser && "justify-end")}>
