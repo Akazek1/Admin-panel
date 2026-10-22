@@ -713,7 +713,14 @@ export default function UserDetailPage() {
         <StatTile
           icon={Clock}
           label="Last active"
-          value={lastActiveAt ? compactDate(lastActiveAt) : "Not tracked yet"}
+          value={
+            <>
+              {lastActiveAt ? compactDate(lastActiveAt) : "Not tracked yet"}
+              <span className="block text-xs font-normal text-muted-foreground">
+                Last login {user.lastLoginAt ? compactDate(user.lastLoginAt) : "never"}
+              </span>
+            </>
+          }
           tone="default"
         />
       </div>
