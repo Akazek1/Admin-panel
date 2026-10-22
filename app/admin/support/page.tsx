@@ -73,6 +73,7 @@ interface ThreadDetail {
     isBanned: boolean
     createdAt: string
     lastLoginAt: string | null
+    lastActiveAt: string | null
   }
   note: ThreadNote | null
   messages: ThreadMessage[]
@@ -1124,6 +1125,12 @@ function SupportInbox() {
                       <dt className="text-xs text-muted-foreground">Joined</dt>
                       <dd>{formatDate(detail.user.createdAt)}</dd>
                     </div>
+                    {detail.user.lastActiveAt && (
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Last active</dt>
+                        <dd>{formatDate(detail.user.lastActiveAt)}</dd>
+                      </div>
+                    )}
                     {detail.user.lastLoginAt && (
                       <div>
                         <dt className="text-xs text-muted-foreground">Last login</dt>

@@ -436,7 +436,7 @@ export default function DashboardPage() {
           <KpiCard title="Total Individuals" value={formatNumber(totalUsers)} description="All registered users" icon={Users} tone="green" href="/admin/users" />
           <KpiCard title="Active Providers" value={formatNumber(totalProviders)} description={`${totalUsers ? Math.round((totalProviders / totalUsers) * 100) : 0}% of individuals`} icon={ShieldCheck} tone="blue" href="/admin/users" />
           <KpiCard title="Online Now" value={formatNumber(onlineUsers)} description="Users with a live connection" icon={UserCheck} tone="green" href="/admin/users" />
-          <KpiCard title="Logged In Today" value={formatNumber(loggedInToday)} description="Distinct logins since midnight" icon={Clock3} tone="blue" href="/admin/users" />
+          <KpiCard title="Active Today" value={formatNumber(loggedInToday)} description="Users active since midnight" icon={Clock3} tone="blue" href="/admin/users" />
           <KpiCard title="Agencies" value={formatNumber(agencyCount)} description="Registered agencies" icon={Building2} tone="purple" href="/admin/agencies" />
           <KpiCard title="Companies" value={formatNumber(companyCount)} description="Registered companies" icon={BriefcaseBusiness} tone="blue" href="/admin/companies" />
           <KpiCard title="Active Bookings" value={formatNumber(activeBookings)} description="Currently in progress" icon={CalendarCheck} tone="green" href="/admin/active-bookings" />
