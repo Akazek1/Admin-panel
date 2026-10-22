@@ -9,7 +9,6 @@ import {
   ArrowUpDown,
   Ban,
   CheckCircle2,
-  Columns3,
   Eye,
   Flag,
   Loader2,
@@ -37,11 +36,26 @@ import {
 import { getAllUsers, getOnlineUserIds, User } from "@/lib/api"
 import { CopyableText } from "@/components/admin/copyable-text"
 import { CreateAccountDialog } from "@/components/admin/create-account-dialog"
+import { ColumnsMenu } from "@/components/admin/columns-menu"
+import { ColumnOption, useTableLayout } from "@/hooks/use-table-layout"
 import { cn } from "@/lib/utils"
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50]
 
-type SortKey = "individual" | "provider" | "verification" | "status" | "reports" | "bookings" | "lastActive" | "joined"
+type SortKey = "individual" | "provider" | "verification" | "status" | "reports" | "bookings" | "lastActive" | "lastLogin" | "joined"
+
+// Column ids double as sort keys. Order here is the default layout.
+const USER_COLUMNS: (ColumnOption & { id: SortKey })[] = [
+  { id: "individual", label: "Individual", required: true },
+  { id: "provider", label: "Provider" },
+  { id: "verification", label: "Verification" },
+  { id: "status", label: "Status" },
+  { id: "reports", label: "Reports" },
+  { id: "bookings", label: "Bookings" },
+  { id: "lastActive", label: "Last Active" },
+  { id: "lastLogin", label: "Last Login", defaultHidden: true },
+  { id: "joined", label: "Joined" },
+]
 type SortDirection = "asc" | "desc"
 
 function userName(user: User) {
@@ -127,6 +141,7 @@ function sortValue(user: User, sortKey: SortKey) {
   if (sortKey === "reports") return reportCount(user)
   if (sortKey === "bookings") return bookingCount(user)
   if (sortKey === "lastActive") return timeValue(user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt)
+  if (sortKey === "lastLogin") return timeValue(user.lastLoginAt)
   return timeValue(user.createdAt)
 }
 
@@ -187,6 +202,7 @@ export default function IndividualsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("joined")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const deferredSearchTerm = useDeferredValue(searchTerm)
+  const { layout, visibleColumns, setLayout, resetLayout, isCustomised } = useTableLayout("users", USER_COLUMNS)
 
   const { data: users, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["admin-users"],
@@ -306,6 +322,106 @@ export default function IndividualsPage() {
     setSortDirection(nextDirection)
   }
 
+  const renderCell = (columnId: SortKey, user: User) => {
+    switch (columnId) {
+      case "individual":
+        return (
+          <TableCell>
+            <div className="flex min-w-[240px] items-center gap-3">
+              <div className="relative shrink-0">
+                {user.profilePicture ? (
+                  <img src={user.profilePicture} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
+                ) : (
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-1 ring-white/10">
+                    {initials(user)}
+                  </div>
+                )}
+                {onlineIds.has(user.id) && (
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500"
+                    title="Online now"
+                  />
+                )}
+              </div>
+              <div className="min-w-0">
+                <CopyableText
+                  value={userName(user)}
+                  label="Name"
+                  className="flex text-sm font-medium text-foreground"
+                />
+                {user.phoneNumber || user.email ? (
+                  <CopyableText
+                    value={(user.phoneNumber || user.email) as string}
+                    label={user.phoneNumber ? "Phone number" : "Email"}
+                    className="text-xs text-muted-foreground"
+                  />
+                ) : (
+                  <p className="truncate text-xs text-muted-foreground">{user.id}</p>
+                )}
+              </div>
+            </div>
+          </TableCell>
+        )
+      case "provider":
+        return (
+          <TableCell>
+            <Badge variant={isProvider(user) ? "default" : "secondary"} className={isProvider(user) ? "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/15" : ""}>
+              {isProvider(user) ? "Yes" : "No"}
+            </Badge>
+          </TableCell>
+        )
+      case "verification":
+        return (
+          <TableCell>
+            <Badge variant="outline" className={isVerified(user) ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : "border-amber-500/20 bg-amber-500/10 text-amber-300"}>
+              {isVerified(user) ? "Verified" : "Pending"}
+            </Badge>
+          </TableCell>
+        )
+      case "status":
+        return (
+          <TableCell>
+            <Badge variant={user.isBanned ? "destructive" : "outline"} className={!user.isBanned ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : ""}>
+              {user.isBanned ? "Banned" : "Active"}
+            </Badge>
+          </TableCell>
+        )
+      case "reports": {
+        const reports = reportCount(user)
+        return <TableCell className={reports > 0 ? "font-medium text-red-400" : "text-emerald-400"}>{reports}</TableCell>
+      }
+      case "bookings":
+        return <TableCell className="font-medium text-emerald-400">{bookingCount(user)}</TableCell>
+      case "lastActive":
+        return (
+          <TableCell>
+            {onlineIds.has(user.id) ? (
+              <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
+                Online now
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+                {relativeTime(user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt)}
+              </span>
+            )}
+          </TableCell>
+        )
+      case "lastLogin":
+        return (
+          <TableCell className="text-sm text-muted-foreground" title={user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : undefined}>
+            {user.lastLoginAt ? relativeTime(user.lastLoginAt) : "Never"}
+          </TableCell>
+        )
+      case "joined":
+        return <TableCell className="text-sm text-muted-foreground">{formatShortDate(user.createdAt)}</TableCell>
+    }
+  }
+
   const firstItem = sortedUsers.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
   const lastItem = Math.min(currentPage * pageSize, sortedUsers.length)
 
@@ -410,10 +526,7 @@ export default function IndividualsPage() {
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="outline" className="border-white/10 bg-background/60">
-                <Columns3 className="mr-2 h-4 w-4" />
-                Columns
-              </Button>
+              <ColumnsMenu layout={layout} onChange={setLayout} onReset={resetLayout} isCustomised={isCustomised} />
               <Select value={`${sortKey}:${sortDirection}`} onValueChange={handleSortSelect}>
                 <SelectTrigger className="h-9 w-[210px] border-white/10 bg-background/60">
                   <SelectValue />
@@ -422,6 +535,7 @@ export default function IndividualsPage() {
                   <SelectItem value="joined:desc">Sort by: Joined newest</SelectItem>
                   <SelectItem value="joined:asc">Sort by: Joined oldest</SelectItem>
                   <SelectItem value="lastActive:desc">Sort by: Last active</SelectItem>
+                  <SelectItem value="lastLogin:desc">Sort by: Last login</SelectItem>
                   <SelectItem value="individual:asc">Sort by: Name A-Z</SelectItem>
                   <SelectItem value="individual:desc">Sort by: Name Z-A</SelectItem>
                   <SelectItem value="reports:desc">Sort by: Most reports</SelectItem>
@@ -453,39 +567,16 @@ export default function IndividualsPage() {
                   <TableHead className="w-10">
                     <span className="sr-only">Select</span>
                   </TableHead>
-                  <TableHead>
-                    <SortableHead label="Individual" sortKey="individual" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Provider" sortKey="provider" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Verification" sortKey="verification" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Status" sortKey="status" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Reports" sortKey="reports" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Bookings" sortKey="bookings" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Last Active" sortKey="lastActive" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Joined" sortKey="joined" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
+                  {visibleColumns.map((column) => (
+                    <TableHead key={column.id}>
+                      <SortableHead label={column.label} sortKey={column.id as SortKey} activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
+                    </TableHead>
+                  ))}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {visibleUsers.map((user) => {
-                  const reports = reportCount(user)
-                  const bookings = bookingCount(user)
-                  const lastActive = user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt
-
                   return (
                     <TableRow
                       key={user.id}
@@ -499,75 +590,9 @@ export default function IndividualsPage() {
                           aria-label={`Select ${userName(user)}`}
                         />
                       </TableCell>
-                      <TableCell>
-                        <div className="flex min-w-[240px] items-center gap-3">
-                          <div className="relative shrink-0">
-                            {user.profilePicture ? (
-                              <img src={user.profilePicture} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
-                            ) : (
-                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-1 ring-white/10">
-                                {initials(user)}
-                              </div>
-                            )}
-                            {onlineIds.has(user.id) && (
-                              <span
-                                className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500"
-                                title="Online now"
-                              />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <CopyableText
-                              value={userName(user)}
-                              label="Name"
-                              className="flex text-sm font-medium text-foreground"
-                            />
-                            {user.phoneNumber || user.email ? (
-                              <CopyableText
-                                value={(user.phoneNumber || user.email) as string}
-                                label={user.phoneNumber ? "Phone number" : "Email"}
-                                className="text-xs text-muted-foreground"
-                              />
-                            ) : (
-                              <p className="truncate text-xs text-muted-foreground">{user.id}</p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={isProvider(user) ? "default" : "secondary"} className={isProvider(user) ? "bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/15" : ""}>
-                          {isProvider(user) ? "Yes" : "No"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={isVerified(user) ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : "border-amber-500/20 bg-amber-500/10 text-amber-300"}>
-                          {isVerified(user) ? "Verified" : "Pending"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.isBanned ? "destructive" : "outline"} className={!user.isBanned ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : ""}>
-                          {user.isBanned ? "Banned" : "Active"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={reports > 0 ? "font-medium text-red-400" : "text-emerald-400"}>{reports}</TableCell>
-                      <TableCell className="font-medium text-emerald-400">{bookings}</TableCell>
-                      <TableCell>
-                        {onlineIds.has(user.id) ? (
-                          <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-400">
-                            <span className="relative flex h-2 w-2">
-                              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-                            </span>
-                            Online now
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-                            {relativeTime(lastActive)}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatShortDate(user.createdAt)}</TableCell>
+                      {visibleColumns.map((column) => (
+                        <React.Fragment key={column.id}>{renderCell(column.id as SortKey, user)}</React.Fragment>
+                      ))}
                       <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
                         <div className="flex justify-end gap-1">
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => router.push(`/admin/users/${user.id}`)}>
