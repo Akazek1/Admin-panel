@@ -48,10 +48,24 @@ import { toast } from "@/components/ui/use-toast"
 import { CopyableText } from "@/components/admin/copyable-text"
 import { CreateAccountDialog } from "@/components/admin/create-account-dialog"
 import { cn } from "@/lib/utils"
+import { ColumnsMenu } from "@/components/admin/columns-menu"
+import { ColumnOption, useTableLayout } from "@/hooks/use-table-layout"
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50]
 
-type SortKey = "company" | "verification" | "status" | "reports" | "bookings" | "lastActive" | "joined"
+type SortKey = "company" | "verification" | "status" | "reports" | "bookings" | "lastActive" | "lastLogin" | "joined"
+
+// Column ids double as sort keys. Order here is the default layout.
+const COMPANY_COLUMNS: (ColumnOption & { id: SortKey })[] = [
+  { id: "company", label: "Company", required: true },
+  { id: "verification", label: "Verification" },
+  { id: "status", label: "Status" },
+  { id: "reports", label: "Reports" },
+  { id: "bookings", label: "Bookings" },
+  { id: "lastActive", label: "Last Active" },
+  { id: "lastLogin", label: "Last Login", defaultHidden: true },
+  { id: "joined", label: "Joined" },
+]
 type SortDirection = "asc" | "desc"
 
 function companyName(user: User) {
@@ -114,6 +128,7 @@ function sortValue(user: User, sortKey: SortKey) {
   if (sortKey === "reports") return reportCount(user)
   if (sortKey === "bookings") return bookingCount(user)
   if (sortKey === "lastActive") return timeValue(user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt)
+  if (sortKey === "lastLogin") return timeValue(user.lastLoginAt)
   return timeValue(user.createdAt)
 }
 
@@ -168,6 +183,7 @@ export default function CompaniesPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const [createOpen, setCreateOpen] = useState(false)
   const deferredSearchTerm = useDeferredValue(searchTerm)
+  const { layout, visibleColumns, setLayout, resetLayout, isCustomised } = useTableLayout("companies", COMPANY_COLUMNS)
 
   // Same query key as the Individuals page — companies and individuals are
   // both just `accountType`-filtered views over one users list, so this reuses
@@ -281,6 +297,97 @@ export default function CompaniesPage() {
     setSortDirection(nextDirection)
   }
 
+  const renderCell = (columnId: SortKey, user: User) => {
+    switch (columnId) {
+      case "company":
+        return (
+          <TableCell>
+            <div className="flex min-w-[240px] items-center gap-3">
+              {user.company?.logoUrl || user.profilePicture ? (
+                <img src={user.company?.logoUrl || user.profilePicture || ""} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-1 ring-white/10">
+                  {initials(user)}
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">{companyName(user)}</p>
+                {user.phoneNumber || user.email ? (
+                  <CopyableText
+                    value={(user.phoneNumber || user.email) as string}
+                    label={user.phoneNumber ? "Phone number" : "Email"}
+                    className="text-xs text-muted-foreground"
+                  />
+                ) : (
+                  <p className="truncate text-xs text-muted-foreground">{user.id}</p>
+                )}
+              </div>
+            </div>
+          </TableCell>
+        )
+      case "verification": {
+        const verified = isVerified(user)
+        const togglePending = verifyMutation.isPending || unverifyMutation.isPending
+        return (
+          <TableCell onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              disabled={!user.company?.id || togglePending}
+              onClick={() => {
+                if (!user.company?.id) return
+                if (verified) unverifyMutation.mutate(user.company.id)
+                else verifyMutation.mutate(user.company.id)
+              }}
+              title={verified ? "Click to unverify" : "Click to verify"}
+            >
+              <Badge
+                variant="outline"
+                className={cn(
+                  "cursor-pointer",
+                  verified ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : "border-amber-500/20 bg-amber-500/10 text-amber-300",
+                  togglePending && "opacity-50"
+                )}
+              >
+                {verified ? "Verified" : "Pending"}
+              </Badge>
+            </button>
+          </TableCell>
+        )
+      }
+      case "status":
+        return (
+          <TableCell>
+            <Badge variant={user.isBanned ? "destructive" : "outline"} className={!user.isBanned ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : ""}>
+              {user.isBanned ? "Banned" : "Active"}
+            </Badge>
+          </TableCell>
+        )
+      case "reports": {
+        const reports = reportCount(user)
+        return <TableCell className={reports > 0 ? "font-medium text-red-400" : "text-emerald-400"}>{reports}</TableCell>
+      }
+      case "bookings":
+        return <TableCell className="font-medium text-emerald-400">{bookingCount(user)}</TableCell>
+      case "lastActive":
+        return (
+          <TableCell>
+            <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
+              {relativeTime(user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt)}
+            </span>
+          </TableCell>
+        )
+      case "lastLogin":
+        return (
+          <TableCell className="text-sm text-muted-foreground" title={user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : undefined}>
+            {user.lastLoginAt ? relativeTime(user.lastLoginAt) : "Never"}
+          </TableCell>
+        )
+      case "joined":
+        return <TableCell className="text-sm text-muted-foreground">{formatShortDate(user.createdAt)}</TableCell>
+    }
+  }
+
   const firstItem = sortedUsers.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
   const lastItem = Math.min(currentPage * pageSize, sortedUsers.length)
 
@@ -358,6 +465,7 @@ export default function CompaniesPage() {
               </Button>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <ColumnsMenu layout={layout} onChange={setLayout} onReset={resetLayout} isCustomised={isCustomised} />
               <Select value={`${sortKey}:${sortDirection}`} onValueChange={handleSortSelect}>
                 <SelectTrigger className="h-9 w-[210px] border-white/10 bg-background/60">
                   <SelectValue />
@@ -366,6 +474,7 @@ export default function CompaniesPage() {
                   <SelectItem value="joined:desc">Sort by: Joined newest</SelectItem>
                   <SelectItem value="joined:asc">Sort by: Joined oldest</SelectItem>
                   <SelectItem value="lastActive:desc">Sort by: Last active</SelectItem>
+                  <SelectItem value="lastLogin:desc">Sort by: Last login</SelectItem>
                   <SelectItem value="company:asc">Sort by: Name A-Z</SelectItem>
                   <SelectItem value="company:desc">Sort by: Name Z-A</SelectItem>
                   <SelectItem value="reports:desc">Sort by: Most reports</SelectItem>
@@ -397,103 +506,24 @@ export default function CompaniesPage() {
                   <TableHead className="w-10">
                     <span className="sr-only">Select</span>
                   </TableHead>
-                  <TableHead>
-                    <SortableHead label="Company" sortKey="company" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Verification" sortKey="verification" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Status" sortKey="status" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Reports" sortKey="reports" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Bookings" sortKey="bookings" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Last Active" sortKey="lastActive" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
-                  <TableHead>
-                    <SortableHead label="Joined" sortKey="joined" activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                  </TableHead>
+                  {visibleColumns.map((column) => (
+                    <TableHead key={column.id}>
+                      <SortableHead label={column.label} sortKey={column.id as SortKey} activeSortKey={sortKey} direction={sortDirection} onSort={handleSort} />
+                    </TableHead>
+                  ))}
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {visibleUsers.map((user) => {
-                  const reports = reportCount(user)
-                  const bookings = bookingCount(user)
-                  const lastActive = user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt
-                  const verified = isVerified(user)
-                  const togglePending = verifyMutation.isPending || unverifyMutation.isPending
-
                   return (
                     <TableRow key={user.id} className="cursor-pointer border-white/5 hover:bg-white/[0.03]" onClick={() => router.push(`/admin/companies/${user.company?.id ?? user.id}`)}>
                       <TableCell onClick={(event) => event.stopPropagation()}>
                         <Checkbox checked={selectedIds.includes(user.id)} onCheckedChange={(value) => toggleUser(user.id, !!value)} aria-label={`Select ${companyName(user)}`} />
                       </TableCell>
-                      <TableCell>
-                        <div className="flex min-w-[240px] items-center gap-3">
-                          {user.company?.logoUrl || user.profilePicture ? (
-                            <img src={user.company?.logoUrl || user.profilePicture || ""} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-white/10" />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground ring-1 ring-white/10">
-                              {initials(user)}
-                            </div>
-                          )}
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-foreground">{companyName(user)}</p>
-                            {user.phoneNumber || user.email ? (
-                              <CopyableText
-                                value={(user.phoneNumber || user.email) as string}
-                                label={user.phoneNumber ? "Phone number" : "Email"}
-                                className="text-xs text-muted-foreground"
-                              />
-                            ) : (
-                              <p className="truncate text-xs text-muted-foreground">{user.id}</p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell onClick={(event) => event.stopPropagation()}>
-                        <button
-                          type="button"
-                          disabled={!user.company?.id || togglePending}
-                          onClick={() => {
-                            if (!user.company?.id) return
-                            if (verified) unverifyMutation.mutate(user.company.id)
-                            else verifyMutation.mutate(user.company.id)
-                          }}
-                          title={verified ? "Click to unverify" : "Click to verify"}
-                        >
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "cursor-pointer",
-                              verified ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : "border-amber-500/20 bg-amber-500/10 text-amber-300",
-                              togglePending && "opacity-50"
-                            )}
-                          >
-                            {verified ? "Verified" : "Pending"}
-                          </Badge>
-                        </button>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={user.isBanned ? "destructive" : "outline"} className={!user.isBanned ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : ""}>
-                          {user.isBanned ? "Banned" : "Active"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={reports > 0 ? "font-medium text-red-400" : "text-emerald-400"}>{reports}</TableCell>
-                      <TableCell className="font-medium text-emerald-400">{bookings}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-                          <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-                          {relativeTime(lastActive)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatShortDate(user.createdAt)}</TableCell>
+                      {visibleColumns.map((column) => (
+                        <React.Fragment key={column.id}>{renderCell(column.id as SortKey, user)}</React.Fragment>
+                      ))}
                       <TableCell className="text-right" onClick={(event) => event.stopPropagation()}>
                         <div className="flex justify-end gap-1">
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => router.push(`/admin/companies/${user.company?.id ?? user.id}`)}>

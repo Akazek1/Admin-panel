@@ -674,3 +674,19 @@ export async function getPendingApprovals(): Promise<any[]> {
 export async function adminAcceptTerms(userId: string): Promise<void> {
   await axiosInstance.post(`/admin/users/${userId}/accept-terms`);
 }
+
+// The signed-in admin's own UI settings (e.g. "table:users" column layout),
+// stored on their account so they follow them across devices.
+export type AdminPreferences = Record<string, unknown>;
+
+export async function getAdminPreferences(): Promise<AdminPreferences> {
+  const response = await axiosInstance.get("/admin/me/preferences");
+  const body = response.data?.data ?? response.data;
+  return body && typeof body === "object" && !Array.isArray(body) ? body : {};
+}
+
+export async function setAdminPreference(key: string, value: unknown): Promise<AdminPreferences> {
+  const response = await axiosInstance.put(`/admin/me/preferences/${encodeURIComponent(key)}`, { value });
+  const body = response.data?.data ?? response.data;
+  return body && typeof body === "object" && !Array.isArray(body) ? body : {};
+}
