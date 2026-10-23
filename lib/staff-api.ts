@@ -42,6 +42,8 @@ export interface StaffMember {
   isBanned: boolean
   lastActiveAt: string | null
   adminMustChangePassword: boolean
+  // Owner-granted permissions on top of the role (grants only).
+  adminExtraPermissions: string[]
   createdAt: string
   adminRole: { id: string; name: string; color: string } | null
 }
@@ -70,6 +72,8 @@ export const addStaff = async (input: { userId: string; roleId: string; email?: 
 export const setStaffRole = async (id: string, roleId: string) => {
   await axiosInstance.patch(`/admin/staff/${id}/role`, { roleId })
 }
+export const setStaffExtras = async (id: string, permissions: string[]) =>
+  unwrap<{ permissions: string[] }>(await axiosInstance.put(`/admin/staff/${id}/extra-permissions`, { permissions }))
 export const resetStaffPassword = async (id: string, email?: string) =>
   unwrap<{ email: string; temporaryPassword: string }>(
     await axiosInstance.post(`/admin/staff/${id}/reset-password`, email ? { email } : {}),

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Copy, KeyRound, Loader2, Plus, Search, Trash2, UserCog } from "lucide-react"
+import { AlertTriangle, Copy, KeyRound, Loader2, Plus, Search, SlidersHorizontal, Trash2, UserCog } from "lucide-react"
 import { AdminPageHeader, EmptyState } from "@/components/admin/admin-primitives"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from "@/components/ui/use-toast"
 import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
@@ -20,11 +21,14 @@ import { getAllUsers, type User } from "@/lib/api"
 import {
   addStaff,
   apiError,
+  getPermissionCatalog,
   getRoles,
   getStaff,
   removeStaff,
   resetStaffPassword,
+  setStaffExtras,
   setStaffRole,
+  type AdminRole,
   type StaffMember,
 } from "@/lib/staff-api"
 
@@ -38,6 +42,7 @@ export default function StaffPage() {
   const { data: roles } = useQuery({ queryKey: ["admin-roles"], queryFn: getRoles })
 
   const [addOpen, setAddOpen] = useState(false)
+  const [extrasFor, setExtrasFor] = useState<StaffMember | null>(null)
   // A temporary password is shown exactly once, right after it is issued.
   const [issued, setIssued] = useState<{ name: string; email: string; password: string } | null>(null)
 
@@ -149,12 +154,20 @@ export default function StaffPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                          {m.adminExtraPermissions.length ? (
+                            <Badge variant="outline" className="mt-1.5 border-amber-500/40 text-amber-300">
+                              +{m.adminExtraPermissions.length} extra
+                            </Badge>
+                          ) : null}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {m.lastActiveAt ? formatDate(m.lastActiveAt) : "Never"}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => setExtrasFor(m)}>
+                              <SlidersHorizontal className="mr-1.5 h-4 w-4" /> Extras
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -196,6 +209,16 @@ export default function StaffPage() {
           </Card>
         )}
       </div>
+
+      <ExtrasDialog
+        member={extrasFor}
+        role={roles?.find((r) => r.id === extrasFor?.adminRole?.id) ?? null}
+        onClose={() => setExtrasFor(null)}
+        onSaved={() => {
+          setExtrasFor(null)
+          refresh()
+        }}
+      />
 
       <AddStaffDialog
         open={addOpen}
@@ -380,6 +403,102 @@ function AddStaffDialog({
           <Button disabled={!user || !roleId || !email.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
             {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Add and issue password
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Owner-granted permissions on top of one person's role. Grants only. */
+function ExtrasDialog({
+  member,
+  role,
+  onClose,
+  onSaved,
+}: {
+  member: StaffMember | null
+  role: AdminRole | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const { data: catalog } = useQuery({ queryKey: ["admin-permission-catalog"], queryFn: getPermissionCatalog, staleTime: Infinity })
+  const [extras, setExtras] = useState<string[]>([])
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  if (member && loadedFor !== member.id) {
+    setLoadedFor(member.id)
+    setExtras(member.adminExtraPermissions)
+  }
+  const fromRole = new Set(role?.permissions ?? [])
+
+  const mutation = useMutation({
+    mutationFn: () => setStaffExtras(member!.id, extras.filter((p) => !fromRole.has(p))),
+    onSuccess: () => {
+      toast({ title: "Extra permissions saved", description: "They apply on the person's next action." })
+      onSaved()
+    },
+    onError: (err) => toast({ title: "Couldn't save", description: apiError(err, "Failed."), variant: "destructive" }),
+  })
+
+  const toggle = (key: string, on: boolean) =>
+    setExtras((cur) => (on ? [...new Set([...cur, key])] : cur.filter((p) => p !== key)))
+
+  return (
+    <Dialog
+      open={!!member}
+      onOpenChange={(o) => {
+        if (!o) {
+          setLoadedFor(null)
+          onClose()
+        }
+      }}
+    >
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Extra permissions for {member ? fullName(member) : ""}</DialogTitle>
+          <DialogDescription>
+            Added on top of their role{role ? ` (${role.name})` : ""}, for this person only. Extras can only add access, never remove it.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {catalog?.groups.map((group) => (
+            <div key={group.key}>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.label}</p>
+              <div className="divide-y divide-white/5 rounded-md border border-white/10">
+                {group.permissions.map((p) => {
+                  const inRole = fromRole.has(p.key)
+                  return (
+                    <label key={p.key} htmlFor={`extra-${p.key}`} className="flex cursor-pointer items-start gap-4 px-4 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                          {p.label}
+                          {p.risk === "high" ? (
+                            <Badge variant="outline" className="gap-1 border-red-500/40 text-red-400">
+                              <AlertTriangle className="h-3 w-3" /> High risk
+                            </Badge>
+                          ) : null}
+                          {inRole ? <Badge variant="outline">In role</Badge> : null}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{p.description}</p>
+                      </div>
+                      <Switch
+                        id={`extra-${p.key}`}
+                        checked={inRole || extras.includes(p.key)}
+                        disabled={inRole}
+                        onCheckedChange={(v) => toggle(p.key, v)}
+                      />
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+            {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Save extras
           </Button>
         </DialogFooter>
       </DialogContent>
