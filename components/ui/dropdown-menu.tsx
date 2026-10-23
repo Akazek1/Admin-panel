@@ -8,19 +8,23 @@ const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, align = "start", sideOffset = 4, ...props }, ref) => (
-  <DropdownMenuPrimitive.Content
-    ref={ref}
-    className={cn(
-      "z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-      align === "center" && "translate-x-[-50%]",
-      align === "end" && "translate-x-[100%]",
-      className,
-    )}
-    align={align}
-    sideOffset={sideOffset}
-    {...props}
-  />
+>(({ className, align = "start", sideOffset = 4, collisionPadding = 8, ...props }, ref) => (
+  // Portalled so no scrolling/overflow ancestor can clip it. Radix positions
+  // and flips it to stay on screen; it must not be shifted with transforms
+  // (an old `translate-x-[100%]` for align="end" pushed menus off the window).
+  <DropdownMenuPrimitive.Portal>
+    <DropdownMenuPrimitive.Content
+      ref={ref}
+      className={cn(
+        "z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-[8rem] overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+        className,
+      )}
+      align={align}
+      sideOffset={sideOffset}
+      collisionPadding={collisionPadding}
+      {...props}
+    />
+  </DropdownMenuPrimitive.Portal>
 ))
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName
 
