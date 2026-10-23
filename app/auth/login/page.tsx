@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/card'
 import api from '@/lib/axios-instance'
 import Cookies from 'js-cookie'
+import { useQueryClient } from '@tanstack/react-query'
+import { ADMIN_ACCESS_QUERY_KEY } from '@/lib/admin-access'
 import { APP_CONFIG } from '@/constant/app.config' 
 
 export default function LoginPage() {
@@ -22,14 +24,12 @@ export default function LoginPage() {
     const [status, setStatus] = useState({ success: false, message: '' })
     const [isPending, setIsPending] = useState(false)
     const router = useRouter()
+    const queryClient = useQueryClient()
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
         setIsPending(true)
         setStatus({ success: false, message: '' })
-
-        console.log('Attempting login to:', '/auth/admin/login')
-        console.log('Payload:', { email, password })
 
         try {
             const res = await api.post(
@@ -37,9 +37,6 @@ export default function LoginPage() {
                 { email, password },
                 { withCredentials: true }
             )
-
-            console.log('Response status:', res.status)
-            console.log('Response data:', res.data)
 
             // Backend wraps responses as { data: { token, user } } via its
             // TransformInterceptor, so the token lives at res.data.data.token.
@@ -50,7 +47,6 @@ export default function LoginPage() {
                 res.data?.data?.accessToken
 
             if ((res.status === 200 || res.status === 201) && accessToken) {
-                console.log('Login success! Redirecting...')
                 // Store token in cookie for reuse
                 Cookies.set('access_token', accessToken, {
                     expires: 7, // 7 days
@@ -58,18 +54,16 @@ export default function LoginPage() {
                     sameSite: 'Lax',
                 })
 
-                router.push('/admin')
+                // Drop any access cached for a previous session, then hold
+                // owner-issued temporary passwords on the change screen.
+                queryClient.removeQueries({ queryKey: ADMIN_ACCESS_QUERY_KEY })
+                const mustChange = res.data?.data?.user?.mustChangePassword === true
+                router.push(mustChange ? '/admin/change-password' : '/admin')
             } else {
                 console.warn('Login response missing token')
                 setStatus({ success: false, message: 'Invalid credentials' })
             }
         } catch (err: any) {
-            console.error('Login Error Details:', {
-                status: err.response?.status,
-                data: err.response?.data,
-                message: err.message,
-                config: err.config
-            })
             const errorMsg = err.response?.data?.message || 'Something went wrong.'
             setStatus({ success: false, message: errorMsg })
         } finally {
@@ -106,7 +100,7 @@ export default function LoginPage() {
                             <Input
                                 id="password"
                                 type="password"
-                                placeholder="admin123"
+                                placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
@@ -123,12 +117,14 @@ export default function LoginPage() {
                             {isPending ? 'Logging in...' : 'Login'}
                         </Button>
                     </form>
-                    <div className="mt-6 text-center text-sm text-muted-foreground">
-                        <p>
-                            Demo Credentials: <strong>admin@example.com</strong> /{' '}
-                            <strong>admin123</strong>
-                        </p>
-                    </div>
+                    {process.env.NODE_ENV === 'development' && (
+                        <div className="mt-6 text-center text-sm text-muted-foreground">
+                            <p>
+                                Demo Credentials: <strong>admin@example.com</strong> /{' '}
+                                <strong>admin123</strong>
+                            </p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

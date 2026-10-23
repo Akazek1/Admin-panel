@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Loader2, RefreshCw, Search, UserCheck, UserMinus, Building2 } from "lucide-react"
 import {
@@ -89,6 +90,7 @@ export default function EnrollmentsPage() {
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-enrollments"] })
 
+  const can = useCan()
   const mutation = useMutation({
     mutationFn: async (action: PendingAction) => {
       if (action.kind === "enrollment") return endEnrollment(action.id, reason || undefined)
@@ -250,10 +252,10 @@ export default function EnrollmentsPage() {
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={mutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={!can("enrollments.manage") || mutation.isPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={(ev) => { ev.preventDefault(); if (pending) mutation.mutate(pending) }}
-              disabled={mutation.isPending}
+              disabled={!can("enrollments.manage") || mutation.isPending}
             >
               {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Confirm

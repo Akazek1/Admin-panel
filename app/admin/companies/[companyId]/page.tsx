@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -45,6 +46,7 @@ export default function CompanyDetailPage() {
     enabled: !!companyId,
   })
 
+  const can = useCan()
   const saveMutation = useMutation({
     mutationFn: () => updateOrganization(companyId, form),
     onSuccess: () => {
@@ -147,10 +149,10 @@ export default function CompanyDetailPage() {
         <div className="flex items-center gap-2">
           {editing ? (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={saveMutation.isPending}>
+              <Button variant="ghost" size="sm" onClick={() => setEditing(false)} disabled={!can("orgs.edit") || saveMutation.isPending}>
                 <X className="mr-1.5 h-4 w-4" /> Cancel
               </Button>
-              <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+              <Button size="sm" onClick={() => saveMutation.mutate()} disabled={!can("orgs.edit") || saveMutation.isPending}>
                 {saveMutation.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
                 Save
               </Button>
@@ -193,7 +195,7 @@ export default function CompanyDetailPage() {
                 size="sm"
                 className="w-full"
                 onClick={() => verifyMutation.mutate()}
-                disabled={verifyMutation.isPending}
+                disabled={!can("orgs.verify") || verifyMutation.isPending}
               >
                 {verifyMutation.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
                 <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
@@ -242,7 +244,7 @@ export default function CompanyDetailPage() {
               <CardTitle className="text-sm font-semibold text-red-400 uppercase tracking-wide">Danger zone</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" size="sm" className="w-full border-white/10" onClick={() => resetPassMutation.mutate()} disabled={resetPassMutation.isPending}>
+              <Button variant="outline" size="sm" className="w-full border-white/10" onClick={() => resetPassMutation.mutate()} disabled={!can("orgs.reset_password") || resetPassMutation.isPending}>
                 {resetPassMutation.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
                 Reset password
               </Button>
@@ -390,7 +392,7 @@ export default function CompanyDetailPage() {
             <Button variant="ghost" onClick={() => setDeleteOpen(false)}>Cancel</Button>
             <Button
               variant="destructive"
-              disabled={deleteConfirm !== org.name || deleteMutation.isPending}
+              disabled={!can("orgs.delete") || deleteConfirm !== org.name || deleteMutation.isPending}
               onClick={() => deleteMutation.mutate()}
             >
               {deleteMutation.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}

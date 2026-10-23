@@ -10,9 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { getSignupAttempts, clearOtp, type SignupAttempt, type OtpSend } from "@/lib/api"
+import { getSignupAttempts, getSignupFunnel, clearOtp, revealSignupCode, type SignupAttempt, type OtpSend } from "@/lib/api"
+import { hasPermission, useAdminAccess } from "@/lib/admin-access"
 import { cn } from "@/lib/utils"
-import { Loader2, Search, AlertTriangle, Lock, Clock, CheckCircle2, ExternalLink, ArrowUp, ArrowDown, Trash2, ChevronDown, ChevronUp } from "lucide-react"
+import { Loader2, Search, AlertTriangle, Lock, Clock, CheckCircle2, ExternalLink, ArrowUp, ArrowDown, Trash2, ChevronDown, ChevronUp, Eye } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import { toast } from "@/components/ui/use-toast"
 
@@ -107,6 +108,20 @@ export default function SignupAttemptsPage() {
   const [expanded, setExpanded] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
+  const { data: access } = useAdminAccess()
+  const canList = hasPermission(access, "signup_attempts.view")
+  const canReveal = hasPermission(access, "signup_attempts.reveal_code")
+  const canClear = hasPermission(access, "users.reset_credentials")
+  const canOpenProfile = hasPermission(access, "users.view")
+  // Revealed codes stay on screen only until the page is left.
+  const [revealed, setRevealed] = useState<Record<string, string>>({})
+
+  const revealMutation = useMutation({
+    mutationFn: revealSignupCode,
+    onSuccess: (r, phone) => setRevealed((m) => ({ ...m, [phone]: r.code })),
+    onError: (err: any) =>
+      toast({ title: "Couldn't reveal the code", description: err.response?.data?.message, variant: "destructive" }),
+  })
 
   const toggleSort = (key: SortKey) =>
     setSort((s) =>
@@ -119,6 +134,7 @@ export default function SignupAttemptsPage() {
   const { data: attempts = [], isLoading, isError, refetch, isFetching } = useQuery<SignupAttempt[]>({
     queryKey: ["signup-attempts"],
     queryFn: getSignupAttempts,
+    enabled: canList,
   })
 
   const clearMutation = useMutation({
@@ -186,6 +202,8 @@ export default function SignupAttemptsPage() {
         return new Date(b.lastTriedAt ?? 0).getTime() - new Date(a.lastTriedAt ?? 0).getTime()
       })
   }, [attempts, search, showRegistered, sort])
+
+  if (access && !canList) return <FunnelOnly />
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -256,7 +274,7 @@ export default function SignupAttemptsPage() {
                   <TableHead>Purpose</TableHead>
                   <SortableHead label="Status" sortKey="status" sort={sort} onSort={toggleSort} />
                   <SortableHead label="Codes sent" sortKey="codesSent" sort={sort} onSort={toggleSort} />
-                  <TableHead>Last code</TableHead>
+                  <TableHead>Code</TableHead>
                   <TableHead>Last SMS</TableHead>
                   <SortableHead label="Last tried" sortKey="lastTriedAt" sort={sort} onSort={toggleSort} />
                   <TableHead className="text-right"> </TableHead>
@@ -287,9 +305,27 @@ export default function SignupAttemptsPage() {
                     <TableCell>{statusBadge(a)}</TableCell>
                     <TableCell className="text-sm">{a.codesSent}</TableCell>
                     <TableCell className="font-mono text-sm">
-                      {a.lastCode
-                        ? <span className="tracking-widest">{a.lastCode}</span>
-                        : <span className="text-muted-foreground">—</span>}
+                      {revealed[a.phoneNumber] ? (
+                        <span className="tracking-widest">{revealed[a.phoneNumber]}</span>
+                      ) : a.hasLiveCode && canReveal && !isMasked(a.phoneNumber) ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7"
+                          disabled={revealMutation.isPending}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            revealMutation.mutate(a.phoneNumber)
+                          }}
+                          title="Reveal the live code. This is recorded in the audit log."
+                        >
+                          <Eye className="mr-1.5 h-3.5 w-3.5" /> Reveal
+                        </Button>
+                      ) : a.hasLiveCode ? (
+                        <span className="text-xs text-muted-foreground">live</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs">
                       {a.lastSmsStatus ? (
@@ -316,19 +352,22 @@ export default function SignupAttemptsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {a.userId && (
+                        {a.userId && canOpenProfile && (
                           <Button asChild variant="outline" size="sm">
                             <Link href={`/admin/users/${a.userId}`}>
                               <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Profile
                             </Link>
                           </Button>
                         )}
-                        {a.status !== "registered" && (
+                        {a.status !== "registered" && canClear && !isMasked(a.phoneNumber) && (
                           <Button
                             variant={clearing === a.phoneNumber ? "destructive" : "outline"}
                             size="sm"
                             disabled={clearMutation.isPending}
-                            onClick={() => handleClear(a.phoneNumber)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleClear(a.phoneNumber)
+                            }}
                             title="Clear OTP lockout so user can request a fresh code"
                           >
                             {clearMutation.isPending && clearing === a.phoneNumber
@@ -356,6 +395,38 @@ export default function SignupAttemptsPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+// A phone the API masked (caller lacks "View contact details") can't be acted on.
+const isMasked = (phone: string) => phone.includes("•")
+
+/** For roles with `funnel.view` but not the per-phone list: totals only. */
+function FunnelOnly() {
+  const { data, isLoading } = useQuery({ queryKey: ["signup-funnel"], queryFn: getSignupFunnel })
+  const pct = (n: number) => `${Math.round(n * 100)}%`
+  return (
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Signup Funnel</h1>
+        <p className="text-sm text-muted-foreground mt-1">How many people who requested a code went on to create an account.</p>
+      </div>
+      {isLoading || !data ? (
+        <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : (
+        ([["Last 30 days", data.last30Days], ["All time", data.allTime]] as const).map(([label, t]) => (
+          <div key={label} className="space-y-2">
+            <p className="text-sm font-semibold text-muted-foreground">{label}</p>
+            <div className="grid gap-4 sm:grid-cols-4">
+              <Card><CardContent className="p-4"><p className="text-2xl font-bold">{t.total}</p><p className="text-xs text-muted-foreground">Requested a code</p></CardContent></Card>
+              <Card><CardContent className="p-4"><p className="text-2xl font-bold text-green-500">{t.registered}</p><p className="text-xs text-muted-foreground">Registered</p></CardContent></Card>
+              <Card><CardContent className="p-4"><p className="text-2xl font-bold text-amber-400">{t.pending + t.locked + t.failed}</p><p className="text-xs text-muted-foreground">Dropped off or still trying</p></CardContent></Card>
+              <Card><CardContent className="p-4"><p className="text-2xl font-bold">{pct(t.conversionRate)}</p><p className="text-xs text-muted-foreground">Conversion</p></CardContent></Card>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   )
 }

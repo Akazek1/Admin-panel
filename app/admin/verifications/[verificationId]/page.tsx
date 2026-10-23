@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -48,6 +49,7 @@ export default function VerificationDetailPage() {
 
   const isPending = request?.status ? request.status === "PENDING" : true
 
+  const can = useCan()
   const approveMutation = useMutation({
     mutationFn: () => approveVerification(verificationId),
     onSuccess: async () => {
@@ -259,7 +261,7 @@ export default function VerificationDetailPage() {
               <Button
                 className="w-full bg-green-600 hover:bg-green-700"
                 onClick={() => approveMutation.mutate()}
-                disabled={!isPending || approveMutation.isPending || rejectMutation.isPending}
+                disabled={!can("verifications.decide") || !isPending || approveMutation.isPending || rejectMutation.isPending}
               >
                 {approveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                 Approve ID
@@ -269,7 +271,7 @@ export default function VerificationDetailPage() {
                 value={rejectionReason}
                 onChange={(event) => setRejectionReason(event.target.value)}
                 rows={4}
-                disabled={!isPending || rejectMutation.isPending}
+                disabled={!can("verifications.decide") || !isPending || rejectMutation.isPending}
               />
               <Button
                 variant="destructive"
@@ -281,7 +283,7 @@ export default function VerificationDetailPage() {
                   }
                   rejectMutation.mutate()
                 }}
-                disabled={!isPending || approveMutation.isPending || rejectMutation.isPending}
+                disabled={!can("verifications.decide") || !isPending || approveMutation.isPending || rejectMutation.isPending}
               >
                 {rejectMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
                 Reject ID

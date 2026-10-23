@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
@@ -254,6 +255,7 @@ export default function PendingBookingsPage() {
     queryFn: () => getBookings("PENDING"),
   })
 
+  const can = useCan()
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => updateBookingStatus(id, status),
     onSuccess: () => {
@@ -356,6 +358,7 @@ export default function PendingBookingsPage() {
   }
 
   const changeStatus = (booking: Booking, status: "CONFIRMED" | "CANCELLED") => {
+    if (!can("bookings.update_status")) return
     const action = status === "CONFIRMED" ? "confirm" : "cancel"
     const ok = window.confirm(`Are you sure you want to ${action} this booking?`)
     if (!ok) return
@@ -405,7 +408,7 @@ export default function PendingBookingsPage() {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOverrideTarget(null)}>Cancel</Button>
-          <Button disabled={!overrideReason.trim() || overrideMutation.isPending} onClick={() => overrideMutation.mutate()}>
+          <Button disabled={!can("bookings.override") || !overrideReason.trim() || overrideMutation.isPending} onClick={() => overrideMutation.mutate()}>
             {overrideMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Apply Override
           </Button>
@@ -445,7 +448,7 @@ export default function PendingBookingsPage() {
               </Button>
               <Button
                 className="bg-emerald-600 hover:bg-emerald-700"
-                disabled={statusMutation.isPending}
+                disabled={!can("bookings.update_status") || statusMutation.isPending}
                 onClick={() => changeStatus(selectedBooking, "CONFIRMED")}
               >
                 <Check className="mr-2 h-4 w-4" />
@@ -554,7 +557,7 @@ export default function PendingBookingsPage() {
                 <div className="space-y-2">
                   <Button
                     className="h-10 w-full bg-emerald-600 hover:bg-emerald-700"
-                    disabled={statusMutation.isPending}
+                    disabled={!can("bookings.update_status") || statusMutation.isPending}
                     onClick={() => changeStatus(selectedBooking, "CONFIRMED")}
                   >
                     <Check className="mr-2 h-4 w-4" />
@@ -562,7 +565,7 @@ export default function PendingBookingsPage() {
                   </Button>
                   <Button
                     className="h-10 w-full border-red-500/50 bg-transparent text-red-300 hover:bg-red-500/10 hover:text-red-200"
-                    disabled={statusMutation.isPending}
+                    disabled={!can("bookings.update_status") || statusMutation.isPending}
                     variant="outline"
                     onClick={() => changeStatus(selectedBooking, "CANCELLED")}
                   >
@@ -809,8 +812,12 @@ export default function PendingBookingsPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => changeStatus(booking, "CONFIRMED")}>Confirm booking</DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-400" onClick={() => changeStatus(booking, "CANCELLED")}>Cancel booking</DropdownMenuItem>
+                                {can("bookings.update_status") && (
+                                  <>
+                                    <DropdownMenuItem onClick={() => changeStatus(booking, "CONFIRMED")}>Confirm booking</DropdownMenuItem>
+                                    <DropdownMenuItem className="text-red-400" onClick={() => changeStatus(booking, "CANCELLED")}>Cancel booking</DropdownMenuItem>
+                                  </>
+                                )}
                                 <DropdownMenuItem
                                   onClick={() => {
                                     setOverrideTarget(booking)
@@ -977,7 +984,7 @@ export default function PendingBookingsPage() {
                     <div className="space-y-2">
                       <Button
                         className="h-10 w-full bg-emerald-600 hover:bg-emerald-700"
-                        disabled={statusMutation.isPending}
+                        disabled={!can("bookings.update_status") || statusMutation.isPending}
                         onClick={() => changeStatus(selectedBooking, "CONFIRMED")}
                       >
                         <Check className="mr-2 h-4 w-4" />
@@ -985,7 +992,7 @@ export default function PendingBookingsPage() {
                       </Button>
                       <Button
                         className="h-10 w-full border-red-500/50 bg-transparent text-red-300 hover:bg-red-500/10 hover:text-red-200"
-                        disabled={statusMutation.isPending}
+                        disabled={!can("bookings.update_status") || statusMutation.isPending}
                         variant="outline"
                         onClick={() => changeStatus(selectedBooking, "CANCELLED")}
                       >

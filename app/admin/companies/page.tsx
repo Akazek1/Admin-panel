@@ -11,6 +11,7 @@
 // existing edit/ban/document/history feature already applies to it unchanged.
 
 import React, { useDeferredValue, useEffect, useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import {
@@ -194,6 +195,7 @@ export default function CompaniesPage() {
     staleTime: 5 * 60 * 1000,
   })
 
+  const can = useCan()
   const verifyMutation = useMutation({
     mutationFn: (companyId: string) => verifyOrganization(companyId),
     onSuccess: () => {
@@ -332,7 +334,7 @@ export default function CompaniesPage() {
           <TableCell onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
-              disabled={!user.company?.id || togglePending}
+              disabled={!user.company?.id || togglePending || !can(verified ? "orgs.edit" : "orgs.verify")}
               onClick={() => {
                 if (!user.company?.id) return
                 if (verified) unverifyMutation.mutate(user.company.id)
@@ -395,10 +397,12 @@ export default function CompaniesPage() {
     <div className="min-h-screen bg-[#101211] p-6">
       <div className="mx-auto max-w-[1500px] space-y-5">
         <AdminPageHeader title="Companies" description="Manage and monitor service-company provider accounts.">
-          <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => setCreateOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add company
-          </Button>
+          {can("users.create") && (
+            <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => setCreateOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add company
+            </Button>
+          )}
         </AdminPageHeader>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

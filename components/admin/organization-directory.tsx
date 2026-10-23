@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Building2, CheckCircle2, ExternalLink, Loader2, Search, ShieldCheck, Trash2, Users } from "lucide-react"
@@ -51,6 +52,7 @@ export function OrganizationDirectory({ title, singularTitle, description, type 
     queryFn: () => getOrganizations(params),
   })
 
+  const can = useCan()
   const verifyMutation = useMutation({
     mutationFn: (id: string) => verifyOrganization(id),
     onSuccess: () => {
@@ -173,12 +175,12 @@ export function OrganizationDirectory({ title, singularTitle, description, type 
 
                     <div className="flex flex-wrap gap-2">
                       {!org.verified ? (
-                        <Button size="sm" onClick={() => verifyMutation.mutate(org.id)} disabled={verifyMutation.isPending}>
+                        <Button size="sm" onClick={() => verifyMutation.mutate(org.id)} disabled={!can("orgs.verify") || verifyMutation.isPending}>
                           <CheckCircle2 className="mr-1.5 h-4 w-4" />
                           Verify
                         </Button>
                       ) : null}
-                      <Button size="sm" variant="outline" onClick={() => orgMutation.mutate({ id: org.id, data: { verified: !org.verified } })}>
+                      <Button size="sm" variant="outline" disabled={!can("orgs.edit") || orgMutation.isPending} onClick={() => orgMutation.mutate({ id: org.id, data: { verified: !org.verified } })}>
                         <ShieldCheck className="mr-1.5 h-4 w-4" />
                         {org.verified ? "Unverify" : "Mark Verified"}
                       </Button>
@@ -259,7 +261,7 @@ export function OrganizationDirectory({ title, singularTitle, description, type 
             </Button>
             <Button
               variant="destructive"
-              disabled={!deleteTarget || confirmName.trim() !== deleteTarget.name || deleteMutation.isPending}
+              disabled={!can("orgs.delete") || !deleteTarget || confirmName.trim() !== deleteTarget.name || deleteMutation.isPending}
               onClick={() => deleteTarget && deleteMutation.mutate({ id: deleteTarget.id, name: confirmName.trim() })}
             >
               {deleteMutation.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}

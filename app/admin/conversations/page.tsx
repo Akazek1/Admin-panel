@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef, useEffect } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
 import { Button } from "@/components/ui/button"
@@ -184,6 +185,7 @@ export default function ConversationsPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [detail?.messages?.length])
 
+  const can = useCan()
   const sendMutation = useMutation({
     mutationFn: (content: string) =>
       axiosInstance.post(`/admin/conversations/${selectedId}/message`, { content }),
@@ -218,7 +220,7 @@ export default function ConversationsPage() {
 
   const handleSend = () => {
     const msg = messageText.trim()
-    if (!msg || !selectedId) return
+    if (!msg || !selectedId || !can("conversations.send")) return
     sendMutation.mutate(msg)
   }
 
@@ -510,7 +512,7 @@ export default function ConversationsPage() {
                   onChange={e => setMessageText(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
                 />
-                <Button onClick={handleSend} disabled={!messageText.trim() || sendMutation.isPending}>
+                <Button onClick={handleSend} disabled={!can("conversations.send") || !messageText.trim() || sendMutation.isPending}>
                   {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
               </div>
@@ -552,7 +554,7 @@ export default function ConversationsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModerationOpen(false)}>Cancel</Button>
-            <Button onClick={() => moderationMutation.mutate()} disabled={moderationMutation.isPending || (moderationAction !== "ACTIVE" && !moderationReason.trim())}>
+            <Button onClick={() => moderationMutation.mutate()} disabled={!can("conversations.moderate") || moderationMutation.isPending || (moderationAction !== "ACTIVE" && !moderationReason.trim())}>
               {moderationMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Apply
             </Button>

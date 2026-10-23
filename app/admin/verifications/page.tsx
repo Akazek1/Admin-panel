@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
@@ -235,6 +236,7 @@ export default function VerificationsPage() {
 
   const selectedRequest = visibleRequests.find((request) => request.id === selectedId) ?? visibleRequests[0] ?? null
 
+  const can = useCan()
   const approveMutation = useMutation({
     mutationFn: (id: string) => approveVerification(id),
     onSuccess: () => {
@@ -320,7 +322,7 @@ export default function VerificationsPage() {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setIsRejectDialogOpen(false)}>Cancel</Button>
-          <Button variant="destructive" onClick={handleReject} disabled={rejectMutation.isPending}>
+          <Button variant="destructive" onClick={handleReject} disabled={!can("verifications.decide") || rejectMutation.isPending}>
             {rejectMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm Rejection
           </Button>
@@ -358,11 +360,11 @@ export default function VerificationsPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => handleQuickApprove(selectedRequest)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+              <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => handleQuickApprove(selectedRequest)} disabled={!can("verifications.decide") || approveMutation.isPending || rejectMutation.isPending}>
                 {approveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                 Approve Verification
               </Button>
-              <Button variant="outline" className="border-red-500/40 text-red-400 hover:text-red-300" onClick={() => setIsRejectDialogOpen(true)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+              <Button variant="outline" className="border-red-500/40 text-red-400 hover:text-red-300" onClick={() => setIsRejectDialogOpen(true)} disabled={!can("verifications.decide") || approveMutation.isPending || rejectMutation.isPending}>
                 <XCircle className="mr-2 h-4 w-4" />
                 Reject Verification
               </Button>
@@ -486,11 +488,11 @@ export default function VerificationsPage() {
               <div className="rounded-lg border border-white/5 bg-card/70 p-4 shadow-sm shadow-black/10">
                 <p className="font-semibold">Take Action</p>
                 <div className="mt-4 grid gap-2">
-                  <Button className="h-10 bg-emerald-700 hover:bg-emerald-600" onClick={() => handleQuickApprove(selectedRequest)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+                  <Button className="h-10 bg-emerald-700 hover:bg-emerald-600" onClick={() => handleQuickApprove(selectedRequest)} disabled={!can("verifications.decide") || approveMutation.isPending || rejectMutation.isPending}>
                     {approveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                     Approve Verification
                   </Button>
-                  <Button variant="outline" className="h-10 border-red-500/40 text-red-400 hover:text-red-300" onClick={() => setIsRejectDialogOpen(true)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+                  <Button variant="outline" className="h-10 border-red-500/40 text-red-400 hover:text-red-300" onClick={() => setIsRejectDialogOpen(true)} disabled={!can("verifications.decide") || approveMutation.isPending || rejectMutation.isPending}>
                     <XCircle className="mr-2 h-4 w-4" />
                     Reject Verification
                   </Button>

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useDeferredValue, useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   AlertTriangle,
@@ -170,6 +171,7 @@ export default function ReportsPage() {
     staleTime: 2 * 60 * 1000,
   })
 
+  const can = useCan()
   const resolveMutation = useMutation({
     mutationFn: ({ id, status, note }: { id: string; status: string; note: string }) =>
       resolveReport(id, status, note),
@@ -275,13 +277,13 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button className="bg-sky-600 hover:bg-sky-700" onClick={() => saveResolution("REVIEWING")} disabled={resolveMutation.isPending}>
+              <Button className="bg-sky-600 hover:bg-sky-700" onClick={() => saveResolution("REVIEWING")} disabled={!can("reports.resolve") || resolveMutation.isPending}>
                 Mark Reviewing
               </Button>
-              <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => saveResolution("RESOLVED")} disabled={resolveMutation.isPending}>
+              <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => saveResolution("RESOLVED")} disabled={!can("reports.resolve") || resolveMutation.isPending}>
                 Resolve
               </Button>
-              <Button variant="outline" className="border-white/10 bg-card/70" onClick={() => saveResolution("DISMISSED")} disabled={resolveMutation.isPending}>
+              <Button variant="outline" className="border-white/10 bg-card/70" onClick={() => saveResolution("DISMISSED")} disabled={!can("reports.resolve") || resolveMutation.isPending}>
                 Dismiss
               </Button>
             </div>
@@ -390,7 +392,7 @@ export default function ReportsPage() {
                       Last updated by {selectedReport.reviewer.firstName} {selectedReport.reviewer.lastName} on {formatDate(selectedReport.reviewedAt)}
                     </p>
                   )}
-                  <Button className="w-full bg-emerald-700 hover:bg-emerald-600" onClick={() => saveResolution()} disabled={resolveMutation.isPending}>
+                  <Button className="w-full bg-emerald-700 hover:bg-emerald-600" onClick={() => saveResolution()} disabled={!can("reports.resolve") || resolveMutation.isPending}>
                     {resolveMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                     Save Resolution
                   </Button>
