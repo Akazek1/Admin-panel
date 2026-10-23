@@ -44,7 +44,7 @@ export interface StaffMember {
   adminMustChangePassword: boolean
   // Owner-granted permissions on top of the role (grants only).
   adminExtraPermissions: string[]
-  // STAFF = standalone panel account; anything else is a promoted client account (legacy).
+  // STAFF = standalone panel account; older staff may still be on a client account.
   accountType: "INDIVIDUAL" | "COMPANY" | "STAFF"
   createdAt: string
   adminRole: { id: string; name: string; color: string } | null

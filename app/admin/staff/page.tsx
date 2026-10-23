@@ -143,11 +143,6 @@ export default function StaffPage() {
                             <div className="text-xs text-muted-foreground">{m.phoneNumber}</div>
                           )}
                           <div className="mt-1 flex flex-wrap gap-1">
-                            {m.accountType !== "STAFF" ? (
-                              <Badge variant="outline" className="border-amber-500/40 text-amber-300" title="Promoted from a client account before staff accounts existed. Create a staff account for them and remove this one.">
-                                Uses a client account
-                              </Badge>
-                            ) : null}
                             {m.adminMustChangePassword ? <Badge variant="outline">Temporary password</Badge> : null}
                             {m.isBanned ? <Badge variant="destructive">Banned — no access</Badge> : null}
                           </div>
