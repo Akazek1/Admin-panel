@@ -28,6 +28,7 @@ import {
   Trash2,
   UserRound,
   Wallet,
+  Building2,
 } from "lucide-react"
 import type { Service } from "@/lib/api"
 import { deleteService, getAllServices, updateService, uploadImage } from "@/lib/api"
@@ -51,6 +52,11 @@ const currencyFormatter = new Intl.NumberFormat("en-US")
 
 function fullName(user?: { firstName: string | null; lastName: string | null; phoneNumber?: string | null }) {
   return [user?.firstName, user?.lastName].filter(Boolean).join(" ") || user?.phoneNumber || "Unknown"
+}
+
+// Who offers the service: the provider, or the company for company-owned cards.
+function ownerName(service: Service) {
+  return service.provider ? fullName(service.provider) : service.company?.name ?? "Company"
 }
 
 function initials(name: string) {
@@ -276,7 +282,7 @@ export default function ServicesPage() {
     return [...services]
       .filter((service) => {
         const status = statusFor(service)
-        const haystack = `${service.description} ${fullName(service.provider)} ${service.provider.phoneNumber || ""} ${service.category.name} ${service.id}`.toLowerCase()
+        const haystack = `${service.description} ${ownerName(service)} ${service.provider?.phoneNumber || service.company?.phone || ""} ${service.category.name} ${service.id}`.toLowerCase()
         const matchesSearch = !normalizedSearch || haystack.includes(normalizedSearch)
         const matchesCategory = categoryFilter === "ALL" || service.category.name === categoryFilter
         const matchesStatus =
@@ -381,6 +387,7 @@ export default function ServicesPage() {
   // Persist a new photo set: the array becomes `serviceImages`, and its first
   // entry stays the `serviceImage` cover so the rest of the app is unchanged.
   async function savePhotos(id: string, next: string[], successMsg: string) {
+    if (!can("services.edit")) return
     setPhotoBusy(true)
     try {
       await updateService(id, { serviceImages: next, serviceImage: next[0] ?? null })
@@ -418,7 +425,10 @@ export default function ServicesPage() {
   }
 
   if (showDetail && selectedService) {
-    const providerName = fullName(selectedService.provider)
+    const providerName = ownerName(selectedService)
+    const providerHandle = selectedService.provider
+      ? `@${selectedService.provider.firstName?.toLowerCase() || "provider"}`
+      : "Company listing"
     const status = statusFor(selectedService)
     const rehireRate = rehireRateFor(selectedService)
     const rehireLabel = rehireRate === null ? "—" : `${rehireRate}%`
@@ -441,7 +451,7 @@ export default function ServicesPage() {
                 <h1 className="line-clamp-2 text-3xl font-semibold tracking-tight">{selectedService.category.name}</h1>
                 <Badge className={statusClass(status)}>{status}</Badge>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">{providerName} · @{selectedService.provider.firstName?.toLowerCase() || "provider"}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{providerName} · {providerHandle}</p>
             </div>
           </header>
 
@@ -488,7 +498,7 @@ export default function ServicesPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="truncate font-semibold">{providerName}</p>
-                        <p className="text-sm text-muted-foreground">@{selectedService.provider.firstName?.toLowerCase() || "provider"}</p>
+                        <p className="text-sm text-muted-foreground">{providerHandle}</p>
                       </div>
                     </div>
                     <h2 className="mt-4 text-xl font-semibold">{selectedService.category.name}</h2>
@@ -585,7 +595,7 @@ export default function ServicesPage() {
                       <Button
                         variant="outline"
                         className="h-8 border-red-500/60 bg-transparent text-red-300 hover:bg-red-500/10"
-                        disabled={photoBusy}
+                        disabled={photoBusy || !can("services.edit")}
                         onClick={() => {
                           if (confirm(`Delete ${selectedPhotos.length} selected photo${selectedPhotos.length > 1 ? "s" : ""}?`)) {
                             savePhotos(selectedService.id, photos.filter((p) => !selectedPhotos.includes(p)), "Photos deleted")
@@ -600,7 +610,7 @@ export default function ServicesPage() {
                       <ImageUploadButton
                         label="Add a photo"
                         className="h-8 border-white/10 bg-background/60"
-                        disabled={photoBusy}
+                        disabled={photoBusy || !can("services.edit")}
                         onFile={async (file) => {
                           const url = await uploadImage(file)
                           const next = Array.from(new Set([...photos, url])).slice(0, MAX_SERVICE_PHOTOS)
@@ -623,7 +633,7 @@ export default function ServicesPage() {
                       return (
                         <div
                           key={url}
-                          draggable={!photoBusy}
+                          draggable={!photoBusy && can("services.edit")}
                           onDragStart={() => setDraggedPhoto(url)}
                           onDragEnd={() => setDraggedPhoto(null)}
                           onDragOver={(e) => e.preventDefault()}
@@ -717,10 +727,12 @@ export default function ServicesPage() {
               <div className="rounded-lg border border-white/5 bg-card/70 p-4">
                 <p className="font-semibold">Admin Actions</p>
                 <div className="mt-4 grid gap-2">
-                  <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" onClick={openEdit}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit details
-                  </Button>
+                  {can("services.edit") && (
+                    <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" onClick={openEdit}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit details
+                    </Button>
+                  )}
                   <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" onClick={() => toggleServiceVisibility(selectedService)} disabled={!can("services.edit") || saveMutation.isPending}>
                     {selectedService.isActive ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
                     {selectedService.isActive ? "Hide Service" : "Activate Service"}
@@ -730,6 +742,14 @@ export default function ServicesPage() {
                       <Link href={`/admin/users/${selectedService.provider.id}`}>
                         <UserRound className="mr-2 h-4 w-4" />
                         View Provider
+                      </Link>
+                    </Button>
+                  )}
+                  {!selectedService.provider && selectedService.company?.id && (
+                    <Button asChild className="h-9 justify-start border-white/10 bg-background/60" variant="outline">
+                      <Link href={`/admin/companies/${selectedService.company.id}`}>
+                        <Building2 className="mr-2 h-4 w-4" />
+                        View Company
                       </Link>
                     </Button>
                   )}
@@ -1053,7 +1073,7 @@ export default function ServicesPage() {
                           <p className="mt-0.5 truncate text-xs text-muted-foreground">{service.category.name}</p>
                         </div>
                       </div>
-                      <p className="truncate text-sm">{fullName(service.provider)}</p>
+                      <p className="truncate text-sm">{ownerName(service)}</p>
                       <div>
                         <Badge variant="outline" className="border-white/10 bg-background/50">{service.category.name}</Badge>
                       </div>

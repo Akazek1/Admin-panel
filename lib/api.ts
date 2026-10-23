@@ -559,7 +559,9 @@ export interface Service {
   priceType: string | null;
   negotiable?: boolean;
   serviceAreas?: string[];
-  provider: User;
+  // Null for company-owned cards — use `company` then.
+  provider: User | null;
+  company?: { id: string; name: string; phone: string | null; verified: boolean } | null;
   category: { id?: string; name: string };
   _count?: { bookings: number; bookmarks: number; reviews: number };
   // Would-rehire summary (the platform's review signal — no numeric rating).
