@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query"
 import {
   AlertTriangle,
   ArrowRight,
-  Bell,
   BriefcaseBusiness,
   Building2,
   CalendarCheck,
@@ -17,19 +16,19 @@ import {
   FileCheck2,
   Flag,
   Gavel,
-  HelpCircle,
   Megaphone,
   RefreshCw,
-  Search,
   ShieldAlert,
   ShieldCheck,
   Star,
   UserCheck,
   UserRoundX,
   Users,
+  HelpCircle,
 } from "lucide-react"
 import { getStats } from "@/lib/api"
 import { useAdminAccess } from "@/lib/admin-access"
+import { DashboardHeaderActions } from "@/components/admin/dashboard-header-actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -280,7 +279,6 @@ export default function DashboardPage() {
   const { data: access } = useAdminAccess()
   const name = access?.displayName ?? "there"
   const roleLabel = access?.isOwner ? "Owner" : access?.roleName ?? "Staff"
-  const initials = (access?.displayName ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: getStats,
@@ -413,28 +411,7 @@ export default function DashboardPage() {
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{roleLabel}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-10 w-10">
-              <Search className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="relative h-10 w-10">
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-1.5 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">12</span>
-            </Button>
-            <Button variant="ghost" size="icon" className="h-10 w-10">
-              <HelpCircle className="h-5 w-5" />
-            </Button>
-            <div className="ml-2 flex items-center gap-3 rounded-full border border-white/10 bg-card/70 px-3 py-2">
-              <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-muted font-semibold">
-                {initials}
-                <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-card bg-emerald-400" />
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-sm font-semibold leading-tight">{access?.displayName ?? "—"}</p>
-                <p className="text-xs text-muted-foreground">{roleLabel}</p>
-              </div>
-            </div>
-          </div>
+          <DashboardHeaderActions stats={stats} />
         </header>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 min-[1800px]:grid-cols-6">
