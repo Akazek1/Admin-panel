@@ -5,10 +5,11 @@ import Cookies from "js-cookie"
 import { LogOut } from "lucide-react"
 import api from "@/lib/axios-instance"
 
-export function LogoutButton() {
+/** Sign out of the panel: end the server session, clear tokens, go to login. */
+export function useSignOut() {
     const router = useRouter()
 
-    const handleLogout = async () => {
+    return async () => {
         try {
             // End the session on the server first: this revokes the refresh
             // cookie (HttpOnly, so it can't be removed from here). Best effort —
@@ -31,6 +32,10 @@ export function LogoutButton() {
             router.push("/auth/login")
         }
     }
+}
+
+export function LogoutButton() {
+    const handleLogout = useSignOut()
 
     return (
         <button

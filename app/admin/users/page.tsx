@@ -1,6 +1,9 @@
 "use client"
 
 import React, { useDeferredValue, useEffect, useMemo, useState } from "react"
+import { useSessionState } from "@/hooks/use-session-state"
+import { useScrollRestoration } from "@/hooks/use-scroll-restoration"
+import { USERS_LIST_STATE_KEY } from "@/constant/list-state"
 import { useCan } from "@/lib/admin-access"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
@@ -189,20 +192,39 @@ function SortableHead({
   )
 }
 
+const USERS_LIST_DEFAULTS = {
+  searchTerm: "",
+  verificationFilter: "ALL",
+  statusFilter: "ALL",
+  providerFilter: "ALL",
+  onlineOnly: false,
+  currentPage: 1,
+  pageSize: 10,
+  sortKey: "joined" as SortKey,
+  sortDirection: "desc" as SortDirection,
+}
+
 export default function IndividualsPage() {
   const router = useRouter()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [verificationFilter, setVerificationFilter] = useState("ALL")
-  const [statusFilter, setStatusFilter] = useState("ALL")
-  const [providerFilter, setProviderFilter] = useState("ALL")
-  const [onlineOnly, setOnlineOnly] = useState(false)
+  // Search, filters, sort and page survive opening someone and coming back.
+  const { state: list, patch, restored } = useSessionState(USERS_LIST_STATE_KEY, USERS_LIST_DEFAULTS)
+  const { searchTerm, verificationFilter, statusFilter, providerFilter, onlineOnly, currentPage, pageSize, sortKey, sortDirection } = list
+  // Any change to what's listed starts again from page 1.
+  const setSearchTerm = (searchTerm: string) => patch({ searchTerm, currentPage: 1 })
+  const setVerificationFilter = (verificationFilter: string) => patch({ verificationFilter, currentPage: 1 })
+  const setStatusFilter = (statusFilter: string) => patch({ statusFilter, currentPage: 1 })
+  const setProviderFilter = (providerFilter: string) => patch({ providerFilter, currentPage: 1 })
+  const setOnlineOnly = (update: boolean | ((current: boolean) => boolean)) =>
+    patch((cur) => ({ onlineOnly: typeof update === "function" ? update(cur.onlineOnly) : update, currentPage: 1 }))
+  const setPageSize = (pageSize: number) => patch({ pageSize, currentPage: 1 })
+  const setCurrentPage = (update: number | ((current: number) => number)) =>
+    patch((cur) => ({ currentPage: typeof update === "function" ? update(cur.currentPage) : update }))
+  const setSortKey = (sortKey: SortKey) => patch({ sortKey })
+  const setSortDirection = (update: SortDirection | ((current: SortDirection) => SortDirection)) =>
+    patch((cur) => ({ sortDirection: typeof update === "function" ? update(cur.sortDirection) : update }))
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [createOpen, setCreateOpen] = useState(false)
   const can = useCan()
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [sortKey, setSortKey] = useState<SortKey>("joined")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const { layout, visibleColumns, setLayout, resetLayout, isCustomised } = useTableLayout("users", USER_COLUMNS)
 
@@ -272,13 +294,14 @@ export default function IndividualsPage() {
     }
   }, [individuals])
 
+  // Keep the page in range once the list is known (not while it's still
+  // loading, or a restored page 3 would snap back to 1).
   useEffect(() => {
-    setCurrentPage(1)
-  }, [deferredSearchTerm, verificationFilter, statusFilter, providerFilter, onlineOnly, pageSize])
+    if (!users) return
+    if (currentPage > pageCount) patch({ currentPage: pageCount })
+  }, [users, currentPage, pageCount, patch])
 
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, pageCount))
-  }, [pageCount])
+  useScrollRestoration("admin-users", restored && !!users)
 
   const allVisibleSelected =
     visibleUsers.length > 0 && visibleUsers.every((user) => selectedIds.includes(user.id))
