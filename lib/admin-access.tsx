@@ -13,6 +13,7 @@ export interface AdminAccess {
   roleId: string | null
   roleName: string | null
   displayName: string | null
+  email: string | null
   // Role permissions plus owner-granted extras.
   permissions: string[]
   extraPermissions: string[]

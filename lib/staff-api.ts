@@ -128,3 +128,19 @@ export const apiError = (err: any, fallback: string) => {
   const message = err?.response?.data?.message
   return Array.isArray(message) ? message.join(" ") : message || fallback
 }
+
+export interface OwnerAccount {
+  id: string
+  firstName: string | null
+  lastName: string | null
+  email: string | null
+  lastLoginAt: string | null
+  createdAt: string
+  isYou: boolean
+}
+export const changeOwnEmail = async (currentPassword: string, newEmail: string) =>
+  unwrap<{ email: string }>(await axiosInstance.patch("/admin/me/email", { currentPassword, newEmail }))
+export const getOwners = async () => unwrap<OwnerAccount[]>(await axiosInstance.get("/admin/owners"))
+export const removeOwner = async (id: string, currentPassword: string, confirmEmail: string) => {
+  await axiosInstance.delete(`/admin/owners/${id}`, { data: { currentPassword, confirmEmail } })
+}
