@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Crown, KeyRound, Loader2, Mail, Trash2 } from "lucide-react"
+import { Crown, KeyRound, Loader2, Mail, Pencil, Trash2 } from "lucide-react"
 import { AdminPageHeader } from "@/components/admin/admin-primitives"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
 import { formatDate } from "@/lib/utils"
 import { ADMIN_ACCESS_QUERY_KEY, useAdminAccess } from "@/lib/admin-access"
-import { apiError, changeOwnEmail, getOwners, removeOwner, type OwnerAccount } from "@/lib/staff-api"
+import { apiError, changeOwnEmail, changeOwnName, getOwners, removeOwner, type OwnerAccount } from "@/lib/staff-api"
 
 const ownerName = (o: OwnerAccount) => [o.firstName, o.lastName].filter(Boolean).join(" ") || "Unnamed"
 
@@ -35,7 +35,7 @@ export default function SettingsPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <p className="text-xs text-muted-foreground">Name</p>
-                <p className="font-medium">{access?.displayName ?? "—"}</p>
+                {isOwner ? <OwnerName /> : <p className="font-medium">{access?.displayName ?? "—"}</p>}
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Access</p>
@@ -64,6 +64,64 @@ export default function SettingsPage() {
 
         {isOwner ? <ChangeEmailCard currentEmail={access?.email ?? ""} /> : null}
         {isOwner ? <OwnersCard /> : null}
+      </div>
+    </div>
+  )
+}
+
+/** The owner's own name, editable in place (staff names are edited on Staff). */
+function OwnerName() {
+  const queryClient = useQueryClient()
+  const { data: owners } = useQuery({ queryKey: ["admin-owners"], queryFn: getOwners })
+  const me = owners?.find((o) => o.isYou)
+  const [editing, setEditing] = useState(false)
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+
+  const mutation = useMutation({
+    mutationFn: () => changeOwnName(firstName.trim(), lastName.trim()),
+    onSuccess: () => {
+      toast({ title: "Name updated" })
+      setEditing(false)
+      queryClient.invalidateQueries({ queryKey: ADMIN_ACCESS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ["admin-owners"] })
+    },
+    onError: (err) => toast({ title: "Couldn't update the name", description: apiError(err, "Failed."), variant: "destructive" }),
+  })
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <p className="font-medium">{me ? ownerName(me) : "—"}</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2"
+          disabled={!me}
+          onClick={() => {
+            setFirstName(me?.firstName ?? "")
+            setLastName(me?.lastName ?? "")
+            setEditing(true)
+          }}
+        >
+          <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-1 space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        <Input aria-label="First name" placeholder="First name" value={firstName} maxLength={60} onChange={(e) => setFirstName(e.target.value)} />
+        <Input aria-label="Last name" placeholder="Last name" value={lastName} maxLength={60} onChange={(e) => setLastName(e.target.value)} />
+      </div>
+      <div className="flex gap-2">
+        <Button size="sm" disabled={!firstName.trim() || !lastName.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
+          {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Save
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
       </div>
     </div>
   )
