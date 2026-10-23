@@ -144,3 +144,5 @@ export const getOwners = async () => unwrap<OwnerAccount[]>(await axiosInstance.
 export const removeOwner = async (id: string, currentPassword: string, confirmEmail: string) => {
   await axiosInstance.delete(`/admin/owners/${id}`, { data: { currentPassword, confirmEmail } })
 }
+export const changeOwnName = async (firstName: string, lastName: string) =>
+  unwrap<{ firstName: string; lastName: string }>(await axiosInstance.patch("/admin/me/name", { firstName, lastName }))
