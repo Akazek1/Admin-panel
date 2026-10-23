@@ -3,7 +3,7 @@ import { PAGE_ACCESS, pageAccessFor } from "./admin-pages"
 import { canAccess, type AdminAccess } from "@/lib/admin-access"
 
 const staff = (permissions: string[]): AdminAccess => ({
-  isOwner: false, isStaff: true, roleId: "r", roleName: "R", displayName: null, permissions, extraPermissions: [], mustChangePassword: false,
+  isOwner: false, isStaff: true, roleId: "r", roleName: "R", displayName: null, email: null, permissions, extraPermissions: [], mustChangePassword: false,
 })
 
 describe("pageAccessFor", () => {
@@ -16,6 +16,7 @@ describe("pageAccessFor", () => {
   it("treats unknown pages as owner-only, never as the dashboard", () => {
     expect(pageAccessFor("/admin/something-new")).toBe("owner")
     expect(pageAccessFor("/admin/sub-admins")).toBe("owner")
+    expect(pageAccessFor("/admin/staff/abc")).toEqual(["staff.view"])
   })
 })
 

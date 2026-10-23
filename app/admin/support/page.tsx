@@ -90,7 +90,8 @@ interface StaffMember {
   id: string
   firstName: string | null
   lastName: string | null
-  phoneNumber: string
+  // Null for staff accounts (they have no real phone).
+  phoneNumber: string | null
   email: string | null
   isFullAdmin: boolean
   supportDisplayName: string | null

@@ -59,6 +59,7 @@ const PAGE_LABELS: Record<string, string> = {
   "/admin/languages": "Languages",
   "/admin/legal": "Legal Documents",
   "/admin/audit-logs": "Audit Logs",
+  "/admin/staff": "Staff (read-only)",
 }
 
 const toDraft = (role: AdminRole): Draft => ({
@@ -170,7 +171,7 @@ export default function RolesPermissionsPage() {
 
   // "View as": which pages a member of this role would see in the sidebar.
   const preview: AdminAccess | undefined = draft
-    ? { isOwner: false, isStaff: true, roleId: draft.id, roleName: draft.name, displayName: null, permissions: draft.permissions, extraPermissions: [], mustChangePassword: false }
+    ? { isOwner: false, isStaff: true, roleId: draft.id, roleName: draft.name, displayName: null, email: null, permissions: draft.permissions, extraPermissions: [], mustChangePassword: false }
     : undefined
   const visiblePages = Object.entries(PAGE_LABELS).filter(([url]) => canAccess(preview, PAGE_ACCESS[url]))
 

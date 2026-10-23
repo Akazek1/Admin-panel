@@ -74,7 +74,7 @@ export function AdminAccessGate({ children }: { children: ReactNode }) {
       <div className="mx-auto max-w-lg space-y-4 p-6 pt-24">
         <EmptyState
           title="No admin access"
-          description="This account isn't staff, or its access was removed. Sign in with a staff account."
+          description="This account isn't staff, or its access was paused or removed. Ask the owner, or sign in with another staff account."
           icon={Lock}
         />
         <LogoutButton />

@@ -29,7 +29,7 @@ export const PAGE_ACCESS: Record<string, PageAccess> = {
   "/admin/languages": ["languages.manage"],
   "/admin/legal": ["legal.edit"],
   "/admin/audit-logs": ["audit_logs.view"],
-  "/admin/staff": "owner",
+  "/admin/staff": ["staff.view"],
   "/admin/roles-permissions": "owner",
   "/admin/settings": "staff",
   "/admin/change-password": "staff",
