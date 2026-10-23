@@ -46,6 +46,9 @@ export interface StaffMember {
   adminExtraPermissions: string[]
   // STAFF = standalone panel account; older staff may still be on a client account.
   accountType: "INDIVIDUAL" | "COMPANY" | "STAFF"
+  staffTitle: string | null
+  // Set while the owner has paused their panel access.
+  adminPausedAt: string | null
   createdAt: string
   adminRole: { id: string; name: string; color: string } | null
   // The same person's client account, if linked.
@@ -71,11 +74,22 @@ export const deleteRole = async (id: string) => {
 }
 
 export const getStaff = async () => unwrap<StaffMember[]>(await axiosInstance.get("/admin/staff"))
+export interface StaffActivity {
+  id: string
+  action: string
+  targetType: string
+  targetId: string
+  createdAt: string
+  actorId: string
+  actor: { firstName: string | null; lastName: string | null } | null
+}
+
 export interface CreateStaffInput {
   firstName: string
   lastName: string
   email: string
   roleId: string
+  staffTitle?: string
   clientAccountId?: string
 }
 export const createStaff = async (input: CreateStaffInput) =>
@@ -92,8 +106,22 @@ export const resetStaffPassword = async (id: string, email?: string) =>
   unwrap<{ email: string; temporaryPassword: string }>(
     await axiosInstance.post(`/admin/staff/${id}/reset-password`, email ? { email } : {}),
   )
-export const removeStaff = async (id: string) => {
-  await axiosInstance.delete(`/admin/staff/${id}`)
+export const removeStaff = async (id: string, confirmName: string) => {
+  await axiosInstance.delete(`/admin/staff/${id}`, { data: { confirmName } })
+}
+export const getStaffMember = async (id: string) =>
+  unwrap<StaffMember & { activity: StaffActivity[] }>(await axiosInstance.get(`/admin/staff/${id}`))
+export const updateStaff = async (
+  id: string,
+  input: Partial<{ firstName: string; lastName: string; email: string; staffTitle: string }>,
+) => {
+  await axiosInstance.patch(`/admin/staff/${id}`, input)
+}
+export const pauseStaff = async (id: string) => {
+  await axiosInstance.post(`/admin/staff/${id}/pause`)
+}
+export const resumeStaff = async (id: string) => {
+  await axiosInstance.post(`/admin/staff/${id}/resume`)
 }
 
 export const apiError = (err: any, fallback: string) => {

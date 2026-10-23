@@ -59,6 +59,7 @@ const PAGE_LABELS: Record<string, string> = {
   "/admin/languages": "Languages",
   "/admin/legal": "Legal Documents",
   "/admin/audit-logs": "Audit Logs",
+  "/admin/staff": "Staff (read-only)",
 }
 
 const toDraft = (role: AdminRole): Draft => ({

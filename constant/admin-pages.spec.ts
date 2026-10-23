@@ -16,6 +16,7 @@ describe("pageAccessFor", () => {
   it("treats unknown pages as owner-only, never as the dashboard", () => {
     expect(pageAccessFor("/admin/something-new")).toBe("owner")
     expect(pageAccessFor("/admin/sub-admins")).toBe("owner")
+    expect(pageAccessFor("/admin/staff/abc")).toEqual(["staff.view"])
   })
 })
 
