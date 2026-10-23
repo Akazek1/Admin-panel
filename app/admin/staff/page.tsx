@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertTriangle, Copy, KeyRound, Loader2, Plus, Search, SlidersHorizontal, Trash2, UserCog } from "lucide-react"
+import { AlertTriangle, Copy, KeyRound, Link2, Loader2, Plus, Search, SlidersHorizontal, Trash2, UserCog } from "lucide-react"
 import { AdminPageHeader, EmptyState } from "@/components/admin/admin-primitives"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -19,13 +19,14 @@ import { useCopyToClipboard } from "@/hooks/use-copy-to-clipboard"
 import { formatDate } from "@/lib/utils"
 import { getAllUsers, type User } from "@/lib/api"
 import {
-  addStaff,
   apiError,
+  createStaff,
   getPermissionCatalog,
   getRoles,
   getStaff,
   removeStaff,
   resetStaffPassword,
+  setStaffClientLink,
   setStaffExtras,
   setStaffRole,
   type AdminRole,
@@ -43,6 +44,7 @@ export default function StaffPage() {
 
   const [addOpen, setAddOpen] = useState(false)
   const [extrasFor, setExtrasFor] = useState<StaffMember | null>(null)
+  const [linkFor, setLinkFor] = useState<StaffMember | null>(null)
   // A temporary password is shown exactly once, right after it is issued.
   const [issued, setIssued] = useState<{ name: string; email: string; password: string } | null>(null)
 
@@ -83,7 +85,7 @@ export default function StaffPage() {
       <div className="mx-auto max-w-[1500px] space-y-5">
         <AdminPageHeader
           title="Staff"
-          description="People who can sign in to this admin panel. Each one holds a single role."
+          description="Your team's admin-panel accounts. Separate from client accounts; each holds one role."
         >
           <Button variant="outline" asChild>
             <Link href="/admin/roles-permissions">Manage roles</Link>
@@ -128,8 +130,24 @@ export default function StaffPage() {
                       <TableRow key={m.id}>
                         <TableCell>
                           <div className="font-medium">{fullName(m)}</div>
-                          <div className="text-xs text-muted-foreground">{m.phoneNumber}</div>
+                          {m.accountType === "STAFF" ? (
+                            <button
+                              type="button"
+                              className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                              onClick={() => setLinkFor(m)}
+                            >
+                              <Link2 className="h-3 w-3" />
+                              {m.staffClientAccount ? `Client: ${fullName(m.staffClientAccount)}` : "Link client account"}
+                            </button>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">{m.phoneNumber}</div>
+                          )}
                           <div className="mt-1 flex flex-wrap gap-1">
+                            {m.accountType !== "STAFF" ? (
+                              <Badge variant="outline" className="border-amber-500/40 text-amber-300" title="Promoted from a client account before staff accounts existed. Create a staff account for them and remove this one.">
+                                Uses a client account
+                              </Badge>
+                            ) : null}
                             {m.adminMustChangePassword ? <Badge variant="outline">Temporary password</Badge> : null}
                             {m.isBanned ? <Badge variant="destructive">Banned — no access</Badge> : null}
                           </div>
@@ -210,6 +228,15 @@ export default function StaffPage() {
         )}
       </div>
 
+      <ClientLinkDialog
+        member={linkFor}
+        onClose={() => setLinkFor(null)}
+        onSaved={() => {
+          setLinkFor(null)
+          refresh()
+        }}
+      />
+
       <ExtrasDialog
         member={extrasFor}
         role={roles?.find((r) => r.id === extrasFor?.adminRole?.id) ?? null}
@@ -274,33 +301,31 @@ function AddStaffDialog({
   roles: { id: string; name: string; color: string }[]
   onAdded: (name: string, email: string, password: string) => void
 }) {
-  const [search, setSearch] = useState("")
-  const [user, setUser] = useState<User | null>(null)
-  const [roleId, setRoleId] = useState("")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
-
-  const { data: users, isLoading } = useQuery({ queryKey: ["admin-users-for-staff"], queryFn: getAllUsers, enabled: open })
-
-  const matches = useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return []
-    return (users ?? [])
-      .filter((u) => !u.isAdmin && !u.roles.includes("ADMIN") && !u.roles.includes("SUB_ADMIN") && !u.isBanned)
-      .filter((u) => `${u.firstName ?? ""} ${u.lastName ?? ""} ${u.phoneNumber} ${u.email ?? ""}`.toLowerCase().includes(q))
-      .slice(0, 8)
-  }, [users, search])
+  const [roleId, setRoleId] = useState("")
+  const [client, setClient] = useState<User | null>(null)
 
   const reset = () => {
-    setSearch("")
-    setUser(null)
-    setRoleId("")
+    setFirstName("")
+    setLastName("")
     setEmail("")
+    setRoleId("")
+    setClient(null)
   }
 
   const mutation = useMutation({
-    mutationFn: () => addStaff({ userId: user!.id, roleId, email: email.trim() || undefined }),
+    mutationFn: () =>
+      createStaff({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        roleId,
+        clientAccountId: client?.id,
+      }),
     onSuccess: (r) => {
-      onAdded(fullName(user!), r.email, r.temporaryPassword)
+      onAdded(`${firstName.trim()} ${lastName.trim()}`, r.email, r.temporaryPassword)
       reset()
     },
     onError: (err) => toast({ title: "Couldn't add staff", description: apiError(err, "Failed."), variant: "destructive" }),
@@ -317,54 +342,36 @@ function AddStaffDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Add staff</DialogTitle>
-          <DialogDescription>Pick an existing Huza account, give it a role and a sign-in email.</DialogDescription>
+          <DialogDescription>
+            Creates a new admin-panel account. It isn&apos;t a client account and can&apos;t sign in to the app.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {user ? (
-            <div className="flex items-center justify-between rounded-md border p-3">
-              <div>
-                <p className="font-medium">{fullName(user)}</p>
-                <p className="text-xs text-muted-foreground">{user.phoneNumber}</p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setUser(null)}>Change</Button>
-            </div>
-          ) : (
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="staff-search">Account</Label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="staff-search"
-                  className="pl-8"
-                  placeholder="Search by name, phone or email"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-              {isLoading ? <p className="text-xs text-muted-foreground">Loading accounts…</p> : null}
-              {matches.length ? (
-                <div className="max-h-56 divide-y overflow-auto rounded-md border">
-                  {matches.map((u) => (
-                    <button
-                      key={u.id}
-                      type="button"
-                      className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-white/5"
-                      onClick={() => {
-                        setUser(u)
-                        setEmail(u.email ?? "")
-                      }}
-                    >
-                      <span className="text-sm font-medium">{fullName(u)}</span>
-                      <span className="text-xs text-muted-foreground">{u.phoneNumber}{u.email ? ` · ${u.email}` : ""}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : search.trim() && !isLoading ? (
-                <p className="text-xs text-muted-foreground">No matching account. They need a Huza account first.</p>
-              ) : null}
+              <Label htmlFor="staff-first">First name</Label>
+              <Input id="staff-first" value={firstName} maxLength={60} onChange={(e) => setFirstName(e.target.value)} />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="staff-last">Last name</Label>
+              <Input id="staff-last" value={lastName} maxLength={60} onChange={(e) => setLastName(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="staff-email">Sign-in email</Label>
+            <Input
+              id="staff-email"
+              type="email"
+              placeholder="name@huza.app"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Use a work email. An email can belong to only one account, so not the one on their client account.
+            </p>
+          </div>
 
           <div className="space-y-2">
             <Label>Role</Label>
@@ -386,23 +393,148 @@ function AddStaffDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="staff-email">Sign-in email</Label>
-            <Input
-              id="staff-email"
-              type="email"
-              placeholder="name@huza.app"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">They sign in to the panel with this email and a temporary password.</p>
+            <Label>Their client account (optional)</Label>
+            <ClientAccountPicker value={client} onChange={setClient} enabled={open} />
+            <p className="text-xs text-muted-foreground">
+              If this person also uses Huza as a client, link it so they can&apos;t moderate their own account.
+            </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button disabled={!user || !roleId || !email.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
+          <Button
+            disabled={!firstName.trim() || !lastName.trim() || !email.trim() || !roleId || mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
             {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Add and issue password
+            Create and issue password
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** Search the client accounts (staff and admins excluded) and pick one. */
+function ClientAccountPicker({
+  value,
+  onChange,
+  enabled,
+}: {
+  value: { id: string; firstName: string | null; lastName: string | null; phoneNumber?: string } | null
+  onChange: (user: User | null) => void
+  enabled: boolean
+}) {
+  const [search, setSearch] = useState("")
+  const { data: users, isLoading } = useQuery({ queryKey: ["admin-users-for-staff"], queryFn: getAllUsers, enabled })
+
+  const matches = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return []
+    return (users ?? [])
+      .filter((u) => !u.isAdmin && !u.roles.includes("ADMIN") && !u.roles.includes("SUB_ADMIN"))
+      .filter((u) => `${u.firstName ?? ""} ${u.lastName ?? ""} ${u.phoneNumber} ${u.email ?? ""}`.toLowerCase().includes(q))
+      .slice(0, 6)
+  }, [users, search])
+
+  if (value) {
+    return (
+      <div className="flex items-center justify-between rounded-md border p-3">
+        <div>
+          <p className="font-medium">{fullName(value)}</p>
+          {value.phoneNumber ? <p className="text-xs text-muted-foreground">{value.phoneNumber}</p> : null}
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => onChange(null)}>Remove</Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          className="pl-8"
+          placeholder="Search clients by name, phone or email"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      {isLoading && search.trim() ? <p className="text-xs text-muted-foreground">Loading accounts…</p> : null}
+      {matches.length ? (
+        <div className="max-h-48 divide-y overflow-auto rounded-md border">
+          {matches.map((u) => (
+            <button
+              key={u.id}
+              type="button"
+              className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-white/5"
+              onClick={() => {
+                onChange(u)
+                setSearch("")
+              }}
+            >
+              <span className="text-sm font-medium">{fullName(u)}</span>
+              <span className="text-xs text-muted-foreground">{u.phoneNumber}</span>
+            </button>
+          ))}
+        </div>
+      ) : search.trim() && !isLoading ? (
+        <p className="text-xs text-muted-foreground">No matching client account.</p>
+      ) : null}
+    </div>
+  )
+}
+
+/** Link or unlink a staff member's own client account. */
+function ClientLinkDialog({
+  member,
+  onClose,
+  onSaved,
+}: {
+  member: StaffMember | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [client, setClient] = useState<StaffMember["staffClientAccount"] | User | null>(null)
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+  if (member && loadedFor !== member.id) {
+    setLoadedFor(member.id)
+    setClient(member.staffClientAccount)
+  }
+
+  const mutation = useMutation({
+    mutationFn: () => setStaffClientLink(member!.id, client?.id ?? null),
+    onSuccess: () => {
+      toast({ title: client ? "Client account linked" : "Client account unlinked" })
+      onSaved()
+    },
+    onError: (err) => toast({ title: "Couldn't save", description: apiError(err, "Failed."), variant: "destructive" }),
+  })
+
+  return (
+    <Dialog
+      open={!!member}
+      onOpenChange={(o) => {
+        if (!o) {
+          setLoadedFor(null)
+          onClose()
+        }
+      }}
+    >
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Client account for {member ? fullName(member) : ""}</DialogTitle>
+          <DialogDescription>
+            Link the client account this person uses on Huza. They won&apos;t be able to take admin actions on it.
+          </DialogDescription>
+        </DialogHeader>
+        <ClientAccountPicker value={client} onChange={setClient} enabled={!!member} />
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+            {mutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -44,8 +44,12 @@ export interface StaffMember {
   adminMustChangePassword: boolean
   // Owner-granted permissions on top of the role (grants only).
   adminExtraPermissions: string[]
+  // STAFF = standalone panel account; anything else is a promoted client account (legacy).
+  accountType: "INDIVIDUAL" | "COMPANY" | "STAFF"
   createdAt: string
   adminRole: { id: string; name: string; color: string } | null
+  // The same person's client account, if linked.
+  staffClientAccount: { id: string; firstName: string | null; lastName: string | null } | null
 }
 
 export interface RoleInput {
@@ -67,8 +71,18 @@ export const deleteRole = async (id: string) => {
 }
 
 export const getStaff = async () => unwrap<StaffMember[]>(await axiosInstance.get("/admin/staff"))
-export const addStaff = async (input: { userId: string; roleId: string; email?: string }) =>
+export interface CreateStaffInput {
+  firstName: string
+  lastName: string
+  email: string
+  roleId: string
+  clientAccountId?: string
+}
+export const createStaff = async (input: CreateStaffInput) =>
   unwrap<{ userId: string; email: string; temporaryPassword: string }>(await axiosInstance.post("/admin/staff", input))
+export const setStaffClientLink = async (id: string, clientAccountId: string | null) => {
+  await axiosInstance.put(`/admin/staff/${id}/client-link`, { clientAccountId })
+}
 export const setStaffRole = async (id: string, roleId: string) => {
   await axiosInstance.patch(`/admin/staff/${id}/role`, { roleId })
 }
