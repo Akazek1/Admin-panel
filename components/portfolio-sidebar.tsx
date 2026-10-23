@@ -40,6 +40,8 @@ import { APP_CONFIG } from "@/constant/app.config"
 import { HuzaLogo } from "@/components/brand/huza-logo"
 import { getStats, type AdminStats } from "@/lib/api"
 import axiosInstance from "@/lib/axios-instance"
+import { canAccess, hasPermission, useAdminAccess } from "@/lib/admin-access"
+import { pageAccessFor } from "@/constant/admin-pages"
 
 type BadgeKey = keyof AdminStats | "pendingAgenciesOrCompanies" | "pendingDropoffs" | "supportUnread"
 
@@ -98,7 +100,7 @@ const navigationGroups: {
   {
     title: "Administration",
     items: [
-      { title: "Sub-admins", url: "/admin/sub-admins", icon: UserCog },
+      { title: "Staff", url: "/admin/staff", icon: UserCog },
       { title: "Audit Logs", url: "/admin/audit-logs", icon: BarChart3 },
       { title: "Roles & Permissions", url: "/admin/roles-permissions", icon: ShieldCheck },
       { title: "Settings", url: "/admin/settings", icon: Settings },
@@ -136,14 +138,23 @@ const STORAGE_KEY = "huza-admin-sidebar-open-groups-v2"
 
 export function PortfolioSidebar() {
   const pathname = usePathname()
+  const { data: access } = useAdminAccess()
+  // Only the links this staff member's role can open; empty groups disappear.
+  const visibleGroups = React.useMemo(
+    () =>
+      navigationGroups
+        .map((group) => ({ ...group, items: group.items.filter((item) => canAccess(access, pageAccessFor(item.url))) }))
+        .filter((group) => group.items.length > 0),
+    [access],
+  )
   const { data: stats } = useQuery({
     queryKey: ["sidebar-stats"],
     queryFn: getStats,
     refetchInterval: 60_000,
     staleTime: 30_000,
+    enabled: hasPermission(access, "dashboard.view"),
   })
-  // Users with unread messages for the support team. Shares the Support page's
-  // query, and simply shows no badge for a sub-admin without the permission.
+  // Users with unread messages for the support team. Shares the Support page's query.
   const { data: supportCounts } = useQuery<{ unreadUsers: number }>({
     queryKey: ["support-counts"],
     queryFn: async () => {
@@ -153,6 +164,7 @@ export function PortfolioSidebar() {
     refetchInterval: 30_000,
     staleTime: 15_000,
     retry: false,
+    enabled: hasPermission(access, "support.view"),
   })
 
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() =>
@@ -206,7 +218,7 @@ export function PortfolioSidebar() {
       </div>
 
       <nav className="flex-1 space-y-3 overflow-auto pr-1">
-        {navigationGroups.map((group) => {
+        {visibleGroups.map((group) => {
           const isOpen = openGroups[group.title]
           const hasActiveItem = group.items.some((item) => isActive(item.url))
 
@@ -252,6 +264,11 @@ export function PortfolioSidebar() {
       </nav>
 
       <div className="mt-4 border-t border-white/10 pt-4">
+        {access?.roleName ? (
+          <p className="mb-2 truncate px-2 text-xs text-muted-foreground">
+            Signed in as <span className="font-medium text-foreground">{access.roleName}</span>
+          </p>
+        ) : null}
         <LogoutButton />
       </div>
     </aside>

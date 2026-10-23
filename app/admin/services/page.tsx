@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -246,6 +247,7 @@ export default function ServicesPage() {
     queryFn: getAllServices,
   })
 
+  const can = useCan()
   const saveMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Service> }) => updateService(id, data),
     onSuccess: () => {
@@ -353,6 +355,7 @@ export default function ServicesPage() {
   })
 
   const saveEdit = () => {
+    if (!can("services.edit")) return
     const min = Number(editForm.priceMin)
     if (!editForm.priceMin.trim() || Number.isNaN(min) || min < 0) {
       toast({ title: "Enter a valid price", variant: "destructive" })
@@ -410,6 +413,7 @@ export default function ServicesPage() {
   }
 
   const toggleServiceVisibility = (service: Service) => {
+    if (!can("services.edit")) return
     saveMutation.mutate({ id: service.id, data: { isActive: !service.isActive } })
   }
 
@@ -717,7 +721,7 @@ export default function ServicesPage() {
                     <Pencil className="mr-2 h-4 w-4" />
                     Edit details
                   </Button>
-                  <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" onClick={() => toggleServiceVisibility(selectedService)} disabled={saveMutation.isPending}>
+                  <Button className="h-9 justify-start border-white/10 bg-background/60" variant="outline" onClick={() => toggleServiceVisibility(selectedService)} disabled={!can("services.edit") || saveMutation.isPending}>
                     {selectedService.isActive ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
                     {selectedService.isActive ? "Hide Service" : "Activate Service"}
                   </Button>
@@ -735,7 +739,7 @@ export default function ServicesPage() {
                     onClick={() => {
                       if (confirm("Delete this service listing permanently?")) deleteMutation.mutate(selectedService.id)
                     }}
-                    disabled={deleteMutation.isPending}
+                    disabled={!can("services.delete") || deleteMutation.isPending}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete Service
@@ -879,7 +883,7 @@ export default function ServicesPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-                <Button onClick={saveEdit} disabled={editMutation.isPending}>
+                <Button onClick={saveEdit} disabled={!can("services.edit") || editMutation.isPending}>
                   {editMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Save changes
                 </Button>

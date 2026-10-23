@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
@@ -240,6 +241,7 @@ export default function ReviewModerationPage() {
     queryFn: getReviews,
   })
 
+  const can = useCan()
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteReview(id),
     onSuccess: () => {
@@ -323,6 +325,7 @@ export default function ReviewModerationPage() {
   }
 
   const toggleHidden = (review: AdminReview, reason = "Hidden by admin review") => {
+    if (!can("reviews.moderate")) return
     updateMutation.mutate({
       id: review.id,
       data: {
@@ -333,6 +336,7 @@ export default function ReviewModerationPage() {
   }
 
   const toggleReplyHidden = (review: AdminReview, reason = "Hidden by admin review moderation") => {
+    if (!can("reviews.moderate")) return
     updateMutation.mutate({
       id: review.id,
       data: {
@@ -406,7 +410,7 @@ export default function ReviewModerationPage() {
           </Button>
           <Button
             onClick={() => editing && updateMutation.mutate({ id: editing.id, data: { comment: editComment, reply: editReply, hiddenReason: hideReason } })}
-            disabled={updateMutation.isPending}
+            disabled={!can("reviews.moderate") || updateMutation.isPending}
           >
             {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save
@@ -470,7 +474,7 @@ export default function ReviewModerationPage() {
                       variant="outline"
                       className="h-8 w-8 border-white/10 bg-background/60"
                       onClick={() => toggleHidden(selectedReview)}
-                      disabled={updateMutation.isPending}
+                      disabled={!can("reviews.moderate") || updateMutation.isPending}
                       title={selectedReview.isHidden ? "Restore review" : "Hide review"}
                     >
                       {selectedReview.isHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -482,7 +486,7 @@ export default function ReviewModerationPage() {
                       onClick={() => {
                         if (confirm("Permanently delete this review?")) deleteMutation.mutate(selectedReview.id)
                       }}
-                      disabled={deleteMutation.isPending}
+                      disabled={!can("reviews.delete") || deleteMutation.isPending}
                       title="Delete review"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -520,7 +524,7 @@ export default function ReviewModerationPage() {
                       variant="outline"
                       className="h-8 w-8 border-white/10 bg-background/60"
                       onClick={() => toggleReplyHidden(selectedReview)}
-                      disabled={!selectedReview.reply || updateMutation.isPending}
+                      disabled={!can("reviews.moderate") || !selectedReview.reply || updateMutation.isPending}
                       title={selectedReview.replyHidden ? "Restore reply" : "Hide reply"}
                     >
                       {selectedReview.replyHidden ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -532,7 +536,7 @@ export default function ReviewModerationPage() {
                       onClick={() => {
                         if (confirm("Remove this reply text?")) updateMutation.mutate({ id: selectedReview.id, data: { reply: "" } })
                       }}
-                      disabled={!selectedReview.reply || updateMutation.isPending}
+                      disabled={!can("reviews.moderate") || !selectedReview.reply || updateMutation.isPending}
                       title="Remove reply"
                     >
                       <Trash2 className="h-4 w-4" />

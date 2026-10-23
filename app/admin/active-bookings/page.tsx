@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   AlertTriangle,
@@ -227,6 +228,7 @@ export default function ActiveBookingsPage() {
     [confirmedQuery.data, inProgressQuery.data]
   )
 
+  const can = useCan()
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => updateBookingStatus(id, status),
     onSuccess: () => {
@@ -309,6 +311,7 @@ export default function ActiveBookingsPage() {
   }
 
   const changeStatus = (booking: Booking, status: "IN_PROGRESS" | "COMPLETED" | "CANCELLED") => {
+    if (!can("bookings.update_status")) return
     const ok = window.confirm(`Are you sure you want to mark this booking as ${displayStatus(status).toLowerCase()}?`)
     if (!ok) return
     statusMutation.mutate({ id: booking.id, status })
@@ -354,7 +357,7 @@ export default function ActiveBookingsPage() {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOverrideTarget(null)}>Cancel</Button>
-          <Button disabled={!overrideReason.trim() || overrideMutation.isPending} onClick={() => overrideMutation.mutate()}>
+          <Button disabled={!can("bookings.override") || !overrideReason.trim() || overrideMutation.isPending} onClick={() => overrideMutation.mutate()}>
             {overrideMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Apply Override
           </Button>
@@ -391,12 +394,12 @@ export default function ActiveBookingsPage() {
                 Back to Active
               </Button>
               {selectedBooking.status === "CONFIRMED" ? (
-                <Button className="bg-sky-600 hover:bg-sky-700" disabled={statusMutation.isPending} onClick={() => changeStatus(selectedBooking, "IN_PROGRESS")}>
+                <Button className="bg-sky-600 hover:bg-sky-700" disabled={!can("bookings.update_status") || statusMutation.isPending} onClick={() => changeStatus(selectedBooking, "IN_PROGRESS")}>
                   <PlayCircle className="mr-2 h-4 w-4" />
                   Start Booking
                 </Button>
               ) : (
-                <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={statusMutation.isPending} onClick={() => changeStatus(selectedBooking, "COMPLETED")}>
+                <Button className="bg-emerald-600 hover:bg-emerald-700" disabled={!can("bookings.update_status") || statusMutation.isPending} onClick={() => changeStatus(selectedBooking, "COMPLETED")}>
                   <Check className="mr-2 h-4 w-4" />
                   Complete Booking
                 </Button>
@@ -465,19 +468,19 @@ export default function ActiveBookingsPage() {
 
                 <div className="space-y-2">
                   {selectedBooking.status === "CONFIRMED" ? (
-                    <Button className="h-10 w-full bg-sky-600 hover:bg-sky-700" disabled={statusMutation.isPending} onClick={() => changeStatus(selectedBooking, "IN_PROGRESS")}>
+                    <Button className="h-10 w-full bg-sky-600 hover:bg-sky-700" disabled={!can("bookings.update_status") || statusMutation.isPending} onClick={() => changeStatus(selectedBooking, "IN_PROGRESS")}>
                       <PlayCircle className="mr-2 h-4 w-4" />
                       Start Booking
                     </Button>
                   ) : (
-                    <Button className="h-10 w-full bg-emerald-600 hover:bg-emerald-700" disabled={statusMutation.isPending} onClick={() => changeStatus(selectedBooking, "COMPLETED")}>
+                    <Button className="h-10 w-full bg-emerald-600 hover:bg-emerald-700" disabled={!can("bookings.update_status") || statusMutation.isPending} onClick={() => changeStatus(selectedBooking, "COMPLETED")}>
                       <Check className="mr-2 h-4 w-4" />
                       Complete Booking
                     </Button>
                   )}
                   <Button
                     className="h-10 w-full border-red-500/50 bg-transparent text-red-300 hover:bg-red-500/10 hover:text-red-200"
-                    disabled={statusMutation.isPending}
+                    disabled={!can("bookings.update_status") || statusMutation.isPending}
                     variant="outline"
                     onClick={() => changeStatus(selectedBooking, "CANCELLED")}
                   >

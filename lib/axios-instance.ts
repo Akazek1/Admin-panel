@@ -1,6 +1,9 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
+/** Fired on any 403 so the panel re-fetches the caller's access. */
+export const ADMIN_ACCESS_STALE_EVENT = "admin-access-stale";
+
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3003",
   headers: {
@@ -107,6 +110,26 @@ api.interceptors.response.use(
         }
         return Promise.reject(refreshError);
       }
+    }
+
+    // A permission refusal means this browser's idea of the role may be stale
+    // (the owner just changed it) — ask the panel to re-check access now.
+    if (
+      error.response?.status === 403 &&
+      typeof window !== "undefined" &&
+      !String(originalRequest?.url ?? "").includes("/admin/me/access")
+    ) {
+      window.dispatchEvent(new Event(ADMIN_ACCESS_STALE_EVENT));
+    }
+
+    // Owner-issued temporary password: every route but the change screen refuses.
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.code === "PASSWORD_CHANGE_REQUIRED" &&
+      typeof window !== "undefined" &&
+      window.location.pathname !== "/admin/change-password"
+    ) {
+      window.location.href = "/admin/change-password";
     }
 
     return Promise.reject(error);

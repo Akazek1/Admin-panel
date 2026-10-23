@@ -137,7 +137,8 @@ export interface SignupAttempt {
   lastTriedAt: string | null;
   codesSent: number;
   wrongAttempts: number;
-  lastCode: string | null;
+  // A code is live for this number; fetch it with revealSignupCode (audited).
+  hasLiveCode: boolean;
   lastSmsStatus: string | null;
   lastSmsError: string | null;
   lastDeliveryStatus: string | null;
@@ -148,6 +149,27 @@ export async function getSignupAttempts(): Promise<SignupAttempt[]> {
   const response = await axiosInstance.get("/admin/signup-attempts");
   const list = response.data?.data ?? response.data;
   return Array.isArray(list) ? list : [];
+}
+
+/** Reveal one live signup code. Needs `signup_attempts.reveal_code`; every call is audited. */
+export async function revealSignupCode(phoneNumber: string): Promise<{ code: string; expiresAt: string }> {
+  const response = await axiosInstance.post(`/admin/signup-attempts/${encodeURIComponent(phoneNumber)}/reveal-code`);
+  return response.data?.data ?? response.data;
+}
+
+export interface SignupFunnelTally {
+  total: number;
+  registered: number;
+  pending: number;
+  locked: number;
+  failed: number;
+  conversionRate: number;
+}
+
+/** Totals only — no phone numbers or codes. Needs `funnel.view`. */
+export async function getSignupFunnel(): Promise<{ allTime: SignupFunnelTally; last30Days: SignupFunnelTally }> {
+  const response = await axiosInstance.get("/admin/signup-funnel");
+  return response.data?.data ?? response.data;
 }
 
 export async function clearOtp(phoneNumber: string): Promise<void> {

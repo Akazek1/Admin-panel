@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
@@ -189,6 +190,7 @@ export default function AgenciesPage() {
       }),
   })
 
+  const can = useCan()
   const verifyMutation = useMutation({
     mutationFn: (id: string) => verifyOrganization(id),
     onSuccess: () => {
@@ -257,6 +259,7 @@ export default function AgenciesPage() {
   }
 
   const toggleVerified = (agency: Organization) => {
+    if (!can(agency.verified ? "orgs.edit" : "orgs.verify")) return
     if (agency.verified) {
       updateMutation.mutate({ id: agency.id, verified: false })
       return
@@ -401,7 +404,7 @@ export default function AgenciesPage() {
                   Open Agency
                 </Button>
                 <div className="grid grid-cols-1 gap-2">
-                  <Button variant="outline" className="border-white/10" onClick={() => toggleVerified(selectedAgency)} disabled={verifyMutation.isPending || updateMutation.isPending}>
+                  <Button variant="outline" className="border-white/10" onClick={() => toggleVerified(selectedAgency)} disabled={!can(selectedAgency.verified ? "orgs.edit" : "orgs.verify") || verifyMutation.isPending || updateMutation.isPending}>
                     <ShieldCheck className="mr-2 h-4 w-4" />
                     {selectedAgency.verified ? "Unverify" : "Verify"}
                   </Button>
@@ -449,10 +452,12 @@ export default function AgenciesPage() {
               <ShieldCheck className="mr-2 h-4 w-4" />
               Review Pending Agencies
             </Button>
-            <Button variant="outline" className="border-white/10 bg-card/70" onClick={() => setCreateOpen(true)}>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Add agency
-            </Button>
+            {can("users.create") && (
+              <Button variant="outline" className="border-white/10 bg-card/70" onClick={() => setCreateOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add agency
+              </Button>
+            )}
           </div>
         </header>
 
@@ -743,7 +748,7 @@ export default function AgenciesPage() {
                     Open Agency
                   </Button>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <Button variant="outline" className="border-white/10" onClick={() => toggleVerified(selectedAgency)} disabled={verifyMutation.isPending || updateMutation.isPending}>
+                    <Button variant="outline" className="border-white/10" onClick={() => toggleVerified(selectedAgency)} disabled={!can(selectedAgency.verified ? "orgs.edit" : "orgs.verify") || verifyMutation.isPending || updateMutation.isPending}>
                       <ShieldCheck className="mr-2 h-4 w-4" />
                       {selectedAgency.verified ? "Unverify" : "Verify"}
                     </Button>

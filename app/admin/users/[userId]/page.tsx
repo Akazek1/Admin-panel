@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -172,6 +173,7 @@ export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const can = useCan()
 
   const [isEditing, setIsEditing] = useState(false)
   const [editData, setEditData] = useState<{
@@ -569,12 +571,14 @@ export default function UserDetailPage() {
           ))}
         </div>
         <div className="flex flex-wrap gap-2 ml-auto">
-          <Button variant="outline" asChild>
-            <Link href={`/admin/support?user=${userId}`}>
-              <Headset className="w-4 h-4 mr-2" /> Message
-            </Link>
-          </Button>
-          {!isEditing ? (
+          {can("support.reply") && (
+            <Button variant="outline" asChild>
+              <Link href={`/admin/support?user=${userId}`}>
+                <Headset className="w-4 h-4 mr-2" /> Message
+              </Link>
+            </Button>
+          )}
+          {can("users.edit_profile") && (!isEditing ? (
             <Button variant="outline" onClick={startEdit}>
               <Edit className="w-4 h-4 mr-2" /> Edit
             </Button>
@@ -588,8 +592,8 @@ export default function UserDetailPage() {
                 <Save className="w-4 h-4 mr-2" /> Save
               </Button>
             </>
-          )}
-          {user.isBanned ? (
+          ))}
+          {can("users.ban") && (user.isBanned ? (
             <Button variant="outline" className="text-green-600 border-green-600" onClick={() => unbanMutation.mutate()} disabled={unbanMutation.isPending}>
               <ShieldCheck className="w-4 h-4 mr-2" /> Unban
             </Button>
@@ -597,50 +601,60 @@ export default function UserDetailPage() {
             <Button variant="destructive" onClick={() => setIsBanDialogOpen(true)}>
               <Ban className="w-4 h-4 mr-2" /> Ban
             </Button>
+          ))}
+          {can("users.reset_credentials") && (
+            <Button variant="outline" onClick={() => unlockOtpMutation.mutate()} disabled={unlockOtpMutation.isPending}>
+              {unlockOtpMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Unlock OTP
+            </Button>
           )}
-          <Button variant="outline" onClick={() => unlockOtpMutation.mutate()} disabled={unlockOtpMutation.isPending}>
-            {unlockOtpMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-            Unlock OTP
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (confirm(`Log out ${fullName} from all devices?`)) {
-                forceLogoutMutation.mutate()
-              }
-            }}
-            disabled={forceLogoutMutation.isPending}
-          >
-            {forceLogoutMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <LogOut className="w-4 h-4 mr-2" />
-            )}
-            Log out
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => { setNewPhone(user.phoneNumber || ""); setIsPhoneDialogOpen(true) }}
-          >
-            Change phone
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => { setAssignPin(""); setIsPinDialogOpen(true) }}
-          >
-            Set PIN
-          </Button>
-          <ImageUploadButton
-            label={user.profilePicture ? "Change photo" : "Add photo"}
-            onFile={async (file) => {
-              const url = await uploadImage(file)
-              await updateUserProfile(userId, { profilePicture: url })
-              queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
-              queryClient.invalidateQueries({ queryKey: ["admin-users"] })
-              toast({ title: "Photo updated", description: "Profile picture saved on the user's behalf." })
-            }}
-          />
-          {user.profilePicture && (
+          {can("users.force_logout") && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (confirm(`Log out ${fullName} from all devices?`)) {
+                  forceLogoutMutation.mutate()
+                }
+              }}
+              disabled={forceLogoutMutation.isPending}
+            >
+              {forceLogoutMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <LogOut className="w-4 h-4 mr-2" />
+              )}
+              Log out
+            </Button>
+          )}
+          {can("users.reset_credentials") && (
+            <Button
+              variant="outline"
+              onClick={() => { setNewPhone(user.phoneNumber || ""); setIsPhoneDialogOpen(true) }}
+            >
+              Change phone
+            </Button>
+          )}
+          {can("users.reset_credentials") && (
+            <Button
+              variant="outline"
+              onClick={() => { setAssignPin(""); setIsPinDialogOpen(true) }}
+            >
+              Set PIN
+            </Button>
+          )}
+          {can("users.edit_profile") && (
+            <ImageUploadButton
+              label={user.profilePicture ? "Change photo" : "Add photo"}
+              onFile={async (file) => {
+                const url = await uploadImage(file)
+                await updateUserProfile(userId, { profilePicture: url })
+                queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+                queryClient.invalidateQueries({ queryKey: ["admin-users"] })
+                toast({ title: "Photo updated", description: "Profile picture saved on the user's behalf." })
+              }}
+            />
+          )}
+          {can("users.edit_profile") && user.profilePicture && (
             <Button
               variant="outline"
               onClick={() => {
@@ -654,15 +668,17 @@ export default function UserDetailPage() {
               Remove photo
             </Button>
           )}
-          <ImageUploadButton
-            label="Upload ID"
-            onFile={async (file) => {
-              await uploadUserDocument(userId, file)
-              queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
-              toast({ title: "ID uploaded", description: "Submitted for verification on the user's behalf." })
-            }}
-          />
-          {(user.isVerified || user.governmentIdStatus === "APPROVED") && (
+          {can("users.upload_documents") && (
+            <ImageUploadButton
+              label="Upload ID"
+              onFile={async (file) => {
+                await uploadUserDocument(userId, file)
+                queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] })
+                toast({ title: "ID uploaded", description: "Submitted for verification on the user's behalf." })
+              }}
+            />
+          )}
+          {can("verifications.revoke") && (user.isVerified || user.governmentIdStatus === "APPROVED") && (
             <Button
               variant="outline"
               onClick={() => { setRevokeReason(""); setIsRevokeDialogOpen(true) }}
@@ -670,13 +686,15 @@ export default function UserDetailPage() {
               Revoke verification
             </Button>
           )}
-          <Button
-            variant="outline"
-            className="text-destructive border-destructive/50 hover:bg-destructive/10"
-            onClick={() => { setDeleteConfirmPhone(""); setIsDeleteDialogOpen(true) }}
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Delete
-          </Button>
+          {can("users.delete") && can("users.view_contact") && (
+            <Button
+              variant="outline"
+              className="text-destructive border-destructive/50 hover:bg-destructive/10"
+              onClick={() => { setDeleteConfirmPhone(""); setIsDeleteDialogOpen(true) }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Delete
+            </Button>
+          )}
         </div>
       </div>
 
@@ -903,7 +921,7 @@ export default function UserDetailPage() {
                 <span className="text-muted-foreground">Accepted by</span>
                 <span>{user.termsAcceptedBy || "—"}</span>
               </div>
-              {!user.termsAcceptedAt && (
+              {can("users.accept_terms") && !user.termsAcceptedAt && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -1098,9 +1116,11 @@ export default function UserDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
               <CardTitle className="text-sm">Service Listings</CardTitle>
-              <Button size="sm" onClick={openAddService}>
-                <Layers className="w-4 h-4 mr-2" /> Add service
-              </Button>
+              {can("users.manage_services") && (
+                <Button size="sm" onClick={openAddService}>
+                  <Layers className="w-4 h-4 mr-2" /> Add service
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               {!user.services?.length ? (

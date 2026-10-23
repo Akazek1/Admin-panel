@@ -1,6 +1,7 @@
 "use client"
 
 import React, { Suspense, useEffect, useRef, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -177,6 +178,7 @@ function ThreadNoteBar({ threadId, note }: { threadId: string; note: ThreadNote 
     setEditing(false)
   }, [threadId])
 
+  const can = useCan()
   const save = useMutation({
     mutationFn: (content: string) => axiosInstance.put(`/admin/support/threads/${threadId}/note`, { content }),
     onSuccess: () => {
@@ -204,7 +206,7 @@ function ThreadNoteBar({ threadId, note }: { threadId: string; note: ThreadNote 
           <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
             Cancel
           </Button>
-          <Button size="sm" disabled={save.isPending || draft.trim() === (note?.content ?? "")} onClick={() => save.mutate(draft)}>
+          <Button size="sm" disabled={!can("support.notes") || save.isPending || draft.trim() === (note?.content ?? "")} onClick={() => save.mutate(draft)}>
             {draft.trim() || !note ? "Save note" : "Remove note"}
           </Button>
         </div>
@@ -625,6 +627,7 @@ function SupportInbox() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [detail?.messages?.length, selectedId])
 
+  const can = useCan()
   const sendMutation = useMutation({
     mutationFn: (content: string) =>
       editTarget
@@ -686,11 +689,11 @@ function SupportInbox() {
 
   const handleSend = () => {
     const text = messageText.trim()
-    if (!text || !selectedId || sendMutation.isPending) return
+    if (!text || !selectedId || sendMutation.isPending || !can("support.reply")) return
     sendMutation.mutate(text)
   }
 
-  const canReply = !!me?.supportDisplayName
+  const canReply = !!me?.supportDisplayName && can("support.reply")
   const threads = list?.items ?? []
 
   return (
@@ -851,12 +854,12 @@ function SupportInbox() {
                   <div className="flex shrink-0 items-center gap-2">
                     <Badge className={cn("text-[10px]", statusBadgeClass(detail.status))}>{STATUS_LABEL[detail.status]}</Badge>
                     {detail.status === "RESOLVED" ? (
-                      <Button size="sm" variant="outline" disabled={resolveMutation.isPending} onClick={() => resolveMutation.mutate(false)}>
+                      <Button size="sm" variant="outline" disabled={!can("support.resolve") || resolveMutation.isPending} onClick={() => resolveMutation.mutate(false)}>
                         <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                         Reopen
                       </Button>
                     ) : (
-                      <Button size="sm" variant="outline" disabled={resolveMutation.isPending} onClick={() => resolveMutation.mutate(true)}>
+                      <Button size="sm" variant="outline" disabled={!can("support.resolve") || resolveMutation.isPending} onClick={() => resolveMutation.mutate(true)}>
                         <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
                         Mark resolved
                       </Button>
@@ -915,7 +918,7 @@ function SupportInbox() {
                               <button
                                 type="button"
                                 aria-label="Unsend"
-                                disabled={unsendMutation.isPending}
+                                disabled={!can("support.reply") || unsendMutation.isPending}
                                 onClick={() => {
                                   if (window.confirm("Unsend this reply? The user will see it as deleted.")) {
                                     unsendMutation.mutate(msg.id)
@@ -938,6 +941,7 @@ function SupportInbox() {
                                 <button
                                   key={emoji}
                                   type="button"
+                                  disabled={!can("support.reply")}
                                   onClick={() => {
                                     reactMutation.mutate({ messageId: msg.id, emoji })
                                     setReactingTo(null)
@@ -1029,9 +1033,11 @@ function SupportInbox() {
                   <div className="flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                     <ShieldAlert className="h-4 w-4 shrink-0" />
                     <span className="flex-1">
-                      {me.isFullAdmin
-                        ? "You need a display name before you can reply. It is the name users see on your messages."
-                        : "You can't reply yet: ask a full admin to set your support display name."}
+                      {!can("support.reply")
+                        ? "Your role can read support threads but not reply."
+                        : me.isFullAdmin
+                          ? "You need a display name before you can reply. It is the name users see on your messages."
+                          : "You can't reply yet: ask a full admin to set your support display name."}
                     </span>
                     {me.isFullAdmin && (
                       <Button size="sm" variant="outline" className="h-7 shrink-0 text-xs" onClick={() => setSettingsOpen(true)}>
@@ -1078,7 +1084,7 @@ function SupportInbox() {
                           if (e.key === "Escape") cancelDraftMode()
                         }}
                       />
-                      <Button onClick={handleSend} disabled={!messageText.trim() || sendMutation.isPending} aria-label="Send">
+                      <Button onClick={handleSend} disabled={!can("support.reply") || !messageText.trim() || sendMutation.isPending} aria-label="Send">
                         {sendMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                       </Button>
                     </div>

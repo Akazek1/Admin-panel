@@ -1,6 +1,7 @@
 // app/(app)/layout.tsx
 import type React from "react";
 import { PortfolioSidebar } from "@/components/portfolio-sidebar";
+import { AdminAccessGate } from "@/components/admin/admin-access-gate";
 import { cookies } from "next/headers";
 import "@/app/globals.css";
 
@@ -11,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div>
       {token && <PortfolioSidebar />}
       <main className={`min-h-screen flex-1 overflow-auto ${token ? "lg:ml-64" : ""}`}>
-        {children}
+        {token ? <AdminAccessGate>{children}</AdminAccessGate> : children}
       </main>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useDeferredValue, useEffect, useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import {
@@ -197,6 +198,7 @@ export default function IndividualsPage() {
   const [onlineOnly, setOnlineOnly] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [createOpen, setCreateOpen] = useState(false)
+  const can = useCan()
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [sortKey, setSortKey] = useState<SortKey>("joined")
@@ -432,10 +434,12 @@ export default function IndividualsPage() {
           title="Individuals"
           description="Manage and monitor individual marketplace users."
         >
-          <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => setCreateOpen(true)}>
-            <UserPlus className="mr-2 h-4 w-4" />
-            Add individual
-          </Button>
+          {can("users.create") && (
+            <Button className="bg-emerald-700 hover:bg-emerald-600" onClick={() => setCreateOpen(true)}>
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add individual
+            </Button>
+          )}
         </AdminPageHeader>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
@@ -68,6 +69,7 @@ export default function OrganizationsPage() {
     queryFn: () => getPlacements(commissionFilter === "ALL" ? undefined : { commissionPaid: commissionFilter }),
   })
 
+  const can = useCan()
   const verifyMutation = useMutation({
     mutationFn: (id: string) => verifyOrganization(id),
     onSuccess: () => {
@@ -174,11 +176,11 @@ export default function OrganizationsPage() {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {!org.verified && (
-                          <Button size="sm" onClick={() => verifyMutation.mutate(org.id)} disabled={verifyMutation.isPending}>
+                          <Button size="sm" onClick={() => verifyMutation.mutate(org.id)} disabled={!can("orgs.verify") || verifyMutation.isPending}>
                             <CheckCircle className="w-4 h-4 mr-1.5" /> Verify
                           </Button>
                         )}
-                        <Button size="sm" variant="outline" onClick={() => orgMutation.mutate({ id: org.id, data: { verified: !org.verified } })}>
+                        <Button size="sm" variant="outline" disabled={!can("orgs.edit") || orgMutation.isPending} onClick={() => orgMutation.mutate({ id: org.id, data: { verified: !org.verified } })}>
                           <ShieldCheck className="w-4 h-4 mr-1.5" /> {org.verified ? "Unverify" : "Mark Verified"}
                         </Button>
                         <Button size="sm" variant="outline" asChild>
@@ -277,6 +279,7 @@ export default function OrganizationsPage() {
                       <Button
                         size="sm"
                         variant="outline"
+                        disabled={!can("placements.manage") || placementMutation.isPending}
                         onClick={() => placementMutation.mutate({ id: placement.id, data: { commissionPaid: !placement.commissionPaid } })}
                       >
                         {placement.commissionPaid ? "Mark Unpaid" : "Mark Paid"}
@@ -285,6 +288,7 @@ export default function OrganizationsPage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          disabled={!can("placements.manage") || placementMutation.isPending}
                           onClick={() => placementMutation.mutate({ id: placement.id, data: { status: "TERMINATED" } })}
                         >
                           Terminate
@@ -318,7 +322,7 @@ export default function OrganizationsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOptOutWorker(null)}>Cancel</Button>
-            <Button onClick={() => optOutMutation.mutate()} disabled={!optOutReason.trim() || optOutMutation.isPending}>
+            <Button onClick={() => optOutMutation.mutate()} disabled={!can("placements.manage") || !optOutReason.trim() || optOutMutation.isPending}>
               {optOutMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               Confirm Opt-Out
             </Button>

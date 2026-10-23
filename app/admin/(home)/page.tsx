@@ -29,6 +29,7 @@ import {
   Users,
 } from "lucide-react"
 import { getStats } from "@/lib/api"
+import { useAdminAccess } from "@/lib/admin-access"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -276,6 +277,10 @@ function MiniSparkline({ tone }: { tone: Tone }) {
 }
 
 export default function DashboardPage() {
+  const { data: access } = useAdminAccess()
+  const name = access?.displayName ?? "there"
+  const roleLabel = access?.isOwner ? "Owner" : access?.roleName ?? "Staff"
+  const initials = (access?.displayName ?? "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
   const { data: stats, isLoading } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: getStats,
@@ -403,10 +408,10 @@ export default function DashboardPage() {
         <header className="flex flex-col gap-4 border-b border-white/5 pb-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">Welcome back, Emmanuel Ops</h1>
-              <Crown className="h-5 w-5 text-amber-400" />
+              <h1 className="text-2xl font-semibold tracking-tight">Welcome back, {name}</h1>
+              {access?.isOwner ? <Crown className="h-5 w-5 text-amber-400" /> : null}
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">Super Admin</p>
+            <p className="mt-1 text-sm text-muted-foreground">{roleLabel}</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" className="h-10 w-10">
@@ -421,12 +426,12 @@ export default function DashboardPage() {
             </Button>
             <div className="ml-2 flex items-center gap-3 rounded-full border border-white/10 bg-card/70 px-3 py-2">
               <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-muted font-semibold">
-                EO
+                {initials}
                 <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border border-card bg-emerald-400" />
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-semibold leading-tight">Emmanuel Ops</p>
-                <p className="text-xs text-muted-foreground">Super Admin</p>
+                <p className="text-sm font-semibold leading-tight">{access?.displayName ?? "—"}</p>
+                <p className="text-xs text-muted-foreground">{roleLabel}</p>
               </div>
             </div>
           </div>

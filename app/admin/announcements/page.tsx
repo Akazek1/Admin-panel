@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { useCan } from "@/lib/admin-access"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
 import { Card, CardContent } from "@/components/ui/card"
@@ -96,6 +97,7 @@ export default function AnnouncementsPage() {
     },
   })
 
+  const can = useCan()
   const sendMutation = useMutation({
     mutationFn: (id: string) => axiosInstance.post(`/admin/announcements/${id}/send`),
     onSuccess: (_, id) => {
@@ -187,7 +189,7 @@ export default function AnnouncementsPage() {
                       </span>
                     )}
                     <div className="flex gap-2 ml-auto">
-                      {!a.sentAt && (
+                      {!a.sentAt && can("announcements.send") && (
                         <Button
                           size="sm"
                           onClick={() => {
@@ -195,7 +197,7 @@ export default function AnnouncementsPage() {
                               sendMutation.mutate(a.id)
                             }
                           }}
-                          disabled={sendMutation.isPending}
+                          disabled={!can("announcements.send") || sendMutation.isPending}
                         >
                           {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 mr-1.5" />}
                           Send Now
