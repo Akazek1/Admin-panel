@@ -49,6 +49,19 @@ async function refreshToken() {
   return refreshPromise;
 }
 
+/**
+ * Trades the admin refresh cookie for a fresh access token. Used by the login
+ * page so an admin whose short-lived token expired goes straight back in.
+ */
+export async function tryRestoreSession(): Promise<boolean> {
+  try {
+    await refreshToken();
+    return !!Cookies.get("access_token");
+  } catch {
+    return false;
+  }
+}
+
 // Request interceptor for adding auth token and silent refresh
 api.interceptors.request.use(
   async (config) => {

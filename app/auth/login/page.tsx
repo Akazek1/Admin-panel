@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,7 +12,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card'
-import api from '@/lib/axios-instance'
+import api, { tryRestoreSession } from '@/lib/axios-instance'
 import Cookies from 'js-cookie'
 import { useQueryClient } from '@tanstack/react-query'
 import { ADMIN_ACCESS_QUERY_KEY } from '@/lib/admin-access'
@@ -25,6 +25,28 @@ export default function LoginPage() {
     const [isPending, setIsPending] = useState(false)
     const router = useRouter()
     const queryClient = useQueryClient()
+    // True while we try the refresh cookie before showing the form.
+    const [restoring, setRestoring] = useState(true)
+
+    // Admin access tokens are short-lived, so most visits here are just an
+    // expired token. Renew it silently and return to the page they were on.
+    useEffect(() => {
+        let cancelled = false
+        tryRestoreSession().then((ok) => {
+            if (cancelled) return
+            if (ok) {
+                const next = new URLSearchParams(window.location.search).get('next')
+                // Same-origin paths only — never an open redirect.
+                const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/admin'
+                router.replace(safeNext)
+            } else {
+                setRestoring(false)
+            }
+        })
+        return () => {
+            cancelled = true
+        }
+    }, [router])
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -69,6 +91,14 @@ export default function LoginPage() {
         } finally {
             setIsPending(false)
         }
+    }
+
+    if (restoring) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-darkBackground p-4">
+                <p className="text-sm text-muted-foreground">Checking your session…</p>
+            </div>
+        )
     }
 
     return (
