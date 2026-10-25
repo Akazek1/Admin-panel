@@ -65,8 +65,15 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
   );
 }
 
+// Access tokens are short-lived, so an expired one usually still has a live
+// refresh cookie behind it. That cookie belongs to the API host and is
+// invisible here, so the login page tries a silent refresh first and sends
+// the admin back to `next` when it works.
 function clearAuthAndRedirect(request: NextRequest) {
-  const response = NextResponse.redirect(new URL("/auth/login", request.url));
+  const loginUrl = new URL("/auth/login", request.url);
+  const next = request.nextUrl.pathname + request.nextUrl.search;
+  if (next !== "/") loginUrl.searchParams.set("next", next);
+  const response = NextResponse.redirect(loginUrl);
   response.cookies.delete("access_token");
   return response;
 }
