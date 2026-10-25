@@ -69,12 +69,13 @@ const toneStyles: Record<Tone, { icon: string; text: string; badge: string; bar:
   },
 }
 
+// Counts come from the live stats below, matched on `key` (never the title,
+// so renaming a card can't silently drop its count).
 const attentionItems = [
   {
+    key: "pendingVerifications",
     title: "Pending ID verifications",
     description: "Users submitted documents awaiting review",
-    countKey: "pendingVerifications",
-    fallback: 134,
     severity: "Medium",
     tone: "amber" as Tone,
     icon: FileCheck2,
@@ -82,9 +83,9 @@ const attentionItems = [
     action: "Review",
   },
   {
+    key: "pendingAgencies",
     title: "Agencies awaiting approval",
     description: "New agency registrations pending your approval",
-    count: 12,
     severity: "Medium",
     tone: "purple" as Tone,
     icon: Building2,
@@ -92,9 +93,9 @@ const attentionItems = [
     action: "Review",
   },
   {
+    key: "pendingCompanies",
     title: "Companies awaiting approval",
     description: "New company registrations pending your approval",
-    count: 4,
     severity: "Medium",
     tone: "blue" as Tone,
     icon: BriefcaseBusiness,
@@ -102,9 +103,9 @@ const attentionItems = [
     action: "Review",
   },
   {
+    key: "pendingReports",
     title: "Reports needing review",
     description: "User reports awaiting admin review",
-    count: 67,
     severity: "High",
     tone: "purple" as Tone,
     icon: Flag,
@@ -112,9 +113,9 @@ const attentionItems = [
     action: "Review",
   },
   {
+    key: "unresolvedIssues",
     title: "Disputes needing action",
     description: "Disputes raised requiring resolution",
-    count: 17,
     severity: "High",
     tone: "red" as Tone,
     icon: Gavel,
@@ -122,9 +123,9 @@ const attentionItems = [
     action: "Review",
   },
   {
+    key: "stuckBookings",
     title: "Stuck bookings",
     description: "Bookings stuck in progress for too long",
-    count: 3,
     severity: "Medium",
     tone: "amber" as Tone,
     icon: Clock3,
@@ -132,16 +133,18 @@ const attentionItems = [
     action: "Investigate",
   },
   {
+    key: "unpaidCommissions",
     title: "Unpaid agency commissions",
     description: "Commissions pending payment",
-    count: 5,
     severity: "Medium",
     tone: "green" as Tone,
     icon: CircleDollarSign,
     href: "/admin/agencies",
     action: "Review",
   },
-]
+] as const
+
+type AttentionKey = (typeof attentionItems)[number]["key"]
 
 // Percentage change between two periods, formatted for display.
 function pctChange(current: number, previous: number): string {
@@ -298,21 +301,19 @@ export default function DashboardPage() {
   // Real "needs attention" total: pending verifications + open reports + open issues.
   const needsReview = pendingVerifications + reports.pending + unresolvedIssues
 
-  // Real counts for the "Needs Attention" list, keyed by item title.
-  const attentionCounts: Record<string, number> = {
-    "Pending ID verifications": pendingVerifications,
-    "Agencies awaiting approval": numberValue(stats?.pendingAgencies, 0),
-    "Companies awaiting approval": numberValue(stats?.pendingCompanies, 0),
-    "Reports needing review": reports.pending,
-    "Disputes needing action": unresolvedIssues,
-    "Stuck bookings": numberValue(stats?.stuckBookings, 0),
-    "Unpaid agency commissions": numberValue(stats?.unpaidCommissions?.count, 0),
+  // Real counts for the "Needs Attention" list. Typed so every card must have one.
+  const attentionCounts: Record<AttentionKey, number> = {
+    pendingVerifications,
+    pendingAgencies: numberValue(stats?.pendingAgencies, 0),
+    pendingCompanies: numberValue(stats?.pendingCompanies, 0),
+    pendingReports: reports.pending,
+    unresolvedIssues,
+    stuckBookings: numberValue(stats?.stuckBookings, 0),
+    unpaidCommissions: numberValue(stats?.unpaidCommissions?.count, 0),
   }
   const resolvedAttentionItems = attentionItems.map((item) => ({
     ...item,
-    count:
-      attentionCounts[item.title] ??
-      ("count" in item ? item.count : numberValue(stats?.[item.countKey as keyof typeof stats], item.fallback)),
+    count: attentionCounts[item.key],
   }))
 
   // Marketplace activity — real counts, with month-over-month change where available.

@@ -1,17 +1,19 @@
-# Akazek Admin Dashboard
+# Huza Admin Panel
 
-Next.js 15 admin dashboard for managing the Akazek marketplace.
+Next.js 16 admin panel for managing the Huza marketplace.
 
 ## Quick Start
 
 ```bash
 npm install
-cp .env.local.example .env.local
-# Edit .env.local with API URL
+cp .env.example .env.local
+# Edit .env.local: API URL, and ADMIN_JWT_SECRET (must match the backend's JWT_SECRET)
 npm run dev
 ```
 
-**Admin dashboard runs on:** `http://localhost:3002` (or next available port)
+**Admin panel runs on:** `http://localhost:3002`
+
+Sign in with an admin account. Running the backend seed creates one (`ADMIN_EMAIL` / `ADMIN_PASSWORD`, see `HWA_Backend/prisma/seed.ts`).
 
 ## Also See
 

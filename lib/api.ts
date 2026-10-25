@@ -89,11 +89,6 @@ export async function getAllUsers(): Promise<User[]> {
   return users;
 }
 
-export async function banUser(id: string, reason: string) {
-  const response = await axiosInstance.post(`/admin/users/${id}/ban`, { reason });
-  return response.data?.data ?? response.data;
-}
-
 export interface CreateAccountPayload {
   persona: "INDIVIDUAL" | "COMPANY" | "STAFFING_AGENCY";
   firstName?: string;
@@ -181,11 +176,6 @@ export async function getOnlineUserIds(): Promise<string[]> {
   const response = await axiosInstance.get("/admin/online-users");
   const body = response.data?.data ?? response.data;
   return Array.isArray(body?.userIds) ? body.userIds : [];
-}
-
-export async function unbanUser(id: string) {
-  const response = await axiosInstance.post(`/admin/users/${id}/unban`);
-  return response.data?.data ?? response.data;
 }
 
 // Permanent deletion. The backend requires `confirmPhoneNumber` to exactly
@@ -360,24 +350,6 @@ export async function getStats(): Promise<AdminStats> {
   return response.data?.data ?? response.data;
 }
 
-// Categories
-export interface Category {
-  id: string;
-  name: string;
-  nameKn: string | null;
-  nameFr: string | null;
-  description: string | null;
-  isActive: boolean;
-  sortOrder: number;
-}
-
-export async function getCategories(): Promise<Category[]> {
-  const response = await axiosInstance.get("/admin/categories", { params: { limit: 500 } });
-  const payload = response.data?.data ?? response.data;
-  const list = payload?.data ?? payload;
-  return Array.isArray(list) ? list : [];
-}
-
 // The service taxonomy: broad groupings, each with the job types (categories)
 // assigned to it. Mirrors what the user app's "Add a service" wizard browses.
 export interface TaxonomyGrouping {
@@ -396,20 +368,6 @@ export async function getTaxonomyTree(): Promise<TaxonomyGrouping[]> {
 export async function createUserService(userId: string, payload: any): Promise<Service> {
   const response = await axiosInstance.post(`/admin/users/${userId}/services`, payload);
   return response.data?.data ?? response.data;
-}
-
-export async function createCategory(data: any): Promise<Category> {
-  const response = await axiosInstance.post("/admin/categories", data);
-  return response.data?.data ?? response.data;
-}
-
-export async function updateCategory(id: string, data: any): Promise<Category> {
-  const response = await axiosInstance.patch(`/admin/categories/${id}`, data);
-  return response.data?.data ?? response.data;
-}
-
-export async function deleteCategory(id: string): Promise<void> {
-  await axiosInstance.delete(`/admin/categories/${id}`);
 }
 
 // Organizations
@@ -452,11 +410,6 @@ export async function getOrganizations(params?: { verified?: string; type?: "SER
 export async function getOrganizationDetail(id: string) {
   const response = await axiosInstance.get(`/admin/organizations/${id}`);
   return response.data?.data ?? response.data;
-}
-
-export async function getPendingOrganizations(): Promise<Organization[]> {
-  const response = await axiosInstance.get("/admin/organizations/pending");
-  return unwrapList<Organization>(response.data);
 }
 
 export async function verifyOrganization(id: string) {
@@ -529,23 +482,6 @@ export async function optOutAgencyEnrollments(agencyId: string, reason?: string)
 
 export async function optOutWorkerEnrollments(workerId: string, reason?: string) {
   const response = await axiosInstance.post(`/admin/enrollments/workers/${workerId}/opt-out`, { reason });
-  return response.data?.data ?? response.data;
-}
-
-// Audit Logs
-export interface AuditLog {
-  id: string;
-  actorId: string;
-  actor: { firstName: string; lastName: string };
-  action: string;
-  targetType: string;
-  targetId: string;
-  metadata: any;
-  createdAt: string;
-}
-
-export async function getAuditLogs(page = 1, limit = 50): Promise<{ data: AuditLog[]; meta: any }> {
-  const response = await axiosInstance.get("/admin/audit-logs", { params: { page, limit } });
   return response.data?.data ?? response.data;
 }
 
@@ -682,17 +618,6 @@ export async function approveVerification(id: string) {
 export async function rejectVerification(id: string, reason: string) {
   const response = await axiosInstance.post(`/admin/verifications/${id}/reject`, { reason });
   return response.data?.data ?? response.data;
-}
-
-// Deprecated or legacy
-export async function getPendingApprovals(): Promise<any[]> {
-  try {
-    const res = await axiosInstance.get("/admin/verifications/pending");
-    return unwrapList<any>(res.data);
-  } catch (error) {
-    console.error("Failed to fetch pending approvals:", error);
-    return [];
-  }
 }
 
 export async function adminAcceptTerms(userId: string): Promise<void> {
