@@ -12,6 +12,12 @@ const api = axios.create({
   withCredentials: true,
 });
 
+/**
+ * The refresh call blocks the login page ("Checking your session…") and every
+ * request that waits on it, so it must not hang when the API is slow or down.
+ */
+export const REFRESH_TIMEOUT_MS = 10_000;
+
 let refreshPromise: Promise<void> | null = null;
 
 function decodeJwt(token: string): { exp?: number } | null {
@@ -31,7 +37,7 @@ async function refreshToken() {
   // The admin panel has its own refresh route + cookie, separate from the
   // user app's, and must store the token it gets back.
   refreshPromise = api
-    .post("/auth/admin/refresh")
+    .post("/auth/admin/refresh", undefined, { timeout: REFRESH_TIMEOUT_MS })
     .then((res) => {
       const token = res.data?.data?.token || res.data?.token;
       if (token) {
