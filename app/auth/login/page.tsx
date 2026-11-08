@@ -16,7 +16,12 @@ import api, { tryRestoreSession } from '@/lib/axios-instance'
 import Cookies from 'js-cookie'
 import { useQueryClient } from '@tanstack/react-query'
 import { ADMIN_ACCESS_QUERY_KEY } from '@/lib/admin-access'
-import { APP_CONFIG } from '@/constant/app.config' 
+import { APP_CONFIG } from '@/constant/app.config'
+import {
+    clearRestoreMarker,
+    markRestoreSucceeded,
+    shouldAttemptRestore,
+} from '@/lib/session-restore'
 
 export default function LoginPage() {
     const [email, setEmail] = useState('')
@@ -32,13 +37,31 @@ export default function LoginPage() {
     // expired token. Renew it silently and return to the page they were on.
     useEffect(() => {
         let cancelled = false
+        const next = new URLSearchParams(window.location.search).get('next')
+        // Same-origin paths only — never an open redirect.
+        const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/admin'
+
+        // A restore for this page just succeeded and we were sent back anyway:
+        // the server rejected the renewed token. Restoring again would loop.
+        if (!shouldAttemptRestore(safeNext)) {
+            clearRestoreMarker()
+            setStatus({
+                success: false,
+                message: 'Your session could not be restored. Please sign in again.',
+            })
+            setRestoring(false)
+            return
+        }
+
         tryRestoreSession().then((ok) => {
             if (cancelled) return
             if (ok) {
-                const next = new URLSearchParams(window.location.search).get('next')
-                // Same-origin paths only — never an open redirect.
-                const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : '/admin'
-                router.replace(safeNext)
+                markRestoreSucceeded(safeNext)
+                // Full navigation, not router.replace: if the middleware rejects
+                // the renewed token it redirects back here, and a client-side
+                // navigation would keep this already-mounted page stuck on
+                // "Checking your session…" without re-running this effect.
+                window.location.replace(safeNext)
             } else {
                 setRestoring(false)
             }
@@ -79,6 +102,7 @@ export default function LoginPage() {
                 // Drop any access cached for a previous session, then hold
                 // owner-issued temporary passwords on the change screen.
                 queryClient.removeQueries({ queryKey: ADMIN_ACCESS_QUERY_KEY })
+                clearRestoreMarker()
                 const mustChange = res.data?.data?.user?.mustChangePassword === true
                 router.push(mustChange ? '/admin/change-password' : '/admin')
             } else {
