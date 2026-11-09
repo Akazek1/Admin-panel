@@ -60,6 +60,9 @@ async function refreshToken() {
  * page so an admin whose short-lived token expired goes straight back in.
  */
 export async function tryRestoreSession(): Promise<boolean> {
+  // Whatever access token is left here is the stale one that sent the admin
+  // to the login page. Drop it so success means the refresh issued a new one.
+  Cookies.remove("access_token", { path: "/" });
   try {
     await refreshToken();
     return !!Cookies.get("access_token");
@@ -73,12 +76,17 @@ api.interceptors.request.use(
   async (config) => {
     const token = Cookies.get("access_token");
 
+    // Auth routes (refresh, login, logout) never wait on a refresh: the
+    // refresh request itself passes through here, and awaiting refreshToken()
+    // for it would wait on its own promise forever without ever sending it.
+    const isAuthRoute = String(config.url ?? "").includes("/auth/");
+
     if (token) {
       const decoded = decodeJwt(token);
       const now = Math.floor(Date.now() / 1000);
 
       // If token expires in less than 5 minutes, refresh silently
-      if (decoded?.exp && decoded.exp - now < 300) {
+      if (!isAuthRoute && decoded?.exp && decoded.exp - now < 300) {
         try {
           await refreshToken();
         } catch (err) {
