@@ -23,6 +23,9 @@ import {
     shouldAttemptRestore,
 } from '@/lib/session-restore'
 
+/** Longer than the refresh request's own timeout, so that one normally wins. */
+const RESTORE_GIVE_UP_MS = 12_000
+
 export default function LoginPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -53,7 +56,14 @@ export default function LoginPage() {
             return
         }
 
+        // Last line of defence: whatever goes wrong, never leave the admin on
+        // "Checking your session…" — show the form after a short wait.
+        const giveUp = window.setTimeout(() => {
+            if (!cancelled) setRestoring(false)
+        }, RESTORE_GIVE_UP_MS)
+
         tryRestoreSession().then((ok) => {
+            window.clearTimeout(giveUp)
             if (cancelled) return
             if (ok) {
                 markRestoreSucceeded(safeNext)
@@ -68,6 +78,7 @@ export default function LoginPage() {
         })
         return () => {
             cancelled = true
+            window.clearTimeout(giveUp)
         }
     }, [router])
 
