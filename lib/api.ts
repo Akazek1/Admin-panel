@@ -35,6 +35,7 @@ export interface User {
   isMobileVerified?: boolean;
   isEmailVerified?: boolean;
   governmentIdStatus?: string | null;
+  governmentIdDocumentId?: string | null;
   registeredById?: string | null;
   ownedOrg?: { name: string } | null;
   agency?: { name: string } | null;
