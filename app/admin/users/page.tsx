@@ -116,7 +116,21 @@ function isProvider(user: User) {
 }
 
 function isVerified(user: User) {
-  return user.isVerified || user.governmentIdStatus === "VERIFIED"
+  return user.isVerified || user.governmentIdStatus === "APPROVED"
+}
+
+// Uploaded an ID that an admin hasn't decided on yet. `governmentIdStatus`
+// defaults to PENDING at sign-up, so the document id is what proves a submission.
+function isAwaitingIdReview(user: User) {
+  return (
+    !isVerified(user) &&
+    !!user.governmentIdDocumentId &&
+    (user.governmentIdStatus === "PENDING" || user.governmentIdStatus === "UNDER_REVIEW")
+  )
+}
+
+function hasNoIdSubmitted(user: User) {
+  return !isVerified(user) && !user.governmentIdDocumentId
 }
 
 function bookingCount(user: User) {
@@ -254,7 +268,9 @@ export default function IndividualsPage() {
       const matchesVerification =
         verificationFilter === "ALL" ||
         (verificationFilter === "VERIFIED" && isVerified(user)) ||
-        (verificationFilter === "PENDING" && !isVerified(user))
+        (verificationFilter === "PENDING" && !isVerified(user)) ||
+        (verificationFilter === "AWAITING_REVIEW" && isAwaitingIdReview(user)) ||
+        (verificationFilter === "NO_ID" && hasNoIdSubmitted(user))
       const matchesStatus =
         statusFilter === "ALL" ||
         (statusFilter === "ACTIVE" && !user.isBanned) ||
@@ -289,6 +305,8 @@ export default function IndividualsPage() {
       providers,
       verified,
       pending: Math.max(0, individuals.length - verified),
+      awaitingReview: individuals.filter(isAwaitingIdReview).length,
+      noId: individuals.filter(hasNoIdSubmitted).length,
       banned,
       reports,
     }
@@ -399,7 +417,7 @@ export default function IndividualsPage() {
         return (
           <TableCell>
             <Badge variant="outline" className={isVerified(user) ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300" : "border-amber-500/20 bg-amber-500/10 text-amber-300"}>
-              {isVerified(user) ? "Verified" : "Pending"}
+              {isVerified(user) ? "Verified" : "Not verified"}
             </Badge>
           </TableCell>
         )
@@ -468,7 +486,7 @@ export default function IndividualsPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <AdminStatCard title="Total Individuals" value={stats.total.toLocaleString()} description="Marketplace users" icon={Users} tone="green" />
           <AdminStatCard title="Providers" value={stats.providers.toLocaleString()} description="Can offer services" icon={ShieldCheck} tone="blue" />
-          <AdminStatCard title="Pending Verification" value={stats.pending.toLocaleString()} description="Needs attention" icon={CheckCircle2} tone="amber" />
+          <AdminStatCard title="Not Verified" value={stats.pending.toLocaleString()} description={`${stats.awaitingReview.toLocaleString()} awaiting review · ${stats.noId.toLocaleString()} no ID yet`} icon={CheckCircle2} tone="amber" />
           <AdminStatCard title="Banned / Suspended" value={stats.banned.toLocaleString()} description="Restricted accounts" icon={Ban} tone="red" />
           <AdminStatCard title="With Reports" value={stats.reports.toLocaleString()} description="Total report signals" icon={Flag} tone="purple" />
         </div>
@@ -491,7 +509,9 @@ export default function IndividualsPage() {
               <SelectContent>
                 <SelectItem value="ALL">All verification</SelectItem>
                 <SelectItem value="VERIFIED">Verified</SelectItem>
-                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="PENDING">Not verified</SelectItem>
+                <SelectItem value="AWAITING_REVIEW">Awaiting ID review</SelectItem>
+                <SelectItem value="NO_ID">No ID submitted</SelectItem>
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
