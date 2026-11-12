@@ -115,17 +115,20 @@ export default function LoginPage() {
                 queryClient.removeQueries({ queryKey: ADMIN_ACCESS_QUERY_KEY })
                 clearRestoreMarker()
                 const mustChange = res.data?.data?.user?.mustChangePassword === true
-                router.push(mustChange ? '/admin/change-password' : '/admin')
-            } else {
-                console.warn('Login response missing token')
-                setStatus({ success: false, message: 'Invalid credentials' })
+                // Full navigation, not router.push: the router can still hold the
+                // "/admin → login" redirect that brought the admin here and would
+                // land them back on this form. The button stays in its loading
+                // state until the new page takes over.
+                window.location.assign(mustChange ? '/admin/change-password' : '/admin')
+                return
             }
+            console.warn('Login response missing token')
+            setStatus({ success: false, message: 'Invalid credentials' })
         } catch (err: any) {
             const errorMsg = err.response?.data?.message || 'Something went wrong.'
             setStatus({ success: false, message: errorMsg })
-        } finally {
-            setIsPending(false)
         }
+        setIsPending(false)
     }
 
     if (restoring) {
