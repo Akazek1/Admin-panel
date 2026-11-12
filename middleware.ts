@@ -26,6 +26,12 @@ function base64UrlToJson<T>(value: string): T | null {
   }
 }
 
+// The signature and the staff role are what this check is for. Expiry is NOT
+// checked: the access token is short-lived and the panel renews it in the
+// browser (lib/axios-instance.ts), so bouncing an expired one to the login
+// page only added a redirect and a full reload to an ordinary click. The page
+// shell carries no data, and the API rejects an expired token on its own. The
+// cookie itself lapses after 7 days, which bounds how old a token can be.
 async function verifyAdminJwt(token: string): Promise<boolean> {
   const [encodedHeader, encodedPayload, encodedSignature] = token.split(".");
   const secret = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
@@ -38,10 +44,6 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
   const payload = base64UrlToJson<JwtPayload>(encodedPayload);
 
   if (!header || header.alg !== "HS256" || !payload) {
-    return false;
-  }
-
-  if (!payload.exp || payload.exp <= Math.floor(Date.now() / 1000)) {
     return false;
   }
 
@@ -65,10 +67,9 @@ async function verifyAdminJwt(token: string): Promise<boolean> {
   );
 }
 
-// Access tokens are short-lived, so an expired one usually still has a live
-// refresh cookie behind it. That cookie belongs to the API host and is
-// invisible here, so the login page tries a silent refresh first and sends
-// the admin back to `next` when it works.
+// A missing access cookie can still have a live refresh cookie behind it. That
+// cookie belongs to the API host and is invisible here, so the login page
+// tries a silent refresh first and sends the admin back to `next` when it works.
 function clearAuthAndRedirect(request: NextRequest) {
   const loginUrl = new URL("/auth/login", request.url);
   const next = request.nextUrl.pathname + request.nextUrl.search;

@@ -44,6 +44,36 @@ describe("session refresh", () => {
     expect(sent).toEqual(["/auth/admin/refresh", "/admin/users"]);
   });
 
+  it("keeps the session when the refresh fails for a reason other than 401", async () => {
+    const stale = tokenExpiringIn(3600);
+    Cookies.set("access_token", stale);
+    api.defaults.adapter = async (config) => {
+      const status = config.url === "/auth/admin/refresh" ? 503 : 401;
+      throw Object.assign(new Error("fail"), { config, response: { status, data: {} } });
+    };
+    await expect(within(api.get("/admin/users"))).rejects.toBeTruthy();
+    expect(Cookies.get("access_token")).toBe(stale);
+    expect(window.location.pathname).not.toBe("/auth/login");
+  });
+
+  it("skips the refresh call when another tab already stored a fresh token", async () => {
+    const rejected = tokenExpiringIn(3600);
+    const fromOtherTab = tokenExpiringIn(3500);
+    Cookies.set("access_token", rejected);
+    let calls = 0;
+    api.defaults.adapter = async (config) => {
+      sent.push(String(config.url));
+      if (config.url === "/admin/users" && calls++ === 0) {
+        // The other tab finishes its refresh while this request is in flight.
+        Cookies.set("access_token", fromOtherTab);
+        throw Object.assign(new Error("401"), { config, response: { status: 401, data: {} } });
+      }
+      return { data: {}, status: 200, statusText: "OK", headers: {}, config };
+    };
+    await within(api.get("/admin/users"));
+    expect(sent).toEqual(["/admin/users", "/admin/users"]);
+  });
+
   it("reports failure when the refresh returns no token, even with a stale cookie", async () => {
     Cookies.set("access_token", tokenExpiringIn(-60));
     api.defaults.adapter = async (config) => ({

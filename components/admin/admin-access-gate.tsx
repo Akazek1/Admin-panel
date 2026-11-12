@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import { useEffect } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { ADMIN_ACCESS_STALE_EVENT } from "@/lib/axios-instance"
+import { ADMIN_ACCESS_STALE_EVENT, startSessionKeepAlive } from "@/lib/axios-instance"
 import { usePathname, useRouter } from "next/navigation"
 import { Loader2, Lock } from "lucide-react"
 import { ADMIN_ACCESS_QUERY_KEY, canAccess, useAdminAccess } from "@/lib/admin-access"
@@ -27,6 +27,9 @@ export function AdminAccessGate({ children }: { children: ReactNode }) {
   const { data: access, isLoading, isError, error, refetch } = useAdminAccess()
   const denied = [401, 403].includes((error as any)?.response?.status)
   const queryClient = useQueryClient()
+
+  // Renew the short-lived access token in the background on every admin page.
+  useEffect(() => startSessionKeepAlive(), [])
 
   // Re-check access as soon as the API refuses something, instead of waiting
   // for the cache to expire — the role may have just changed.

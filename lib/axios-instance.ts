@@ -31,28 +31,87 @@ function decodeJwt(token: string): { exp?: number } | null {
   }
 }
 
-async function refreshToken() {
+/** Renew this long before expiry, so a token is never stale mid-click. */
+const REFRESH_EARLY_SECONDS = 300;
+
+/** One refresh at a time across every open tab of the panel. */
+const REFRESH_LOCK = "huza-admin-token-refresh";
+
+function secondsLeft(token: string | undefined): number {
+  const exp = token ? decodeJwt(token)?.exp : undefined;
+  return exp ? exp - Math.floor(Date.now() / 1000) : -Infinity;
+}
+
+/**
+ * Refresh tokens are single-use: two tabs trading the same cookie at once
+ * looks like theft to the API and ends the session. So tabs queue on a Web
+ * Lock, and a tab that waited first checks whether the tab ahead of it already
+ * stored a new token — if so there is nothing left to do.
+ */
+function withRefreshLock<T>(run: () => Promise<T>): Promise<T> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks?.request) return run();
+  return locks.request(REFRESH_LOCK, run) as Promise<T>;
+}
+
+/**
+ * `staleToken` is the access token the caller wants replaced. If the cookie
+ * holds a different, still-fresh one by the time we get the lock, another tab
+ * did the work.
+ */
+async function refreshToken(staleToken?: string) {
   if (refreshPromise) return refreshPromise;
 
-  // The admin panel has its own refresh route + cookie, separate from the
-  // user app's, and must store the token it gets back.
-  refreshPromise = api
-    .post("/auth/admin/refresh", undefined, { timeout: REFRESH_TIMEOUT_MS })
-    .then((res) => {
-      const token = res.data?.data?.token || res.data?.token;
-      if (token) {
-        Cookies.set("access_token", token, {
-          expires: 7,
-          secure: true,
-          sameSite: "Lax",
-        });
-      }
-    })
-    .finally(() => {
-      refreshPromise = null;
-    });
+  refreshPromise = withRefreshLock(async () => {
+    const current = Cookies.get("access_token");
+    if (current && current !== staleToken && secondsLeft(current) > REFRESH_EARLY_SECONDS) {
+      return;
+    }
+
+    // The admin panel has its own refresh route + cookie, separate from the
+    // user app's, and must store the token it gets back.
+    const res = await api.post("/auth/admin/refresh", undefined, { timeout: REFRESH_TIMEOUT_MS });
+    const token = res.data?.data?.token || res.data?.token;
+    if (token) {
+      Cookies.set("access_token", token, {
+        expires: 7,
+        secure: true,
+        sameSite: "Lax",
+      });
+    }
+  }).finally(() => {
+    refreshPromise = null;
+  });
 
   return refreshPromise;
+}
+
+/**
+ * Keeps the access token fresh while a panel page is open, so navigation and
+ * API calls never meet an expired one. Checks every minute and whenever the
+ * tab is looked at again (timers barely run in background tabs). Returns a
+ * cleanup function.
+ */
+export function startSessionKeepAlive(): () => void {
+  if (typeof window === "undefined") return () => undefined;
+
+  const check = () => {
+    if (document.visibilityState === "hidden") return;
+    const token = Cookies.get("access_token");
+    if (!token || secondsLeft(token) > REFRESH_EARLY_SECONDS) return;
+    // Failures are left to the next check or the next API call's 401 handling.
+    refreshToken(token).catch(() => undefined);
+  };
+
+  check();
+  const timer = window.setInterval(check, 60_000);
+  document.addEventListener("visibilitychange", check);
+  window.addEventListener("focus", check);
+  return () => {
+    window.clearInterval(timer);
+    document.removeEventListener("visibilitychange", check);
+    window.removeEventListener("focus", check);
+  };
 }
 
 /**
@@ -82,13 +141,10 @@ api.interceptors.request.use(
     const isAuthRoute = String(config.url ?? "").includes("/auth/");
 
     if (token) {
-      const decoded = decodeJwt(token);
-      const now = Math.floor(Date.now() / 1000);
-
       // If token expires in less than 5 minutes, refresh silently
-      if (!isAuthRoute && decoded?.exp && decoded.exp - now < 300) {
+      if (!isAuthRoute && secondsLeft(token) < REFRESH_EARLY_SECONDS) {
         try {
-          await refreshToken();
+          await refreshToken(token);
         } catch (err) {
           console.warn("Silent refresh failed, will retry on 401");
         }
@@ -120,8 +176,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthRoute) {
       originalRequest._retry = true;
 
+      const usedToken = String(originalRequest.headers?.Authorization ?? "").replace(/^Bearer /, "");
+
       try {
-        await refreshToken();
+        await refreshToken(usedToken || undefined);
 
         // Retry original request with new token
         const newToken = Cookies.get("access_token");
@@ -129,11 +187,14 @@ api.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
           return api(originalRequest);
         }
-      } catch (refreshError) {
-        // Refresh failed, redirect to login
-        if (typeof window !== "undefined") {
+      } catch (refreshError: any) {
+        // Only a refused refresh means the session is over. A timeout, a
+        // network blip or a 429/5xx says nothing about the session, so the
+        // admin stays signed in and the next request simply tries again.
+        if (refreshError?.response?.status === 401 && typeof window !== "undefined") {
           Cookies.remove("access_token", { path: "/" });
-          window.location.href = "/auth/login";
+          const next = window.location.pathname + window.location.search;
+          window.location.href = `/auth/login?next=${encodeURIComponent(next)}`;
         }
         return Promise.reject(refreshError);
       }
