@@ -1,8 +1,10 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useEffect, useLayoutEffect } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import axiosInstance from "@/lib/axios-instance"
+import { clearCachedAccess, readCachedAccess, writeCachedAccess } from "@/lib/admin-access-cache"
 
 // What the signed-in staff member may do, from GET /admin/me/access. The
 // backend enforces every permission on its own; this only decides what the
@@ -23,11 +25,37 @@ export interface AdminAccess {
 export const ADMIN_ACCESS_QUERY_KEY = ["admin-access"] as const
 
 export async function getMyAccess(): Promise<AdminAccess> {
-  const res = await axiosInstance.get("/admin/me/access")
-  return res.data?.data ?? res.data
+  try {
+    const res = await axiosInstance.get("/admin/me/access")
+    const access: AdminAccess = res.data?.data ?? res.data
+    // Remembered so the next page load can draw before this call returns.
+    writeCachedAccess(access)
+    return access
+  } catch (err: any) {
+    // Refused: the remembered copy is wrong, never show it again.
+    if ([401, 403].includes(err?.response?.status)) clearCachedAccess()
+    throw err
+  }
 }
 
+// Layout effect in the browser (runs before paint, so no spinner flash);
+// plain effect on the server, where a layout effect only logs a warning.
+const useBrowserLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect
+
 export function useAdminAccess() {
+  const queryClient = useQueryClient()
+
+  // On a fresh page load, start from the access this browser saw last time so
+  // the sidebar and page render at once. It is seeded as already stale
+  // (updatedAt 0), so the query below still asks the API straight away and
+  // replaces it. Done after mount, not as initialData, so the first client
+  // render matches the server-rendered HTML.
+  useBrowserLayoutEffect(() => {
+    if (queryClient.getQueryData(ADMIN_ACCESS_QUERY_KEY) !== undefined) return
+    const cached = readCachedAccess()
+    if (cached) queryClient.setQueryData(ADMIN_ACCESS_QUERY_KEY, cached, { updatedAt: 0 })
+  }, [queryClient])
+
   return useQuery<AdminAccess>({
     queryKey: ADMIN_ACCESS_QUERY_KEY,
     queryFn: getMyAccess,

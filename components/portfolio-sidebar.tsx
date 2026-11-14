@@ -147,8 +147,9 @@ export function PortfolioSidebar() {
         .filter((group) => group.items.length > 0),
     [access],
   )
+  // Same key as the dashboard's stats query, so the two share one request.
   const { data: stats } = useQuery({
-    queryKey: ["sidebar-stats"],
+    queryKey: ["admin-stats"],
     queryFn: getStats,
     refetchInterval: 60_000,
     staleTime: 30_000,
