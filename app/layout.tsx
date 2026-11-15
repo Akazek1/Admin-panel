@@ -8,6 +8,9 @@ import { Toaster } from "@/components/ui/toaster";
 // The tab icon follows the browser's colour scheme: the white mark on dark tab
 // bars, the black mark on light ones, so it never disappears into the bar.
 export const metadata: Metadata = {
+  // The sidebar appends the current section ("Reports · Huza Admin") once a
+  // page is open; this is the name before that and on the login page.
+  title: "Huza Admin",
   icons: {
     icon: [
       { url: "/brand/favicon-white.png", type: "image/png", media: "(prefers-color-scheme: dark)" },

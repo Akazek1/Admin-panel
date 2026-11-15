@@ -135,6 +135,7 @@ const DEFAULT_OPEN_GROUPS: Record<string, boolean> = {
 }
 
 const STORAGE_KEY = "huza-admin-sidebar-open-groups-v2"
+const APP_TITLE = "Huza Admin"
 
 export function PortfolioSidebar() {
   const pathname = usePathname()
@@ -171,6 +172,17 @@ export function PortfolioSidebar() {
   const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() =>
     Object.fromEntries(navigationGroups.map((group) => [group.title, DEFAULT_OPEN_GROUPS[group.title] ?? true]))
   )
+
+  // Name the browser tab after the section that is open, so several admin
+  // tabs can be told apart. A record page (/admin/users/123) takes the name
+  // of the section it belongs to.
+  React.useEffect(() => {
+    const section = navigationGroups
+      .flatMap((group) => group.items)
+      .filter((item) => (item.url === "/admin" ? pathname === "/admin" : pathname === item.url || pathname.startsWith(`${item.url}/`)))
+      .sort((a, b) => b.url.length - a.url.length)[0]
+    document.title = section ? `${section.title} · ${APP_TITLE}` : APP_TITLE
+  }, [pathname])
 
   const isActive = (url: string) => {
     if (url === "/admin") return pathname === "/admin"
