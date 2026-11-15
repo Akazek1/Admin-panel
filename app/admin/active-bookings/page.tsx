@@ -1,5 +1,6 @@
 "use client"
 
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useMemo, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -201,13 +202,13 @@ function PersonBlock({
 
 export default function ActiveBookingsPage() {
   const queryClient = useQueryClient()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL")
-  const [locationFilter, setLocationFilter] = useState<LocationFilter>("ALL")
-  const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("ALL")
-  const [sortMode, setSortMode] = useState<SortMode>("RECENT")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
+  const [searchTerm, setSearchTerm] = usePersistedState("admin:active-bookings:searchTerm", "")
+  const [statusFilter, setStatusFilter] = usePersistedState<StatusFilter>("admin:active-bookings:statusFilter", "ALL")
+  const [locationFilter, setLocationFilter] = usePersistedState<LocationFilter>("admin:active-bookings:locationFilter", "ALL")
+  const [serviceFilter, setServiceFilter] = usePersistedState<ServiceFilter>("admin:active-bookings:serviceFilter", "ALL")
+  const [sortMode, setSortMode] = usePersistedState<SortMode>("admin:active-bookings:sortMode", "RECENT")
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:active-bookings:selectedId", null)
+  const [showDetail, setShowDetail] = usePersistedState("admin:active-bookings:showDetail", false)
   const [overrideTarget, setOverrideTarget] = useState<Booking | null>(null)
   const [overrideStatus, setOverrideStatus] = useState("IN_PROGRESS")
   const [overrideReason, setOverrideReason] = useState("")

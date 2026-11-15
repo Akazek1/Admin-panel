@@ -1,5 +1,6 @@
 "use client"
 
+import { useGoBack } from "@/hooks/use-go-back"
 import { useMemo, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
@@ -37,6 +38,7 @@ function displayName(request: VerificationRequest) {
 export default function VerificationDetailPage() {
   const params = useParams<{ verificationId: string }>()
   const router = useRouter()
+  const goBack = useGoBack("/admin/verifications")
   const queryClient = useQueryClient()
   const [rejectionReason, setRejectionReason] = useState("")
 
@@ -104,11 +106,9 @@ export default function VerificationDetailPage() {
   if (!request) {
     return (
       <div className="p-6">
-        <Button asChild variant="outline">
-          <Link href="/admin/verifications">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Link>
+        <Button variant="outline" onClick={goBack}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
         </Button>
         <p className="mt-8 text-muted-foreground">Verification request not found.</p>
       </div>
@@ -119,11 +119,9 @@ export default function VerificationDetailPage() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/admin/verifications">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to queue
-            </Link>
+          <Button variant="outline" size="sm" onClick={goBack}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Verification Review</h1>

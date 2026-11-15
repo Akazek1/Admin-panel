@@ -1,5 +1,6 @@
 "use client"
 
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useMemo, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -195,13 +196,13 @@ function UserAvatar({ request, size = "md" }: { request: VerificationRequest; si
 
 export default function VerificationsPage() {
   const queryClient = useQueryClient()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [documentTypeFilter, setDocumentTypeFilter] = useState("ALL")
-  const [sortMode, setSortMode] = useState<SortMode>("NEWEST")
-  const [hasServicesFilter, setHasServicesFilter] = useState("ALL")
-  const [profilePhotoFilter, setProfilePhotoFilter] = useState("ALL")
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:verifications:selectedId", null)
+  const [showDetail, setShowDetail] = usePersistedState("admin:verifications:showDetail", false)
+  const [searchTerm, setSearchTerm] = usePersistedState("admin:verifications:searchTerm", "")
+  const [documentTypeFilter, setDocumentTypeFilter] = usePersistedState("admin:verifications:documentTypeFilter", "ALL")
+  const [sortMode, setSortMode] = usePersistedState<SortMode>("admin:verifications:sortMode", "NEWEST")
+  const [hasServicesFilter, setHasServicesFilter] = usePersistedState("admin:verifications:hasServicesFilter", "ALL")
+  const [profilePhotoFilter, setProfilePhotoFilter] = usePersistedState("admin:verifications:profilePhotoFilter", "ALL")
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState("")
 

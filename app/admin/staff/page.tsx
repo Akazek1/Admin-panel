@@ -130,7 +130,7 @@ export default function StaffPage() {
                                   <SelectItem key={r.id} value={r.id}>
                                     <span className="flex items-center gap-2">
                                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
-                                      {r.name}
+                                      <span>{r.name}</span>
                                     </span>
                                   </SelectItem>
                                 ))}
@@ -139,7 +139,7 @@ export default function StaffPage() {
                           ) : (
                             <span className="flex items-center gap-2 text-sm">
                               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: m.adminRole?.color ?? "#6b7280" }} />
-                              {m.adminRole?.name ?? "No role"}
+                              <span>{m.adminRole?.name ?? "No role"}</span>
                             </span>
                           )}
                           {m.adminExtraPermissions.length ? (

@@ -103,7 +103,9 @@ export async function middleware(request: NextRequest) {
 // Configure which paths the middleware should run on
 export const config = {
   matcher: [
-    // Apply to all routes except static files and Next.js internals
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    // Apply to all routes except static files and Next.js internals. /brand
+    // holds only the public logo and tab-icon images, which the login page
+    // needs before anyone is signed in.
+    "/((?!api|_next/static|_next/image|favicon.ico|brand/).*)",
   ],
 };

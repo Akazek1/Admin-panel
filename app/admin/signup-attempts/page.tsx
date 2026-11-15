@@ -1,5 +1,6 @@
 "use client"
 
+import { CopyableText } from "@/components/admin/copyable-text"
 import React, { useMemo, useState } from "react"
 import Link from "next/link"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -290,7 +291,10 @@ export default function SignupAttemptsPage() {
                     <TableCell className="font-mono text-sm font-medium whitespace-nowrap">
                       <span className="flex items-center gap-1.5">
                         {expanded === a.phoneNumber ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
-                        {a.phoneNumber}
+                        {/* In its own element: bare text beside the icon in a flex row
+                            makes a drag past the end of the number snap the
+                            selection back to its start. */}
+                        <CopyableText value={a.phoneNumber} label="Phone" />
                       </span>
                     </TableCell>
                     <TableCell className="text-sm">

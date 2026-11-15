@@ -1,5 +1,6 @@
 "use client"
 
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useEffect, useMemo, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
@@ -227,13 +228,13 @@ function ServiceImage({ service, size = "small", zoomable = false }: { service: 
 
 export default function ServicesPage() {
   const queryClient = useQueryClient()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL")
-  const [qualityFilter, setQualityFilter] = useState<QualityFilter>("ALL")
-  const [categoryFilter, setCategoryFilter] = useState("ALL")
-  const [sortMode, setSortMode] = useState<SortMode>("RECENT")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
+  const [searchTerm, setSearchTerm] = usePersistedState("admin:services:searchTerm", "")
+  const [statusFilter, setStatusFilter] = usePersistedState<StatusFilter>("admin:services:statusFilter", "ALL")
+  const [qualityFilter, setQualityFilter] = usePersistedState<QualityFilter>("admin:services:qualityFilter", "ALL")
+  const [categoryFilter, setCategoryFilter] = usePersistedState("admin:services:categoryFilter", "ALL")
+  const [sortMode, setSortMode] = usePersistedState<SortMode>("admin:services:sortMode", "RECENT")
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:services:selectedId", null)
+  const [showDetail, setShowDetail] = usePersistedState("admin:services:showDetail", false)
   const [adminNote, setAdminNote] = useState("")
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([])
   const [photoBusy, setPhotoBusy] = useState(false)
@@ -1087,7 +1088,7 @@ export default function ServicesPage() {
                       <div>
                         <div className="flex items-center gap-1 text-sm font-medium text-emerald-300">
                           <CheckCircle2 className="h-3.5 w-3.5" />
-                          {rehireRateFor(service) === null ? "No reviews" : `${rehireRateFor(service)}% rehire`}
+                          <span>{rehireRateFor(service) === null ? "No reviews" : `${rehireRateFor(service)}% rehire`}</span>
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {service._count?.bookings ?? 0} bookings · {service._count?.reviews ?? 0} reviews · {service._count?.bookmarks ?? 0} saves

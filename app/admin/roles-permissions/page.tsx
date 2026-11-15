@@ -208,7 +208,7 @@ export default function RolesPermissionsPage() {
                 <DropdownMenuItem key={t.name} onClick={() => startNew(t)} className="flex-col items-start gap-0.5">
                   <span className="flex items-center gap-2 font-medium">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: t.color }} />
-                    {t.name}
+                    <span>{t.name}</span>
                   </span>
                   <span className="text-xs text-muted-foreground">{t.description}</span>
                 </DropdownMenuItem>
@@ -355,7 +355,7 @@ export default function RolesPermissionsPage() {
                             >
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                                  {p.label}
+                                  <span>{p.label}</span>
                                   {p.risk === "high" ? (
                                     <Badge variant="outline" className="gap-1 border-red-500/40 text-red-400">
                                       <AlertTriangle className="h-3 w-3" /> High risk

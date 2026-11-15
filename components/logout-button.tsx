@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation"
 import Cookies from "js-cookie"
 import { LogOut } from "lucide-react"
 import api from "@/lib/axios-instance"
+import { clearCachedAccess } from "@/lib/admin-access-cache"
+import { clearAllDrafts } from "@/lib/drafts"
 
 /** Sign out of the panel: end the server session, clear tokens, go to login. */
 export function useSignOut() {
@@ -22,6 +24,8 @@ export function useSignOut() {
             // Clear any other stored auth data
             localStorage.removeItem("token")
             localStorage.removeItem("access_token")
+            clearCachedAccess()
+            clearAllDrafts()
 
             // Redirect to login page
             router.push("/auth/login")

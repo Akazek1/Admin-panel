@@ -1,5 +1,6 @@
 "use client"
 
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useDeferredValue, useMemo, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -155,14 +156,14 @@ function UserCard({
 
 export default function ReportsPage() {
   const queryClient = useQueryClient()
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:reports:selectedId", null)
+  const [showDetail, setShowDetail] = usePersistedState("admin:reports:showDetail", false)
   const [resolutionStatus, setResolutionStatus] = useState<Report["status"]>("REVIEWING")
   const [resolutionNote, setResolutionNote] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("ALL")
-  const [reasonFilter, setReasonFilter] = useState("ALL")
-  const [sortMode, setSortMode] = useState<SortMode>("NEWEST")
+  const [searchTerm, setSearchTerm] = usePersistedState("admin:reports:searchTerm", "")
+  const [statusFilter, setStatusFilter] = usePersistedState("admin:reports:statusFilter", "ALL")
+  const [reasonFilter, setReasonFilter] = usePersistedState("admin:reports:reasonFilter", "ALL")
+  const [sortMode, setSortMode] = usePersistedState<SortMode>("admin:reports:sortMode", "NEWEST")
   const deferredSearchTerm = useDeferredValue(searchTerm)
 
   const { data: reports = [], isLoading, isError } = useQuery({

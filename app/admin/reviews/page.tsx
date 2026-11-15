@@ -1,5 +1,6 @@
 "use client"
 
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useMemo, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -225,12 +226,12 @@ function UserCard({ label, user, tone }: { label: string; user: ReviewUser; tone
 
 export default function ReviewModerationPage() {
   const queryClient = useQueryClient()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>("ALL")
-  const [repeatFilter, setRepeatFilter] = useState<RepeatFilter>("ALL")
-  const [sortMode, setSortMode] = useState<SortMode>("NEWEST")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
+  const [searchTerm, setSearchTerm] = usePersistedState("admin:reviews:searchTerm", "")
+  const [visibilityFilter, setVisibilityFilter] = usePersistedState<VisibilityFilter>("admin:reviews:visibilityFilter", "ALL")
+  const [repeatFilter, setRepeatFilter] = usePersistedState<RepeatFilter>("admin:reviews:repeatFilter", "ALL")
+  const [sortMode, setSortMode] = usePersistedState<SortMode>("admin:reviews:sortMode", "NEWEST")
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:reviews:selectedId", null)
+  const [showDetail, setShowDetail] = usePersistedState("admin:reviews:showDetail", false)
   const [editing, setEditing] = useState<AdminReview | null>(null)
   const [editComment, setEditComment] = useState("")
   const [editReply, setEditReply] = useState("")

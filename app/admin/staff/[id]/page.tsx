@@ -1,5 +1,6 @@
 "use client"
 
+import { useGoBack } from "@/hooks/use-go-back"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
@@ -271,7 +272,7 @@ export default function StaffMemberPage() {
                         <SelectItem key={r.id} value={r.id}>
                           <span className="flex items-center gap-2">
                             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
-                            {r.name}
+                            <span>{r.name}</span>
                           </span>
                         </SelectItem>
                       ))}
@@ -395,10 +396,11 @@ export default function StaffMemberPage() {
 }
 
 function BackLink() {
+  const goBack = useGoBack("/admin/staff")
   return (
-    <Link href="/admin/staff" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-      <ArrowLeft className="h-4 w-4" /> Staff
-    </Link>
+    <button type="button" onClick={goBack} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+      <ArrowLeft className="h-4 w-4" /> Back
+    </button>
   )
 }
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useEffect, useMemo, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -236,14 +237,14 @@ function ChecklistItem({ ok, title, description }: { ok: boolean; title: string;
 
 export default function PendingBookingsPage() {
   const queryClient = useQueryClient()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [scheduleFilter, setScheduleFilter] = useState<ScheduleFilter>("ALL")
-  const [locationFilter, setLocationFilter] = useState<LocationFilter>("ALL")
-  const [serviceFilter, setServiceFilter] = useState<ServiceFilter>("ALL")
-  const [sortMode, setSortMode] = useState<SortMode>("RECENT")
+  const [searchTerm, setSearchTerm] = usePersistedState("admin:pending-bookings:searchTerm", "")
+  const [scheduleFilter, setScheduleFilter] = usePersistedState<ScheduleFilter>("admin:pending-bookings:scheduleFilter", "ALL")
+  const [locationFilter, setLocationFilter] = usePersistedState<LocationFilter>("admin:pending-bookings:locationFilter", "ALL")
+  const [serviceFilter, setServiceFilter] = usePersistedState<ServiceFilter>("admin:pending-bookings:serviceFilter", "ALL")
+  const [sortMode, setSortMode] = usePersistedState<SortMode>("admin:pending-bookings:sortMode", "RECENT")
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:pending-bookings:selectedId", null)
+  const [showDetail, setShowDetail] = usePersistedState("admin:pending-bookings:showDetail", false)
   const [overrideTarget, setOverrideTarget] = useState<Booking | null>(null)
   const [overrideStatus, setOverrideStatus] = useState("CONFIRMED")
   const [overrideReason, setOverrideReason] = useState("")

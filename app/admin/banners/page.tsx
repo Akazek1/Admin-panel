@@ -437,7 +437,7 @@ export default function BannersPage() {
                     <span>Order {banner.sortOrder}</span>
                     <span className="inline-flex items-center gap-1">
                       {banner.mediaType === "VIDEO" ? <Video className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
-                      {banner.mediaType || "IMAGE"}
+                      <span>{banner.mediaType || "IMAGE"}</span>
                     </span>
                     <span>{banner.ctaText || "No CTA"} {banner.ctaLink ? `-> ${banner.ctaLink}` : ""}</span>
                     <span>{formatShortDate(banner.startDate)} - {formatShortDate(banner.endDate)}</span>

@@ -241,7 +241,7 @@ export function AddStaffDialog({
                   <SelectItem key={r.id} value={r.id}>
                     <span className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.color }} />
-                      {r.name}
+                      <span>{r.name}</span>
                     </span>
                   </SelectItem>
                 ))}
@@ -460,7 +460,7 @@ export function ExtrasDialog({
                     <label key={p.key} htmlFor={`extra-${p.key}`} className="flex cursor-pointer items-start gap-4 px-4 py-2.5">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                          {p.label}
+                          <span>{p.label}</span>
                           {p.risk === "high" ? (
                             <Badge variant="outline" className="gap-1 border-red-500/40 text-red-400">
                               <AlertTriangle className="h-3 w-3" /> High risk
