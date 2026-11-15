@@ -1,5 +1,7 @@
 "use client"
 
+import { readDraft, writeDraft } from "@/lib/drafts"
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useState, useRef, useEffect } from "react"
 import { useCan } from "@/lib/admin-access"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
@@ -126,19 +128,24 @@ function chatBadge(status?: string) {
 
 export default function ConversationsPage() {
   const queryClient = useQueryClient()
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = usePersistedState("admin:conversations:search", "")
   const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:conversations:selectedId", null)
   const [messageText, setMessageText] = useState("")
-  const [statusFilter, setStatusFilter] = useState("ALL")
-  const [chatFilter, setChatFilter] = useState("ALL")
-  const [categoryFilter, setCategoryFilter] = useState("ALL")
-  const [locationFilter, setLocationFilter] = useState("")
+  const [statusFilter, setStatusFilter] = usePersistedState("admin:conversations:statusFilter", "ALL")
+  const [chatFilter, setChatFilter] = usePersistedState("admin:conversations:chatFilter", "ALL")
+  const [categoryFilter, setCategoryFilter] = usePersistedState("admin:conversations:categoryFilter", "ALL")
+  const [locationFilter, setLocationFilter] = usePersistedState("admin:conversations:locationFilter", "")
   const [moderationOpen, setModerationOpen] = useState(false)
   const [moderationAction, setModerationAction] = useState<"TEMPORARILY_DISABLED" | "PERMANENTLY_DISABLED" | "ARCHIVED" | "ACTIVE">("TEMPORARILY_DISABLED")
   const [moderationReason, setModerationReason] = useState("")
   const [disabledUntil, setDisabledUntil] = useState("")
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  // Each conversation keeps its own unsent message.
+  useEffect(() => {
+    setMessageText(readDraft("conversations", selectedId))
+  }, [selectedId])
 
   // Debounce search
   useEffect(() => {
@@ -192,6 +199,7 @@ export default function ConversationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-conversation-detail", selectedId] })
       setMessageText("")
+      writeDraft("conversations", selectedId, "")
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.response?.data?.message || "Send failed.", variant: "destructive" })
@@ -386,9 +394,9 @@ export default function ConversationsPage() {
                       </div>
                     </div>
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1.5"><BriefcaseBusiness className="h-3.5 w-3.5" /> {bookingTitle(selectedConversation)}</span>
+                      <span className="flex items-center gap-1.5"><BriefcaseBusiness className="h-3.5 w-3.5" /> <span>{bookingTitle(selectedConversation)}</span></span>
                       <span>{categoryName(selectedConversation)}</span>
-                      <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> {locationText(selectedConversation)}</span>
+                      <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" /> <span>{locationText(selectedConversation)}</span></span>
                       <span>Booking ID: {selected.id.slice(0, 8)}...</span>
                     </div>
                   </div>
@@ -509,7 +517,10 @@ export default function ConversationsPage() {
                   placeholder="Type a support message…"
                   className="border-white/10 bg-background/70"
                   value={messageText}
-                  onChange={e => setMessageText(e.target.value)}
+                  onChange={e => {
+                    setMessageText(e.target.value)
+                    writeDraft("conversations", selectedId, e.target.value)
+                  }}
                   onKeyDown={e => e.key === "Enter" && !e.shiftKey && handleSend()}
                 />
                 <Button onClick={handleSend} disabled={!can("conversations.send") || !messageText.trim() || sendMutation.isPending}>

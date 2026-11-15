@@ -41,7 +41,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-muted-foreground">Access</p>
                 <p className="flex items-center gap-1.5 font-medium">
                   {isOwner ? <Crown className="h-4 w-4 text-amber-400" /> : null}
-                  {isOwner ? "Owner" : access?.roleName ?? "Staff"}
+                  <span>{isOwner ? "Owner" : access?.roleName ?? "Staff"}</span>
                 </p>
               </div>
               <div>
@@ -221,7 +221,7 @@ function OwnersCard() {
               <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    {ownerName(o)}
+                    <span>{ownerName(o)}</span>
                     {o.isYou ? <Badge variant="outline" className="border-emerald-500/40 text-emerald-300">You</Badge> : null}
                   </div>
                   <p className="text-xs text-muted-foreground">

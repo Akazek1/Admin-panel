@@ -1,5 +1,6 @@
 "use client"
 
+import { useGoBack } from "@/hooks/use-go-back"
 import { useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
@@ -32,6 +33,7 @@ async function resetOrgPassword(id: string) {
 export default function CompanyDetailPage() {
   const { companyId } = useParams<{ companyId: string }>()
   const router = useRouter()
+  const goBack = useGoBack("/admin/companies")
   const queryClient = useQueryClient()
 
   const [editing, setEditing] = useState(false)
@@ -116,7 +118,7 @@ export default function CompanyDetailPage() {
       <div className="flex h-64 flex-col items-center justify-center gap-4 text-muted-foreground">
         <AlertCircle className="h-10 w-10" />
         <p>Company not found.</p>
-        <Button variant="outline" onClick={() => router.back()}>Go back</Button>
+        <Button variant="outline" onClick={goBack}>Go back</Button>
       </div>
     )
   }
@@ -129,8 +131,8 @@ export default function CompanyDetailPage() {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild className="h-9 w-9">
-            <Link href="/admin/companies"><ArrowLeft className="h-4 w-4" /></Link>
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={goBack} aria-label="Back">
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-3">
             {org.logoUrl ? (

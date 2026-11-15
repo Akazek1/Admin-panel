@@ -375,7 +375,7 @@ export default function CompaniesPage() {
           <TableCell>
             <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />
-              {relativeTime(user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt)}
+              <span>{relativeTime(user.lastActiveAt || user.lastLoginAt || user.updatedAt || user.createdAt)}</span>
             </span>
           </TableCell>
         )

@@ -1,5 +1,7 @@
 "use client"
 
+import { readDraft, writeDraft } from "@/lib/drafts"
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { Suspense, useEffect, useRef, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
@@ -516,10 +518,10 @@ function SupportInbox() {
   const queryClient = useQueryClient()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const [filter, setFilter] = useState<StatusFilter>("NEEDS_REPLY")
-  const [search, setSearch] = useState("")
+  const [filter, setFilter] = usePersistedState<StatusFilter>("admin:support:filter", "NEEDS_REPLY")
+  const [search, setSearch] = usePersistedState("admin:support:search", "")
   const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:support:selectedId", null)
   const [messageText, setMessageText] = useState("")
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [listLimit, setListLimit] = useState(50)
@@ -546,7 +548,8 @@ function SupportInbox() {
     setReplyTarget(null)
     setEditTarget(null)
     setReactingTo(null)
-    setMessageText("")
+    // Whatever was typed for this thread and never sent is still waiting.
+    setMessageText(readDraft("support", selectedId))
   }, [selectedId])
 
   useEffect(() => {
@@ -638,7 +641,9 @@ function SupportInbox() {
             ...(replyTarget ? { replyToId: replyTarget.id } : {}),
           }),
     onSuccess: () => {
-      setMessageText("")
+      // A sent reply uses up the draft; a saved edit puts the draft back.
+      if (!editTarget) writeDraft("support", selectedId, "")
+      setMessageText(editTarget ? readDraft("support", selectedId) : "")
       setReplyTarget(null)
       setEditTarget(null)
       refresh()
@@ -671,7 +676,8 @@ function SupportInbox() {
     inputRef.current?.focus()
   }
   const cancelDraftMode = () => {
-    if (editTarget) setMessageText("")
+    // Leaving edit mode brings back the unsent reply, if there was one.
+    if (editTarget) setMessageText(readDraft("support", selectedId))
     setReplyTarget(null)
     setEditTarget(null)
   }
@@ -1075,7 +1081,11 @@ function SupportInbox() {
                         className="max-h-40 min-h-[40px] resize-none border-white/10 bg-background/70 py-2"
                         value={messageText}
                         maxLength={2000}
-                        onChange={(e) => setMessageText(e.target.value)}
+                        onChange={(e) => {
+                          setMessageText(e.target.value)
+                          // Text typed while editing a sent message is not a draft.
+                          if (!editTarget) writeDraft("support", selectedId, e.target.value)
+                        }}
                         onKeyDown={(e) => {
                           // isComposing: Enter that confirms an IME suggestion is not "send".
                           if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {

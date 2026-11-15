@@ -1,5 +1,6 @@
 "use client"
 
+import { useGoBack } from "@/hooks/use-go-back"
 import React, { useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
@@ -172,6 +173,7 @@ function StatTile({
 export default function UserDetailPage() {
   const { userId } = useParams<{ userId: string }>()
   const router = useRouter()
+  const goBack = useGoBack("/admin/users")
   const queryClient = useQueryClient()
   const can = useCan()
 
@@ -471,7 +473,7 @@ export default function UserDetailPage() {
     return (
       <div className="p-6 text-center">
         <p className="text-muted-foreground">Failed to load user.</p>
-        <Button variant="outline" className="mt-4" onClick={() => router.back()}>Go back</Button>
+        <Button variant="outline" className="mt-4" onClick={goBack}>Go back</Button>
       </div>
     )
   }
@@ -544,7 +546,7 @@ export default function UserDetailPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0">
+        <Button variant="ghost" size="icon" onClick={goBack} className="shrink-0">
           <ArrowLeft className="w-5 h-5" />
         </Button>
         

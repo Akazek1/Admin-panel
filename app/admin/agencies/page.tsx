@@ -1,5 +1,6 @@
 "use client"
 
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useEffect, useMemo, useState } from "react"
 import { useCan } from "@/lib/admin-access"
 import Link from "next/link"
@@ -172,13 +173,13 @@ function WorkerName({ worker }: { worker?: AgencyPlacement["worker"] }) {
 
 export default function AgenciesPage() {
   const queryClient = useQueryClient()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [verifiedFilter, setVerifiedFilter] = useState("ALL")
-  const [issueFilter, setIssueFilter] = useState("ALL")
-  const [commissionFilter, setCommissionFilter] = useState("ALL")
-  const [sortMode, setSortMode] = useState<SortMode>("RECENT")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
+  const [searchTerm, setSearchTerm] = usePersistedState("admin:agencies:searchTerm", "")
+  const [verifiedFilter, setVerifiedFilter] = usePersistedState("admin:agencies:verifiedFilter", "ALL")
+  const [issueFilter, setIssueFilter] = usePersistedState("admin:agencies:issueFilter", "ALL")
+  const [commissionFilter, setCommissionFilter] = usePersistedState("admin:agencies:commissionFilter", "ALL")
+  const [sortMode, setSortMode] = usePersistedState<SortMode>("admin:agencies:sortMode", "RECENT")
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:agencies:selectedId", null)
+  const [showDetail, setShowDetail] = usePersistedState("admin:agencies:showDetail", false)
   const [createOpen, setCreateOpen] = useState(false)
 
   const { data: agencies, isLoading, isError, error, refetch, isFetching } = useQuery<Organization[]>({

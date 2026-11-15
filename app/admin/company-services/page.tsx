@@ -135,7 +135,7 @@ export default function CompanyServicesPage() {
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-gray-600">
                       <span className="flex items-center gap-1.5 font-medium text-gray-800">
                         <Building2 className="h-3.5 w-3.5" />
-                        {s.company?.name || "Unknown company"}
+                        <span>{s.company?.name || "Unknown company"}</span>
                         {s.company?.verified ? (
                           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
                         ) : (

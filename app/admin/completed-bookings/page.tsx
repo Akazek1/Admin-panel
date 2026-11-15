@@ -1,5 +1,6 @@
 "use client"
 
+import { usePersistedState } from "@/hooks/use-session-state"
 import React, { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -199,13 +200,13 @@ function PersonBlock({
 }
 
 export default function CompletedBookingsPage() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [rehireFilter, setRehireFilter] = useState<RehireFilter>("ALL")
-  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("ALL")
-  const [dateFilter, setDateFilter] = useState<DateFilter>("ALL")
-  const [sortMode, setSortMode] = useState<SortMode>("RECENT")
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [showDetail, setShowDetail] = useState(false)
+  const [searchTerm, setSearchTerm] = usePersistedState("admin:completed-bookings:searchTerm", "")
+  const [rehireFilter, setRehireFilter] = usePersistedState<RehireFilter>("admin:completed-bookings:rehireFilter", "ALL")
+  const [paymentFilter, setPaymentFilter] = usePersistedState<PaymentFilter>("admin:completed-bookings:paymentFilter", "ALL")
+  const [dateFilter, setDateFilter] = usePersistedState<DateFilter>("admin:completed-bookings:dateFilter", "ALL")
+  const [sortMode, setSortMode] = usePersistedState<SortMode>("admin:completed-bookings:sortMode", "RECENT")
+  const [selectedId, setSelectedId] = usePersistedState<string | null>("admin:completed-bookings:selectedId", null)
+  const [showDetail, setShowDetail] = usePersistedState("admin:completed-bookings:showDetail", false)
   const [adminNote, setAdminNote] = useState("")
 
   const { data: bookings = [], isLoading, isError, isFetching, refetch } = useQuery<Booking[]>({
@@ -420,7 +421,7 @@ export default function CompletedBookingsPage() {
                     <div key={item} className="flex items-center justify-between gap-4">
                       <span className="flex items-center gap-2 font-medium">
                         <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                        {item}
+                        <span>{item}</span>
                       </span>
                       <span className="text-muted-foreground">{formatDate(selectedBooking.createdAt)}</span>
                     </div>
