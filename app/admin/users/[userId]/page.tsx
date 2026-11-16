@@ -29,7 +29,7 @@ import {
   AlertCircle, Briefcase, Star, Activity,
   GraduationCap, FileText, Bell, Layers, Building2,
   Clock, ShieldAlert, ClipboardCheck,
-  LogOut, Trash2, ChevronRight, Headset, Copy2,
+  LogOut, Trash2, ChevronRight, Headset, Copy,
 } from "lucide-react"
 
 async function fetchUserDetail(id: string) {
@@ -1128,7 +1128,7 @@ export default function UserDetailPage() {
                       toast({ title: "Profile link copied" })
                     }}
                   >
-                    <Copy2 className="w-4 h-4 mr-2" /> Copy profile link
+                    <Copy className="w-4 h-4 mr-2" /> Copy profile link
                   </Button>
                 )}
                 {can("users.manage_services") && (
@@ -1189,7 +1189,7 @@ export default function UserDetailPage() {
                             toast({ title: "Service link copied" })
                           }}
                         >
-                          <Copy2 className="w-4 h-4" />
+                          <Copy className="w-4 h-4" />
                         </button>
                       )}
                     </div>
