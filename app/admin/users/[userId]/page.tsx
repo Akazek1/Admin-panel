@@ -29,7 +29,7 @@ import {
   AlertCircle, Briefcase, Star, Activity,
   GraduationCap, FileText, Bell, Layers, Building2,
   Clock, ShieldAlert, ClipboardCheck,
-  LogOut, Trash2, ChevronRight, Headset,
+  LogOut, Trash2, ChevronRight, Headset, Copy,
 } from "lucide-react"
 
 async function fetchUserDetail(id: string) {
@@ -1118,11 +1118,25 @@ export default function UserDetailPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
               <CardTitle className="text-sm">Service Listings</CardTitle>
-              {can("users.manage_services") && (
-                <Button size="sm" onClick={openAddService}>
-                  <Layers className="w-4 h-4 mr-2" /> Add service
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {user.username && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://app.huza.app/${user.username}`)
+                      toast({ title: "Profile link copied" })
+                    }}
+                  >
+                    <Copy className="w-4 h-4 mr-2" /> Copy profile link
+                  </Button>
+                )}
+                {can("users.manage_services") && (
+                  <Button size="sm" onClick={openAddService}>
+                    <Layers className="w-4 h-4 mr-2" /> Add service
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               {!user.services?.length ? (
@@ -1165,6 +1179,19 @@ export default function UserDetailPage() {
                           <span className="font-bold text-primary">{service.priceMin ?? "—"} - {service.priceMax ?? "—"} RWF {service.priceType ? `(${service.priceType})` : ""}</span>
                         </div>
                       </Link>
+                      {user.username && (
+                        <button
+                          className="shrink-0 self-start p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                          title="Copy service link"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            navigator.clipboard.writeText(`https://app.huza.app/${user.username}/services/${service.id}`)
+                            toast({ title: "Service link copied" })
+                          }}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
