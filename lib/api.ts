@@ -351,6 +351,34 @@ export async function getStats(): Promise<AdminStats> {
   return response.data?.data ?? response.data;
 }
 
+export interface EngagementStats {
+  devices: {
+    byPlatform: { platform: string; count: number }[];
+    pwaInstalls: number;
+  };
+  retention: {
+    activeUsers7d: number;
+    activeUsers30d: number;
+  };
+  messaging: {
+    welcomeSent: number;
+  };
+  topProfiles: {
+    profileId: string;
+    firstName: string | null;
+    lastName: string | null;
+    username: string | null;
+    profilePicture: string | null;
+    totalViews: number;
+    uniqueViewers: number;
+  }[];
+}
+
+export async function getEngagementStats(): Promise<EngagementStats> {
+  const response = await axiosInstance.get("/admin/analytics/engagement");
+  return response.data?.data ?? response.data;
+}
+
 // The service taxonomy: broad groupings, each with the job types (categories)
 // assigned to it. Mirrors what the user app's "Add a service" wizard browses.
 export interface TaxonomyGrouping {
