@@ -27,7 +27,7 @@ import {
   HelpCircle,
 } from "lucide-react"
 import { getStats, getEngagementStats } from "@/lib/api"
-import { Smartphone, Monitor, Apple, Download, UserCheck, Bell } from "lucide-react"
+import { Smartphone, Monitor, Apple, Download, Bell } from "lucide-react"
 import { useAdminAccess } from "@/lib/admin-access"
 import { DashboardHeaderActions } from "@/components/admin/dashboard-header-actions"
 import { Badge } from "@/components/ui/badge"
