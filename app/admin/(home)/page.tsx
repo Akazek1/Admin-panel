@@ -26,7 +26,8 @@ import {
   Users,
   HelpCircle,
 } from "lucide-react"
-import { getStats } from "@/lib/api"
+import { getStats, getEngagementStats } from "@/lib/api"
+import { Smartphone, Monitor, Apple, Download, UserCheck, Bell } from "lucide-react"
 import { useAdminAccess } from "@/lib/admin-access"
 import { DashboardHeaderActions } from "@/components/admin/dashboard-header-actions"
 import { Badge } from "@/components/ui/badge"
@@ -286,6 +287,12 @@ export default function DashboardPage() {
     queryKey: ["admin-stats"],
     queryFn: getStats,
     refetchInterval: 60 * 1000,
+  })
+
+  const { data: engagement } = useQuery({
+    queryKey: ["admin-engagement"],
+    queryFn: getEngagementStats,
+    refetchInterval: 5 * 60 * 1000,
   })
 
   const totalUsers = numberValue(stats?.totalUsers, 0)
@@ -603,6 +610,70 @@ export default function DashboardPage() {
             </div>
           </Panel>
         </div>
+
+        {/* Engagement snapshot */}
+        <Panel>
+          <SectionHeader title="Engagement" />
+          <div className="grid grid-cols-2 gap-px border-t border-white/5 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              {
+                label: "Active 7d",
+                value: engagement ? formatNumber(engagement.retention.activeUsers7d) : "—",
+                icon: UserCheck,
+                tone: "green" as Tone,
+              },
+              {
+                label: "Active 30d",
+                value: engagement ? formatNumber(engagement.retention.activeUsers30d) : "—",
+                icon: UserCheck,
+                tone: "blue" as Tone,
+              },
+              {
+                label: "Welcome sent",
+                value: engagement ? formatNumber(engagement.messaging.welcomeSent) : "—",
+                icon: Bell,
+                tone: "purple" as Tone,
+              },
+              {
+                label: "PWA installs",
+                value: engagement ? formatNumber(engagement.devices.pwaInstalls) : "—",
+                icon: Download,
+                tone: "amber" as Tone,
+              },
+              ...(engagement?.devices.byPlatform ?? []).slice(0, 2).map((p) => ({
+                label: p.platform === "ios" ? "iOS" : p.platform === "android" ? "Android" : "Web",
+                value: formatNumber(p.count),
+                icon: p.platform === "ios" ? Apple : p.platform === "android" ? Smartphone : Monitor,
+                tone: "blue" as Tone,
+              })),
+            ].map((item) => (
+              <div key={item.label} className="flex flex-col gap-1 bg-card/70 px-4 py-3">
+                <div className={cn("mb-1 flex h-7 w-7 items-center justify-center rounded-md ring-1", toneStyles[item.tone].icon)}>
+                  <item.icon className="h-4 w-4" />
+                </div>
+                <span className="text-xl font-semibold tabular-nums">{item.value}</span>
+                <span className="text-xs text-muted-foreground">{item.label}</span>
+              </div>
+            ))}
+          </div>
+          {engagement && engagement.topProfiles.length > 0 && (
+            <div className="border-t border-white/5 px-4 py-3">
+              <p className="mb-3 text-sm font-medium text-muted-foreground">Most visited profiles (30d)</p>
+              <div className="flex flex-col gap-1">
+                {engagement.topProfiles.slice(0, 5).map((p, i) => (
+                  <div key={p.profileId} className="flex items-center gap-3 rounded-md px-2 py-1.5 hover:bg-white/5">
+                    <span className="w-4 shrink-0 text-xs text-muted-foreground">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                      {p.firstName ?? ""} {p.lastName ?? ""}
+                      {p.username && <span className="ml-1 text-xs text-muted-foreground">@{p.username}</span>}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{formatNumber(p.totalViews)} views · {formatNumber(p.uniqueViewers)} unique</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Panel>
 
         <footer className="flex flex-col justify-between gap-2 border-t border-white/5 pt-3 text-xs text-muted-foreground sm:flex-row">
           <span className="inline-flex items-center gap-2">
